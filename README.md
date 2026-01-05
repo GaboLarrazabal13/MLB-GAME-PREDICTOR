@@ -376,10 +376,10 @@ streamlit run web_app_hybrid.py
 #### Capturas de Pantalla
 
 **Pantalla Principal:**
-![Predictor]("C:\Users\gabo_\OneDrive\Imágenes\Capturas de pantalla\predictor.png")
+![Predictor](docs/screenshots/predictor.png)
 
 **Estadísticas Detalladas:**
-![Stats]("C:\Users\gabo_\OneDrive\Imágenes\Capturas de pantalla\stats.png")
+![Stats](docs/screenshots/stats.png)
 
 ---
 
