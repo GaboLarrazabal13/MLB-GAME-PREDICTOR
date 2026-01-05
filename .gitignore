@@ -1,0 +1,127 @@
+# ============================================================================
+# PYTHON
+# ============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+src/__pycache__/
+src/.streamlit/__pycache__/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+notebook/*.ipynb_checkpoints
+
+
+# pyenv
+.python-version
+
+# ============================================================================
+# DATOS GRANDES (CSV)
+# ============================================================================
+# Mantener estructura pero excluir CSVs grandes
+data/raw/*.csv
+data/processed/*.csv
+
+# Mantener archivos .gitkeep para preservar estructura
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# ============================================================================
+# MODELOS Y CACHE - INCLUIDOS (son ligeros según tu caso)
+# ============================================================================
+# Si decides no subirlos después, descomenta estas líneas:
+# models/*.pkl
+# cache/*.pkl
+
+# ============================================================================
+# STREAMLIT
+# ============================================================================
+.streamlit/secrets.toml
+src/.streamlit/secrets.toml
+src/.streamlit/config.toml
+
+# ============================================================================
+# LOGS Y TEMPORALES
+# ============================================================================
+*.log
+*.tmp
+*.temp
+logs/
+temp/
+reports/*.log
+reports/*.tmp
+
+# ============================================================================
+# CONFIGURACIÓN LOCAL
+# ============================================================================
+.env
+.env.local
+config.local.py
+secrets.py
+
+# ============================================================================
+# SISTEMA OPERATIVO
+# ============================================================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ============================================================================
+# OTROS
+# ============================================================================
+# Archivos de respaldo
+*.bak
+*.backup
+*.old
+
+# Test outputs
+test_*.txt
+test_*.json
