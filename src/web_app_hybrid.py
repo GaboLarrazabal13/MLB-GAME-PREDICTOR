@@ -38,7 +38,7 @@ if 'STREAMLIT_SHARING' in os.environ:
     USE_API = False
 else:
     # En desarrollo local
-    API_URL = st.secrets.get("API_URL", "http://localhost:8001")
+    API_URL = st.secrets.get("API_URL", "https://mlb-game-predictor-v2.streamlit.app/")
     USE_API = True
 
 # # URL de la API HÍBRIDA (cambiar según donde esté desplegada)
