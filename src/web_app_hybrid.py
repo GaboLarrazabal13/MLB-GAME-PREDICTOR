@@ -10,8 +10,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 import json
-from PIL import Image
-import os
 
 # ============================================================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -86,7 +84,7 @@ def get_team_logo_html(team_code, size=30):
     """Retorna HTML con el logo del equipo"""
     if team_code in EQUIPOS_MLB:
         logo_url = EQUIPOS_MLB[team_code]['logo']
-        return f'<img src="{logo_url}" width="{size}" style="vertical-align: middle; margin-right: 6px;">'
+        return f'<img src="{logo_url}" width="{size}" style="vertical-align: middle; margin-right: 8px;">'
     return ''
 
 def get_team_display_name(team_code):
@@ -129,7 +127,7 @@ st.markdown("""
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
     .winner-box {
-        background: linear-gradient(135deg, #1E6982 0%, #1A1818 50%,#570D0D 100%);
+        background: linear-gradient(135deg, #2A7B9B 0%, #12244D 50%, #141010 100%);
         padding: 1.5rem;
         border-radius: 0.5rem;
         margin: 1rem 0;
@@ -143,7 +141,7 @@ st.markdown("""
         text-align: center;
     }
     .pitcher-card {
-        background: linear-gradient(135deg, #1E6982 0%, #1A1818 50%,#570D0D 100%);
+        background: linear-gradient(135deg, #2A7B9B 0%, #12244D 50%, #141010 100%);
         padding: 1.5rem;
         border-radius: 0.75rem;
         color: white;
@@ -452,7 +450,7 @@ with st.sidebar:
 if pagina == "🎯 Predictor":
     
     # Header
-    st.markdown('<div class="main-header">MLB Game Predictor</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">⚾ MLB Game Predictor</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Predicciones con Modelo Híbrido</div>', unsafe_allow_html=True)
     
     if not api_ok:
@@ -467,7 +465,7 @@ if pagina == "🎯 Predictor":
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("#### Equipo Local")
+            st.markdown("#### 🏠 Equipo Local")
             
             # CAMBIO 2: Selector con logos
             home_team_options = []
@@ -495,7 +493,7 @@ if pagina == "🎯 Predictor":
             )
         
         with col2:
-            st.markdown("#### Equipo Visitante")
+            st.markdown("#### ✈️ Equipo Visitante")
             
             # CAMBIO 2: Selector con logos
             away_team_options = []
@@ -527,7 +525,7 @@ if pagina == "🎯 Predictor":
         st.markdown("---")
         
         submit_button = st.form_submit_button(
-            "Realizar Predicción",
+            "🔮 Realizar Predicción",
             use_container_width=True,
             type="primary"
         )
@@ -551,7 +549,7 @@ if pagina == "🎯 Predictor":
                 st.success("✅ Predicción realizada exitosamente!")
                 
                 st.markdown("---")
-                st.markdown("## Resultado de la Predicción")
+                st.markdown("## 🎯 Resultado de la Predicción")
                 
                 ganador = resultado.get('ganador')
                 prob_home = resultado.get('prob_home', 0)
@@ -564,7 +562,7 @@ if pagina == "🎯 Predictor":
                 
                 st.markdown(f"""
                 <div class="winner-box">
-                    <h1 style="margin:0; font-size: 2.5rem;">EQUIPO GANADOR</h1>
+                    <h1 style="margin:0; font-size: 2.5rem;">🏆 GANADOR PREDICHO</h1>
                     <div style="margin:1rem 0;">
                         {ganador_logo}
                         <h2 style="display:inline; margin:0; font-size: 3rem; vertical-align: middle;">{ganador_nombre}</h2>
@@ -618,7 +616,7 @@ if pagina == "🎯 Predictor":
                     st.metric("Confianza", f"{confianza*100:.1f}%")
                     st.markdown(f'<p class="{conf_class}">{conf_emoji} {conf_text}</p>', unsafe_allow_html=True)
                 
-                # Gráficos de probabilidades
+                # Gráficos
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -633,10 +631,7 @@ if pagina == "🎯 Predictor":
                         use_container_width=True
                     )
                 
-                # ============================================================
                 # ESTADÍSTICAS DETALLADAS
-                # ============================================================
-                
                 stats_detalladas = resultado.get('stats_detalladas', {})
                 
                 if stats_detalladas:
@@ -644,14 +639,19 @@ if pagina == "🎯 Predictor":
                     st.markdown("## 📊 Estadísticas Detalladas de Jugadores")
                     
                     # LANZADORES
-                    st.markdown("###  Lanzadores Iniciales")
+                    st.markdown("### ⚾ Lanzadores Iniciales")
                     
                     col1, col2 = st.columns(2)
                     
                     with col1:
                         home_pitcher_stats = stats_detalladas.get('home_pitcher')
                         if home_pitcher_stats:
-                            st.markdown(f"#### {home_team} - {home_pitcher_stats.get('nombre', home_pitcher)}")
+                            # CAMBIO 3: Logo en título de lanzador
+                            st.markdown(
+                                get_team_logo_html(home_team, 40) + 
+                                f"#### {home_team} - {home_pitcher_stats.get('nombre', home_pitcher)}",
+                                unsafe_allow_html=True
+                            )
                             
                             subcol1, subcol2, subcol3 = st.columns(3)
                             with subcol1:
@@ -678,7 +678,12 @@ if pagina == "🎯 Predictor":
                     with col2:
                         away_pitcher_stats = stats_detalladas.get('away_pitcher')
                         if away_pitcher_stats:
-                            st.markdown(f"#### {away_team} - {away_pitcher_stats.get('nombre', away_pitcher)}")
+                            # CAMBIO 3: Logo en título de lanzador
+                            st.markdown(
+                                get_team_logo_html(away_team, 40) + 
+                                f"#### {away_team} - {away_pitcher_stats.get('nombre', away_pitcher)}",
+                                unsafe_allow_html=True
+                            )
                             
                             subcol1, subcol2, subcol3 = st.columns(3)
                             with subcol1:
@@ -714,14 +719,18 @@ if pagina == "🎯 Predictor":
                     
                     # BATEADORES
                     st.markdown("---")
-                    st.markdown("###  Top 3 Bateadores")
+                    st.markdown("### 🏏 Top 3 Bateadores")
                     
                     col1, col2 = st.columns(2)
                     
                     with col1:
                         home_batters = stats_detalladas.get('home_batters', [])
                         if home_batters:
-                            st.markdown(f"#### {home_team}")
+                            # CAMBIO 3: Logo en título de bateadores
+                            st.markdown(
+                                get_team_logo_html(home_team, 40) + f"#### {home_team}",
+                                unsafe_allow_html=True
+                            )
                             for i, batter in enumerate(home_batters, 1):
                                 with st.expander(f"#{i} - {batter.get('nombre', 'N/A')}", expanded=(i==1)):
                                     subcol1, subcol2, subcol3, subcol4 = st.columns(4)
@@ -747,7 +756,11 @@ if pagina == "🎯 Predictor":
                     with col2:
                         away_batters = stats_detalladas.get('away_batters', [])
                         if away_batters:
-                            st.markdown(f"#### {away_team}")
+                            # CAMBIO 3: Logo en título de bateadores
+                            st.markdown(
+                                get_team_logo_html(away_team, 40) + f"#### {away_team}",
+                                unsafe_allow_html=True
+                            )
                             for i, batter in enumerate(away_batters, 1):
                                 with st.expander(f"#{i} - {batter.get('nombre', 'N/A')}", expanded=(i==1)):
                                     subcol1, subcol2, subcol3, subcol4 = st.columns(4)
@@ -798,20 +811,44 @@ elif pagina == "📜 Historial":
     else:
         st.success(f"✅ {len(st.session_state.historial)} predicciones guardadas")
         
-        # Convertir a DataFrame
+        # Convertir a DataFrame y agregar logos
         df = pd.DataFrame(st.session_state.historial)
         
-        # Mostrar tabla
-        st.dataframe(
-            df.style.format({
-                'prob_home': '{:.1%}',
-                'prob_away': '{:.1%}',
-                'confianza': '{:.1%}'
-            }),
-            use_container_width=True
-        )
+        # Mostrar tabla con formato
+        st.markdown("### 📊 Predicciones Recientes")
         
-        # Estadísticas
+        for idx, pred in enumerate(st.session_state.historial[:10]):  # Mostrar solo las 10 más recientes
+            with st.expander(f"🎯 {pred['timestamp']} - {pred['home_team']} vs {pred['away_team']}", expanded=(idx==0)):
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.markdown(
+                        get_team_logo_html(pred['home_team'], 40) + 
+                        f"**{pred['home_team']}** (Local)",
+                        unsafe_allow_html=True
+                    )
+                    st.metric("Probabilidad", f"{pred['prob_home']*100:.1f}%")
+                    st.caption(f"Lanzador: {pred['home_pitcher']}")
+                
+                with col2:
+                    st.markdown(
+                        get_team_logo_html(pred['away_team'], 40) + 
+                        f"**{pred['away_team']}** (Visitante)",
+                        unsafe_allow_html=True
+                    )
+                    st.metric("Probabilidad", f"{pred['prob_away']*100:.1f}%")
+                    st.caption(f"Lanzador: {pred['away_pitcher']}")
+                
+                with col3:
+                    st.markdown("**Ganador Predicho**")
+                    st.markdown(
+                        get_team_logo_html(pred['ganador'], 50) + 
+                        f"<span style='font-size: 1.5rem; font-weight: bold;'>{pred['ganador']}</span>",
+                        unsafe_allow_html=True
+                    )
+                    st.metric("Confianza", f"{pred['confianza']*100:.1f}%")
+        
+        # Estadísticas del historial
         st.markdown("---")
         st.subheader("📊 Estadísticas del Historial")
         
@@ -826,7 +863,11 @@ elif pagina == "📜 Historial":
         
         with col3:
             ganador_mas_comun = df['ganador'].mode()[0] if len(df) > 0 else "N/A"
-            st.metric("Equipo Más Predicho", ganador_mas_comun)
+            st.markdown(
+                get_team_logo_html(ganador_mas_comun, 30) + 
+                f"**Equipo Más Predicho:** {ganador_mas_comun}",
+                unsafe_allow_html=True
+            )
         
         # Botón limpiar historial
         if st.button("🗑️ Limpiar Historial", type="secondary"):
@@ -839,6 +880,11 @@ elif pagina == "📜 Historial":
 
 elif pagina == "ℹ️ Acerca de":
     st.title("ℹ️ Acerca de MLB Game Predictor - Hybrid Model")
+    
+    # Logo de MLB centrado
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", width=200)
     
     st.markdown("""
     ## 🏟️ ¿Qué es MLB Game Predictor Hybrid?
@@ -865,40 +911,22 @@ elif pagina == "ℹ️ Acerca de":
     
     ### 🎯 Características
     
-    - ✅ **Predicciones en tiempo real** basadas en estadísticas actualizadas
-    - ✅ **Análisis detallado de jugadores clave** (lanzadores iniciales y top 3 bateadores)
-    - ✅ **Interfaz intuitiva** y fácil de usar
-    - ✅ **Historial de predicciones** para seguimiento
-    - ✅ **Múltiples visualizaciones** de resultados
-    - ✅ **Estadísticas completas** de cada jugador clave
+    - ✅ **Predicciones en tiempo real** con datos actualizados
+    - ✅ **Logos oficiales de la MLB** para mejor visualización
+    - ✅ **Análisis detallado** de lanzadores y bateadores
+    - ✅ **Interfaz intuitiva** y profesional
+    - ✅ **Historial de predicciones** con seguimiento
+    - ✅ **Múltiples visualizaciones** interactivas
     - ✅ **Modelo híbrido optimizado** con XGBoost
     
     ### 📊 Modelo de Machine Learning
     
     El modelo utiliza:
-    - **XGBoost / Random Forest** optimizados con GridSearchCV
+    - **XGBoost / Random Forest** optimizados
     - **~55 features híbridas** (temporales + scraping)
     - **Accuracy de ~63-67%** en datos de prueba
     - **Validación temporal** (TimeSeriesSplit)
     - **Optimización de hiperparámetros**
-    
-    ### 🔑 Features Principales
-    
-    **Temporales:**
-    - Últimos 10 partidos por equipo
-    - Últimas 5 aperturas por lanzador
-    - Historial H2H (últimos 10 enfrentamientos)
-    - Rachas y momentum
-    
-    **Scraping:**
-    - **Pitching:** ERA, WHIP, H9, W, L
-    - **Batting:** BA, OBP, SLG, OPS, RBI, R, HR
-    - **Jugadores Clave:** Top 3 bateadores (por OBP) + Lanzador inicial
-    
-    **Derivadas:**
-    - Diferencias entre equipos
-    - Comparaciones de lanzadores
-    - Ratios y ventajas
     
     ### 🛠️ Tecnologías
     
@@ -906,73 +934,49 @@ elif pagina == "ℹ️ Acerca de":
     - **Scraping:** cloudscraper + BeautifulSoup
     - **Frontend:** Streamlit
     - **Visualización:** Plotly
-    - **Data:** Baseball-Reference.com
-    - **Optimización:** GridSearchCV + TimeSeriesSplit
-    
-    ### 🚀 Ventajas del Modelo Híbrido
-    
-    1. **Mayor precisión**: Combina contexto temporal + stats actuales
-    2. **Adaptabilidad**: Se ajusta a la forma reciente de los equipos
-    3. **Profundidad**: Analiza tanto el equipo completo como jugadores clave
-    4. **Robustez**: Validación temporal previene overfitting
-    5. **Escalabilidad**: Procesa 3000+ partidos sin colapsar
-    
-    ### 👨‍💻 Desarrollo
-    
-    Desarrollado como proyecto avanzado de Machine Learning aplicado a deportes.
-    Evolución del modelo original con mejoras en features, validación y optimización.
+    - **Data:** Baseball-Reference.com + MLB API
     
     ### 📝 Nota
     
     Las predicciones son estimaciones basadas en datos históricos y estadísticas actuales.
-    No garantizan resultados futuros. El modelo híbrido mejora la precisión pero 
-    el béisbol sigue siendo un deporte impredecible.
-    """)
+    No garantizan resultados futuros. El béisbol es un deporte impredecible.
     
-    st.markdown("---")
+    ---
     
-    st.markdown("""
     ### 🚀 Cómo usar
     
-    1. **Inicia la API híbrida** en una terminal:
-       ```bash
+    1. Inicia la API híbrida:
+```bash
        python api_hybrid.py
-       ```
-       O con uvicorn:
-       ```bash
-       uvicorn api_hybrid:app --reload
-       ```
+```
     
-    2. **Inicia esta web app** en otra terminal:
-       ```bash
-       streamlit run web_app_hybrid.py
-       ```
+    2. Selecciona los equipos usando los selectores
     
-    3. **Selecciona los equipos** y lanzadores
+    3. Ingresa los nombres de los lanzadores
     
-    4. **¡Haz la predicción!**
+    4. ¡Haz la predicción y revisa los detalles!
     
-    5. **Revisa las estadísticas detalladas** de lanzadores y bateadores
+    ---
     
-    ### 📈 Diferencias con el Modelo Original
+    **Desarrollado con ❤️ para la comunidad de ML y béisbol**
     
-    | Característica | Modelo Original | Modelo Híbrido |
-    |----------------|----------------|----------------|
-    | **Features** | 37 (solo scraping) | 55+ (temporal + scraping) |
-    | **Validación** | KFold estándar | TimeSeriesSplit temporal |
-    | **Algoritmos** | RF + GBM | RF + GBM + XGBoost |
-    | **Optimización** | Parámetros fijos | GridSearchCV automático |
-    | **Accuracy** | ~60-64% | ~63-67% |
-    | **Partidos procesables** | ~600 | 3000+ |
-    | **Scraping** | Todos los partidos | Solo partidos recientes |
-    | **Velocidad** | 2-3 horas | 1-1.5 horas |
-    
-    ### 🎓 Aprendizajes Clave
-    
-    - Las **features temporales** (últimos 10 partidos) son altamente predictivas
-    - La **validación temporal** es crucial para evitar "ver el futuro"
-    - El **scraping inteligente** (solo partidos recientes) optimiza tiempos
-    - Los **modelos ensemble** mejoran la robustez
-    - Las **features derivadas** facilitan el aprendizaje del modelo
+    Logos © Major League Baseball
     """)
-
+    
+    # Mostrar todos los logos en una cuadrícula
+    st.markdown("---")
+    st.markdown("### 🏆 Equipos de la MLB")
+    
+    # Crear cuadrícula de logos
+    cols_per_row = 5
+    teams_sorted = sorted(EQUIPOS_MLB.items(), key=lambda x: x[1]['nombre'])
+    
+    for i in range(0, len(teams_sorted), cols_per_row):
+        cols = st.columns(cols_per_row)
+        for j, col in enumerate(cols):
+            if i + j < len(teams_sorted):
+                code, info = teams_sorted[i + j]
+                with col:
+                    st.image(info['logo'], width=80)
+                    st.caption(f"**{code}**")
+                    st.caption(info['nombre'])
