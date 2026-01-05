@@ -17,7 +17,7 @@ import json
 
 st.set_page_config(
     page_title="MLB Game Predictor - Hybrid Model",
-    page_icon="⚾",
+    page_icon="st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", width=10)",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -108,7 +108,7 @@ st.markdown("""
         margin-left: 8px;
     }
     .prediction-box {
-        background: linear-gradient(135deg, #2A7B9B 0%, #12244D 500%, #141010 100%);
+        background: linear-gradient(135deg, #2A7B9B 0%, #12244D 50%, #141010 100%);
         padding: 2rem;
         border-radius: 1rem;
         color: white;
@@ -117,7 +117,7 @@ st.markdown("""
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
     .winner-box {
-        background: linear-gradient(135deg, #2A7B9B 0%, #12244D 500%, #141010 100%);
+        background: linear-gradient(135deg, #1E6982 0%, #1A1818 50%,#570D0D 100%);
         padding: 1.5rem;
         border-radius: 0.5rem;
         margin: 1rem 0;
@@ -131,7 +131,7 @@ st.markdown("""
         text-align: center;
     }
     .pitcher-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #1E6982 0%, #1A1818 50%,#570D0D 100%);
         padding: 1.5rem;
         border-radius: 0.75rem;
         color: white;
@@ -440,7 +440,7 @@ with st.sidebar:
 if pagina == "🎯 Predictor":
     
     # Header
-    st.markdown('<div class="main-header">⚾ MLB Game Predictor</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">MLB Game Predictor</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Predicciones con Modelo Híbrido</div>', unsafe_allow_html=True)
     
     if not api_ok:
@@ -455,7 +455,7 @@ if pagina == "🎯 Predictor":
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("#### 🏠 Equipo Local")
+            st.markdown("#### Equipo Local")
             
             # CAMBIO 2: Selector con logos
             home_team_options = []
@@ -483,7 +483,7 @@ if pagina == "🎯 Predictor":
             )
         
         with col2:
-            st.markdown("#### ✈️ Equipo Visitante")
+            st.markdown("#### Equipo Visitante")
             
             # CAMBIO 2: Selector con logos
             away_team_options = []
@@ -515,7 +515,7 @@ if pagina == "🎯 Predictor":
         st.markdown("---")
         
         submit_button = st.form_submit_button(
-            "🔮 Realizar Predicción",
+            "Realizar Predicción",
             use_container_width=True,
             type="primary"
         )
@@ -539,7 +539,7 @@ if pagina == "🎯 Predictor":
                 st.success("✅ Predicción realizada exitosamente!")
                 
                 st.markdown("---")
-                st.markdown("## 🎯 Resultado de la Predicción")
+                st.markdown("## Resultado de la Predicción")
                 
                 ganador = resultado.get('ganador')
                 prob_home = resultado.get('prob_home', 0)
@@ -552,7 +552,7 @@ if pagina == "🎯 Predictor":
                 
                 st.markdown(f"""
                 <div class="winner-box">
-                    <h1 style="margin:0; font-size: 2.5rem;">🏆 GANADOR PREDICHO</h1>
+                    <h1 style="margin:0; font-size: 2.5rem;">EQUIPO GANADOR</h1>
                     <div style="margin:1rem 0;">
                         {ganador_logo}
                         <h2 style="display:inline; margin:0; font-size: 3rem; vertical-align: middle;">{ganador_nombre}</h2>
@@ -639,7 +639,7 @@ if pagina == "🎯 Predictor":
                     with col1:
                         home_pitcher_stats = stats_detalladas.get('home_pitcher')
                         if home_pitcher_stats:
-                            st.markdown(f"#### 🏠 {home_team} - {home_pitcher_stats.get('nombre', home_pitcher)}")
+                            st.markdown(f"#### {home_team} - {home_pitcher_stats.get('nombre', home_pitcher)}")
                             
                             subcol1, subcol2, subcol3 = st.columns(3)
                             with subcol1:
@@ -666,7 +666,7 @@ if pagina == "🎯 Predictor":
                     with col2:
                         away_pitcher_stats = stats_detalladas.get('away_pitcher')
                         if away_pitcher_stats:
-                            st.markdown(f"#### ✈️ {away_team} - {away_pitcher_stats.get('nombre', away_pitcher)}")
+                            st.markdown(f"#### {away_team} - {away_pitcher_stats.get('nombre', away_pitcher)}")
                             
                             subcol1, subcol2, subcol3 = st.columns(3)
                             with subcol1:
@@ -709,7 +709,7 @@ if pagina == "🎯 Predictor":
                     with col1:
                         home_batters = stats_detalladas.get('home_batters', [])
                         if home_batters:
-                            st.markdown(f"#### 🏠 {home_team}")
+                            st.markdown(f"#### {home_team}")
                             for i, batter in enumerate(home_batters, 1):
                                 with st.expander(f"#{i} - {batter.get('nombre', 'N/A')}", expanded=(i==1)):
                                     subcol1, subcol2, subcol3, subcol4 = st.columns(4)
@@ -735,7 +735,7 @@ if pagina == "🎯 Predictor":
                     with col2:
                         away_batters = stats_detalladas.get('away_batters', [])
                         if away_batters:
-                            st.markdown(f"#### ✈️ {away_team}")
+                            st.markdown(f"#### {away_team}")
                             for i, batter in enumerate(away_batters, 1):
                                 with st.expander(f"#{i} - {batter.get('nombre', 'N/A')}", expanded=(i==1)):
                                     subcol1, subcol2, subcol3, subcol4 = st.columns(4)
