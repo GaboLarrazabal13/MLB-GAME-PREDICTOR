@@ -74,7 +74,7 @@ def get_team_logo_html(team_code, size=30):
     """Retorna HTML con el logo del equipo"""
     if team_code in EQUIPOS_MLB:
         logo_url = EQUIPOS_MLB[team_code]['logo']
-        return f'<img src="{logo_url}" width="{size}" style="vertical-align: middle; margin-right: 8px;">'
+        return f'<img src="{logo_url}" width="{size}" style="vertical-align: middle; margin-right: 6px;">'
     return ''
 
 def get_team_display_name(team_code):
@@ -108,7 +108,7 @@ st.markdown("""
         margin-left: 8px;
     }
     .prediction-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #2A7B9B 0%, #12244D 500%, #141010 100%);
         padding: 2rem;
         border-radius: 1rem;
         color: white;
@@ -117,7 +117,7 @@ st.markdown("""
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
     .winner-box {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        background: linear-gradient(135deg, #2A7B9B 0%, #12244D 500%, #141010 100%);
         padding: 1.5rem;
         border-radius: 0.5rem;
         margin: 1rem 0;
