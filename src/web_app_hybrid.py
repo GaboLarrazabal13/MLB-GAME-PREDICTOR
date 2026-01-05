@@ -309,7 +309,7 @@ def crear_gauge_confianza(confianza):
         height=300,
         margin=dict(l=20, r=20, t=50, b=20),
         paper_bgcolor='rgba(0,0,0,0)',
-        font={'color': "white", 'family': "Arial"}
+        # font={'color': "white", 'family': "Arial"}
     )
     
     return fig
