@@ -10,14 +10,16 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 import json
+from PIL import Image
 
 # ============================================================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ============================================================================
+favicon = Image.open("../docs/logo.png")
 
 st.set_page_config(
-    page_title="MLB Game Predictor - Hybrid Model",
-    page_icon="st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", width=10)",
+    page_title="MLB Game Predictor",
+    page_icon=favicon,
     layout="wide",
     initial_sidebar_state="expanded"
 )
