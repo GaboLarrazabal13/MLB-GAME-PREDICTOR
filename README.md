@@ -197,7 +197,7 @@ python train_model_hybrid.py
 
 - **Features:** 55+ (temporales + scraping)
 - **Tiempo:** ~1-2 horas
-- **Accuracy:** ~63-67%
+- **Accuracy:** ~58.50%
 - **Ventajas:** Validación temporal, optimización de hiperparámetros
 
 **Salida de ambos:**
@@ -265,30 +265,30 @@ uvicorn api:app --reload --port 8000
 
 **Modelo Híbrido:**
 ```bash
-uvicorn api_hybrid:app --reload --port 8000
+uvicorn api_hybrid:app --reload --port 8001
 ```
 
 #### Documentación Interactiva
 
 Una vez iniciada, accede a:
-- **Swagger UI:** http://localhost:8000/docs
-- **ReDoc:** http://localhost:8000/redoc
+- **Swagger UI:** http://localhost:8001/docs
+- **ReDoc:** http://localhost:8001/redoc
 
 #### Endpoints Principales
 
 ##### 1. Health Check
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 ```
 
 ##### 2. Información del Modelo
 ```bash
-curl http://localhost:8000/info
+curl http://localhost:8001/info
 ```
 
 ##### 3. Predicción Básica
 ```bash
-curl -X POST "http://localhost:8000/predict" \
+curl -X POST "http://localhost:8001/predict" \
   -H "Content-Type: application/json" \
   -d '{
     "home_team": "NYY",
@@ -301,7 +301,7 @@ curl -X POST "http://localhost:8000/predict" \
 
 ##### 4. Predicción Detallada (con stats de jugadores)
 ```bash
-curl -X POST "http://localhost:8000/predict/detailed" \
+curl -X POST "http://localhost:8001/predict/detailed" \
   -H "Content-Type: application/json" \
   -d '{
     "home_team": "NYY",
@@ -376,10 +376,10 @@ streamlit run web_app_hybrid.py
 #### Capturas de Pantalla
 
 **Pantalla Principal:**
-![Predictor](docs/screenshots/predictor.png)
+![Predictor]("C:\Users\gabo_\OneDrive\Imágenes\Capturas de pantalla\predictor.png")
 
 **Estadísticas Detalladas:**
-![Stats](docs/screenshots/stats.png)
+![Stats]("C:\Users\gabo_\OneDrive\Imágenes\Capturas de pantalla\stats.png")
 
 ---
 
@@ -569,30 +569,6 @@ mlb-game-predictor/
 
 ## 📈 Resultados
 
-### Comparación de Modelos
-
-| Métrica | Modelo Básico | Modelo Híbrido | Mejora |
-|---------|---------------|----------------|--------|
-| **Accuracy** | 62.5% | 65.8% | +3.3% |
-| **ROC-AUC** | 0.6821 | 0.7145 | +4.8% |
-| **F1-Score** | 0.64 | 0.66 | +3.1% |
-| **Features** | 37 | 55+ | +48% |
-| **Tiempo Entrenamiento** | 30-60 min | 60-120 min | +100% |
-| **Validación** | KFold | TimeSeriesSplit | Temporal |
-
-### Matriz de Confusión (Modelo Híbrido)
-
-```
-                 Predicted
-                 Away  Home
-   Actual Away   242    98
-   Actual Home   107   253
-
-Precisión por Clase:
-- Visitante (Away): 69.4%
-- Local (Home): 72.0%
-```
-
 ### Análisis de Confianza
 
 ```
@@ -652,7 +628,7 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 ```
 MIT License
 
-Copyright (c) 2025 [Tu Nombre]
+Copyright (c) 2025 [Gabriel Larrazabal]
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software")...
@@ -662,10 +638,9 @@ of this software and associated documentation files (the "Software")...
 
 ## 📧 Contacto
 
-**Autor:** [Tu Nombre]  
-**Email:** [tu@email.com]  
-**GitHub:** [@tu-usuario](https://github.com/tu-usuario)  
-**LinkedIn:** [Tu Perfil](https://linkedin.com/in/tu-perfil)
+**Autor:** [Gabriel Larrazabal]  
+**Email:** [gabolarrazabal13@gmail.com]  
+**GitHub:** [@GaboLarrazabal13](https://github.com/GaboLarrazabal13)  
 
 ---
 
