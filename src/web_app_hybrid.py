@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 import json
+import os
 
 # ============================================================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -26,8 +27,22 @@ st.set_page_config(
 # DATOS Y CONFIGURACIÓN
 # ============================================================================
 
-# URL de la API HÍBRIDA (cambiar según donde esté desplegada)
-API_URL = st.secrets.get("API_URL", "http://localhost:8001")
+# Al inicio del archivo, después de los imports
+import os
+
+# Configurar URL de la API
+if 'STREAMLIT_SHARING' in os.environ:
+    # En producción (Streamlit Cloud)
+    # Aquí tendrías que desplegar también la API en otro servicio
+    # Por ahora, usamos el scraping directo sin API
+    USE_API = False
+else:
+    # En desarrollo local
+    API_URL = st.secrets.get("API_URL", "http://localhost:8001")
+    USE_API = True
+
+# # URL de la API HÍBRIDA (cambiar según donde esté desplegada)
+# API_URL = st.secrets.get("API_URL", "http://localhost:8001")
 
 # Mapeo de equipos
 EQUIPOS_MLB = {
