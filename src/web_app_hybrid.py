@@ -286,7 +286,7 @@ def crear_gauge_confianza(confianza):
         title={'text': "Nivel de Confianza", 'font': {'size': 24}},
         number={'suffix': "%", 'font': {'size': 40}},
         gauge={
-            'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
+            'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "white"},
             'bar': {'color': "darkblue"},
             'bgcolor': "white",
             'borderwidth': 2,
