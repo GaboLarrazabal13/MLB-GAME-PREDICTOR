@@ -397,7 +397,7 @@ with st.sidebar:
     st.markdown("---")
     
     # Estado de la API
-    st.subheader("🔌 Estado del Sistema")
+    st.subheader("Estado del Sistema")
     
     api_ok, api_data = verificar_api()
     
@@ -407,12 +407,12 @@ with st.sidebar:
         
         model_type = api_data.get('model_type', 'unknown')
         if model_type == 'hybrid_optimized':
-            st.info("🔬 Modelo Híbrido")
+            st.info("Modelo Híbrido")
         
         info = obtener_info_modelo()
         if info:
             st.markdown("---")
-            st.subheader("📊 Información del Modelo")
+            st.subheader("Información del Modelo")
             st.metric("Modelo", info.get('nombre', 'N/A'))
             st.metric("Accuracy", f"{info.get('accuracy', 0)*100:.2f}%")
             st.metric("ROC-AUC", f"{info.get('roc_auc', 0):.4f}")
@@ -428,7 +428,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    st.subheader("⚙️ Configuración")
+    st.subheader("Configuración")
     nueva_url = st.text_input("URL de la API", value=API_URL)
     if nueva_url != API_URL:
         if st.button("Actualizar URL"):
@@ -440,7 +440,7 @@ with st.sidebar:
     st.subheader("📱 Navegación")
     pagina = st.radio(
         "Ir a:",
-        ["🎯 Predictor", "📜 Historial", "ℹ️ Acerca de"],
+        ["Predictor", "Historial", "ℹ️ Acerca de"],
         label_visibility="collapsed"
     )
 
@@ -448,7 +448,7 @@ with st.sidebar:
 # PÁGINA PRINCIPAL - PREDICTOR
 # ============================================================================
 
-if pagina == "🎯 Predictor":
+if pagina == "Predictor":
     
     # Header
     st.markdown('<div class="main-header">MLB Game Predictor</div>', unsafe_allow_html=True)
@@ -461,7 +461,7 @@ if pagina == "🎯 Predictor":
     
     # Formulario de predicción
     with st.form("prediction_form"):
-        st.subheader("📝 Datos del Partido")
+        st.subheader("Datos del Partido")
         
         col1, col2 = st.columns(2)
         
@@ -563,7 +563,7 @@ if pagina == "🎯 Predictor":
                 
                 st.markdown(f"""
                 <div class="winner-box">
-                    <h1 style="margin:0; font-size: 2.5rem;">🏆 GANADOR PREDICHO</h1>
+                    <h1 style="margin:0; font-size: 2.5rem;">GANADOR PREDICHO</h1>
                     <div style="margin:1rem 0;">
                         {ganador_logo}
                         <h2 style="display:inline; margin:0; font-size: 3rem; vertical-align: middle;">{ganador_nombre}</h2>
@@ -637,7 +637,7 @@ if pagina == "🎯 Predictor":
                 
                 if stats_detalladas:
                     st.markdown("---")
-                    st.markdown("## 📊 Estadísticas Detalladas de Jugadores")
+                    st.markdown("## Estadísticas Detalladas de Jugadores")
                     
                     # LANZADORES
                     st.markdown("### Lanzadores Iniciales")
@@ -804,11 +804,11 @@ if pagina == "🎯 Predictor":
 # PÁGINA - HISTORIAL
 # ============================================================================
 
-elif pagina == "📜 Historial":
-    st.title("📜 Historial de Predicciones")
+elif pagina == "Historial":
+    st.title("Historial de Predicciones")
     
     if 'historial' not in st.session_state or len(st.session_state.historial) == 0:
-        st.info("📋 No hay predicciones en el historial aún")
+        st.info("No hay predicciones en el historial aún")
     else:
         st.success(f"✅ {len(st.session_state.historial)} predicciones guardadas")
         
@@ -816,7 +816,7 @@ elif pagina == "📜 Historial":
         df = pd.DataFrame(st.session_state.historial)
         
         # Mostrar tabla con formato
-        st.markdown("### 📊 Predicciones Recientes")
+        st.markdown("### Predicciones Recientes")
         
         for idx, pred in enumerate(st.session_state.historial[:10]):  # Mostrar solo las 10 más recientes
             with st.expander(f" {pred['timestamp']} - {pred['home_team']} vs {pred['away_team']}", expanded=(idx==0)):
@@ -851,7 +851,7 @@ elif pagina == "📜 Historial":
         
         # Estadísticas del historial
         st.markdown("---")
-        st.subheader("📊 Estadísticas del Historial")
+        st.subheader("Estadísticas del Historial")
         
         col1, col2, col3 = st.columns(3)
         
@@ -871,7 +871,7 @@ elif pagina == "📜 Historial":
             )
         
         # Botón limpiar historial
-        if st.button("🗑️ Limpiar Historial", type="secondary"):
+        if st.button("Limpiar Historial", type="secondary"):
             st.session_state.historial = []
             st.rerun()
 
@@ -893,7 +893,7 @@ elif pagina == "ℹ️ Acerca de":
     MLB Game Predictor es un sistema de predicción de partidos de béisbol que utiliza 
     **Machine Learning con Modelo Híbrido** para analizar estadísticas de equipos y jugadores.
     
-    ### 🔬 Modelo Híbrido
+    ### Modelo Híbrido
     
     Este modelo combina **dos tipos de features** para mayor precisión:
     
@@ -910,7 +910,7 @@ elif pagina == "ℹ️ Acerca de":
        - Top 3 bateadores por OBP
        - Métricas avanzadas (ERA, WHIP, OPS, SLG)
     
-    ### 🎯 Características
+    ### Características
     
     - ✅ **Predicciones en tiempo real** con datos actualizados
     - ✅ **Logos oficiales de la MLB** para mejor visualización
@@ -919,9 +919,9 @@ elif pagina == "ℹ️ Acerca de":
     - ✅ **Historial de predicciones** con seguimiento
     - ✅ **Múltiples visualizaciones** interactivas
     - ✅ **Modelo híbrido optimizado** con XGBoost
-    
-    ### 📊 Modelo de Machine Learning
-    
+
+    ### Modelo de Machine Learning
+
     El modelo utiliza:
     - **XGBoost / Random Forest** optimizados
     - **~55 features híbridas** (temporales + scraping)
@@ -929,7 +929,7 @@ elif pagina == "ℹ️ Acerca de":
     - **Validación temporal** (TimeSeriesSplit)
     - **Optimización de hiperparámetros**
     
-    ### 🛠️ Tecnologías
+    ### Tecnologías
     
     - **Backend:** FastAPI + scikit-learn + XGBoost
     - **Scraping:** cloudscraper + BeautifulSoup
@@ -937,14 +937,14 @@ elif pagina == "ℹ️ Acerca de":
     - **Visualización:** Plotly
     - **Data:** Baseball-Reference.com + MLB API
     
-    ### 📝 Nota
+    ### Nota
     
     Las predicciones son estimaciones basadas en datos históricos y estadísticas actuales.
     No garantizan resultados futuros. El béisbol es un deporte impredecible.
     
     ---
     
-    ### 🚀 Cómo usar
+    ### Cómo usar
     
     1. Inicia la API híbrida:
 ```bash
