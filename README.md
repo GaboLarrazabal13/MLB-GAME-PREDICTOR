@@ -375,6 +375,10 @@ streamlit run web_app_hybrid.py
 
 #### Capturas de Pantalla
 
+#### App desplegada en Stramlit
+https://mlb-game-predictor-v2.streamlit.app/
+
+#### Capturas de Pantalla
 **Pantalla Principal:**
 ![Predictor](docs/screenshots/predictor.png)
 
