@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 import json
+import os
 
 # ============================================================================
 # CONFIGURACIÓN DE LA PÁGINA
