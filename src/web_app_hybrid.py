@@ -11,12 +11,21 @@ import plotly.express as px
 from datetime import datetime
 import json
 from PIL import Image
+import os
 
 # ============================================================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ============================================================================
-    
-favicon = Image.open("logo.png")
+# 1. Localizar la carpeta donde está este archivo (web_app_hybrid.py)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 2. Crear la ruta completa hacia el logo
+logo_path = os.path.join(current_dir, "logo.png")
+
+# 3. Intentar cargar la imagen, si no existe usar el emoji
+try:
+    favicon = Image.open(logo_path)
+except FileNotFoundError:
+    favicon = "⚾"
 
 st.set_page_config(
     page_title="MLB Game Predictor",
