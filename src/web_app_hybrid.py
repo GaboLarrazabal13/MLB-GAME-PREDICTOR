@@ -407,7 +407,7 @@ with st.sidebar:
         
         model_type = api_data.get('model_type', 'unknown')
         if model_type == 'hybrid_optimized':
-            st.info("🔬 Modelo Híbrido Optimizado")
+            st.info("🔬 Modelo Híbrido")
         
         info = obtener_info_modelo()
         if info:
@@ -451,7 +451,7 @@ with st.sidebar:
 if pagina == "🎯 Predictor":
     
     # Header
-    st.markdown('<div class="main-header">⚾ MLB Game Predictor</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">MLB Game Predictor</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Predicciones con Modelo Híbrido</div>', unsafe_allow_html=True)
     
     if not api_ok:
@@ -466,7 +466,7 @@ if pagina == "🎯 Predictor":
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("#### 🏠 Equipo Local")
+            st.markdown("#### Equipo Local")
             
             # CAMBIO 2: Selector con logos
             home_team_options = []
@@ -494,7 +494,7 @@ if pagina == "🎯 Predictor":
             )
         
         with col2:
-            st.markdown("#### ✈️ Equipo Visitante")
+            st.markdown("#### Equipo Visitante")
             
             # CAMBIO 2: Selector con logos
             away_team_options = []
@@ -526,7 +526,7 @@ if pagina == "🎯 Predictor":
         st.markdown("---")
         
         submit_button = st.form_submit_button(
-            "🔮 Realizar Predicción",
+            "Realizar Predicción",
             use_container_width=True,
             type="primary"
         )
@@ -550,7 +550,7 @@ if pagina == "🎯 Predictor":
                 st.success("✅ Predicción realizada exitosamente!")
                 
                 st.markdown("---")
-                st.markdown("## 🎯 Resultado de la Predicción")
+                st.markdown("## Resultado de la Predicción")
                 
                 ganador = resultado.get('ganador')
                 prob_home = resultado.get('prob_home', 0)
@@ -640,7 +640,7 @@ if pagina == "🎯 Predictor":
                     st.markdown("## 📊 Estadísticas Detalladas de Jugadores")
                     
                     # LANZADORES
-                    st.markdown("### ⚾ Lanzadores Iniciales")
+                    st.markdown("### Lanzadores Iniciales")
                     
                     col1, col2 = st.columns(2)
                     
@@ -720,7 +720,7 @@ if pagina == "🎯 Predictor":
                     
                     # BATEADORES
                     st.markdown("---")
-                    st.markdown("### 🏏 Top 3 Bateadores")
+                    st.markdown("### Top 3 Bateadores")
                     
                     col1, col2 = st.columns(2)
                     
@@ -819,7 +819,7 @@ elif pagina == "📜 Historial":
         st.markdown("### 📊 Predicciones Recientes")
         
         for idx, pred in enumerate(st.session_state.historial[:10]):  # Mostrar solo las 10 más recientes
-            with st.expander(f"🎯 {pred['timestamp']} - {pred['home_team']} vs {pred['away_team']}", expanded=(idx==0)):
+            with st.expander(f" {pred['timestamp']} - {pred['home_team']} vs {pred['away_team']}", expanded=(idx==0)):
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
@@ -888,7 +888,7 @@ elif pagina == "ℹ️ Acerca de":
         st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", width=200)
     
     st.markdown("""
-    ## 🏟️ ¿Qué es MLB Game Predictor Hybrid?
+    ## ¿Qué es MLB Game Predictor Hybrid?
     
     MLB Game Predictor es un sistema de predicción de partidos de béisbol que utiliza 
     **Machine Learning con Modelo Híbrido** para analizar estadísticas de equipos y jugadores.
@@ -925,7 +925,7 @@ elif pagina == "ℹ️ Acerca de":
     El modelo utiliza:
     - **XGBoost / Random Forest** optimizados
     - **~55 features híbridas** (temporales + scraping)
-    - **Accuracy de ~63-67%** en datos de prueba
+    - **Accuracy de ~58.50%** en datos de prueba
     - **Validación temporal** (TimeSeriesSplit)
     - **Optimización de hiperparámetros**
     
@@ -956,17 +956,13 @@ elif pagina == "ℹ️ Acerca de":
     3. Ingresa los nombres de los lanzadores
     
     4. ¡Haz la predicción y revisa los detalles!
-    
-    ---
-    
-    **Desarrollado con ❤️ para la comunidad de ML y béisbol**
-    
+        
     Logos © Major League Baseball
     """)
     
     # Mostrar todos los logos en una cuadrícula
     st.markdown("---")
-    st.markdown("### 🏆 Equipos de la MLB")
+    st.markdown("### Equipos de la MLB")
     
     # Crear cuadrícula de logos
     cols_per_row = 5
