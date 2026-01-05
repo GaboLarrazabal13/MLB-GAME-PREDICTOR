@@ -72,11 +72,11 @@ EQUIPOS_CODES = list(EQUIPOS_MLB.keys())
 EQUIPOS_NAMES = list(EQUIPOS_MLB.values())
 
 # URLs de Logos
-MLB_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/thumb/a/a6/Major_League_Baseball_logo.svg/1200px-Major_League_Baseball_logo.svg.png"
+MLB_LOGO_URL = "https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
 
 def get_team_logo_url(team_code):
-    """Retorna la URL del logo del equipo (usando la CDN de ESPN que es confiable)"""
-    return f"https://a.espncdn.com/i/teamlogos/mlb/500/{team_code.lower()}.png"
+    """Retorna la URL del logo del equipo usando la API oficial de MLB"""
+    return f"https://www.mlbstatic.com/team-logos/{team_code}.svg"
 
 # ============================================================================
 # ESTILOS CSS
@@ -275,9 +275,9 @@ def guardar_prediccion_local(home_team, away_team, home_pitcher, away_pitcher, y
 
 with st.sidebar:
     # --- MODIFICACIÓN: Logo MLB al lado del Título ---
-    col_l1, col_l2 = st.columns([1, 4])
+    col_l1, col_l2 = st.columns([1, 3])
     with col_l1:
-        st.image(MLB_LOGO_URL, width=50)
+        st.image(MLB_LOGO_URL, width=45)
     with col_l2:
         st.title("MLB Predictor")
     
@@ -329,17 +329,17 @@ if pagina == "🎯 Predictor":
         
         with col1:
             st.markdown("#### 🏠 Equipo Local")
-            home_team_display = st.selectbox("Selecciona equipo local", EQUIPOS_NAMES, key="home_display")
+            home_team_display = st.selectbox("Selecciona equipo local", EQUIPOS_NAMES, key="sb_home")
             home_team = EQUIPOS_CODES[EQUIPOS_NAMES.index(home_team_display)]
             
             # --- MODIFICACIÓN: Mostrar Logo del Equipo Local ---
-            st.image(get_team_logo_url(home_team), width=80)
+            st.image(get_team_logo_url(home_team), width=100)
             
             home_pitcher = st.text_input("Lanzador Local", placeholder="Ej: Bello, Kershaw, Cole...", key="home_pitcher")
         
         with col2:
             st.markdown("#### ✈️ Equipo Visitante")
-            away_team_display = st.selectbox("Selecciona equipo visitante", EQUIPOS_NAMES, key="away_display")
+            away_team_display = st.selectbox("Selecciona equipo visitante", EQUIPOS_NAMES, key="sb_away")
             away_team = EQUIPOS_CODES[EQUIPOS_NAMES.index(away_team_display)]
             
             # --- MODIFICACIÓN: Mostrar Logo del Equipo Visitante ---
