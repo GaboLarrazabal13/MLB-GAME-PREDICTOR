@@ -11,7 +11,7 @@ import plotly.express as px
 from datetime import datetime
 import json
 import os
-
+from PIL import Image
 # ============================================================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ============================================================================
