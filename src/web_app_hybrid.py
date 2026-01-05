@@ -10,7 +10,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 import json
-import os
 
 # ============================================================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -27,60 +26,62 @@ st.set_page_config(
 # DATOS Y CONFIGURACIÓN
 # ============================================================================
 
-# Al inicio del archivo, después de los imports
-import os
+# URL de la API HÍBRIDA (cambiar según donde esté desplegada)
+API_URL = st.secrets.get("API_URL", "https://mlb-game-predictor.onrender.com")
 
-# Configurar URL de la API
-if 'STREAMLIT_SHARING' in os.environ:
-    # En producción (Streamlit Cloud)
-    # Aquí tendrías que desplegar también la API en otro servicio
-    # Por ahora, usamos el scraping directo sin API
-    USE_API = False
-else:
-    # En desarrollo local
-    API_URL = st.secrets.get("API_URL", "https://mlb-game-predictor.onrender.com")
-    USE_API = True
-
-# # URL de la API HÍBRIDA (cambiar según donde esté desplegada)
-# API_URL = st.secrets.get("API_URL", "http://localhost:8001")
-
-# Mapeo de equipos
+# Mapeo de equipos CON LOGOS
 EQUIPOS_MLB = {
-    'ARI': '🔶 Arizona Diamondbacks',
-    'ATL': '🔴 Atlanta Braves',
-    'BAL': '🟠 Baltimore Orioles',
-    'BOS': '🔴 Boston Red Sox',
-    'CHC': '🔵 Chicago Cubs',
-    'CHW': '⚫ Chicago White Sox',
-    'CIN': '🔴 Cincinnati Reds',
-    'CLE': '🔴 Cleveland Guardians',
-    'COL': '🟣 Colorado Rockies',
-    'DET': '🔵 Detroit Tigers',
-    'HOU': '🟠 Houston Astros',
-    'KCR': '🔵 Kansas City Royals',
-    'LAA': '🔴 Los Angeles Angels',
-    'LAD': '🔵 Los Angeles Dodgers',
-    'MIA': '🔵 Miami Marlins',
-    'MIL': '🟡 Milwaukee Brewers',
-    'MIN': '🔴 Minnesota Twins',
-    'NYM': '🔵 New York Mets',
-    'NYY': '🔵 New York Yankees',
-    'OAK': '🟢 Oakland Athletics',
-    'PHI': '🔴 Philadelphia Phillies',
-    'PIT': '🟡 Pittsburgh Pirates',
-    'SDP': '🟤 San Diego Padres',
-    'SEA': '⚪ Seattle Mariners',
-    'SFG': '🟠 San Francisco Giants',
-    'STL': '🔴 St. Louis Cardinals',
-    'TBR': '🔵 Tampa Bay Rays',
-    'TEX': '🔴 Texas Rangers',
-    'TOR': '🔵 Toronto Blue Jays',
-    'WSN': '🔴 Washington Nationals'
+    'ARI': {'nombre': 'Arizona Diamondbacks', 'logo': 'https://www.mlbstatic.com/team-logos/109.svg'},
+    'ATL': {'nombre': 'Atlanta Braves', 'logo': 'https://www.mlbstatic.com/team-logos/144.svg'},
+    'BAL': {'nombre': 'Baltimore Orioles', 'logo': 'https://www.mlbstatic.com/team-logos/110.svg'},
+    'BOS': {'nombre': 'Boston Red Sox', 'logo': 'https://www.mlbstatic.com/team-logos/111.svg'},
+    'CHC': {'nombre': 'Chicago Cubs', 'logo': 'https://www.mlbstatic.com/team-logos/112.svg'},
+    'CHW': {'nombre': 'Chicago White Sox', 'logo': 'https://www.mlbstatic.com/team-logos/145.svg'},
+    'CIN': {'nombre': 'Cincinnati Reds', 'logo': 'https://www.mlbstatic.com/team-logos/113.svg'},
+    'CLE': {'nombre': 'Cleveland Guardians', 'logo': 'https://www.mlbstatic.com/team-logos/114.svg'},
+    'COL': {'nombre': 'Colorado Rockies', 'logo': 'https://www.mlbstatic.com/team-logos/115.svg'},
+    'DET': {'nombre': 'Detroit Tigers', 'logo': 'https://www.mlbstatic.com/team-logos/116.svg'},
+    'HOU': {'nombre': 'Houston Astros', 'logo': 'https://www.mlbstatic.com/team-logos/117.svg'},
+    'KCR': {'nombre': 'Kansas City Royals', 'logo': 'https://www.mlbstatic.com/team-logos/118.svg'},
+    'LAA': {'nombre': 'Los Angeles Angels', 'logo': 'https://www.mlbstatic.com/team-logos/108.svg'},
+    'LAD': {'nombre': 'Los Angeles Dodgers', 'logo': 'https://www.mlbstatic.com/team-logos/119.svg'},
+    'MIA': {'nombre': 'Miami Marlins', 'logo': 'https://www.mlbstatic.com/team-logos/146.svg'},
+    'MIL': {'nombre': 'Milwaukee Brewers', 'logo': 'https://www.mlbstatic.com/team-logos/158.svg'},
+    'MIN': {'nombre': 'Minnesota Twins', 'logo': 'https://www.mlbstatic.com/team-logos/142.svg'},
+    'NYM': {'nombre': 'New York Mets', 'logo': 'https://www.mlbstatic.com/team-logos/121.svg'},
+    'NYY': {'nombre': 'New York Yankees', 'logo': 'https://www.mlbstatic.com/team-logos/147.svg'},
+    'OAK': {'nombre': 'Oakland Athletics', 'logo': 'https://www.mlbstatic.com/team-logos/133.svg'},
+    'PHI': {'nombre': 'Philadelphia Phillies', 'logo': 'https://www.mlbstatic.com/team-logos/143.svg'},
+    'PIT': {'nombre': 'Pittsburgh Pirates', 'logo': 'https://www.mlbstatic.com/team-logos/134.svg'},
+    'SDP': {'nombre': 'San Diego Padres', 'logo': 'https://www.mlbstatic.com/team-logos/135.svg'},
+    'SEA': {'nombre': 'Seattle Mariners', 'logo': 'https://www.mlbstatic.com/team-logos/136.svg'},
+    'SFG': {'nombre': 'San Francisco Giants', 'logo': 'https://www.mlbstatic.com/team-logos/137.svg'},
+    'STL': {'nombre': 'St. Louis Cardinals', 'logo': 'https://www.mlbstatic.com/team-logos/138.svg'},
+    'TBR': {'nombre': 'Tampa Bay Rays', 'logo': 'https://www.mlbstatic.com/team-logos/139.svg'},
+    'TEX': {'nombre': 'Texas Rangers', 'logo': 'https://www.mlbstatic.com/team-logos/140.svg'},
+    'TOR': {'nombre': 'Toronto Blue Jays', 'logo': 'https://www.mlbstatic.com/team-logos/141.svg'},
+    'WSN': {'nombre': 'Washington Nationals', 'logo': 'https://www.mlbstatic.com/team-logos/120.svg'}
 }
 
 # Códigos para selector
 EQUIPOS_CODES = list(EQUIPOS_MLB.keys())
-EQUIPOS_NAMES = list(EQUIPOS_MLB.values())
+
+# ============================================================================
+# FUNCIONES AUXILIARES PARA LOGOS
+# ============================================================================
+
+def get_team_logo_html(team_code, size=30):
+    """Retorna HTML con el logo del equipo"""
+    if team_code in EQUIPOS_MLB:
+        logo_url = EQUIPOS_MLB[team_code]['logo']
+        return f'<img src="{logo_url}" width="{size}" style="vertical-align: middle; margin-right: 8px;">'
+    return ''
+
+def get_team_display_name(team_code):
+    """Retorna el nombre completo del equipo"""
+    if team_code in EQUIPOS_MLB:
+        return EQUIPOS_MLB[team_code]['nombre']
+    return team_code
 
 # ============================================================================
 # ESTILOS CSS
@@ -100,6 +101,11 @@ st.markdown("""
         text-align: center;
         color: #666;
         margin-bottom: 2rem;
+    }
+    .team-logo-inline {
+        vertical-align: middle;
+        margin-right: 8px;
+        margin-left: 8px;
     }
     .prediction-box {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -158,6 +164,11 @@ st.markdown("""
         font-size: 0.8rem;
         font-weight: bold;
     }
+    /* Estilos para selectbox con logos */
+    .stSelectbox > div > div {
+        display: flex;
+        align-items: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -165,7 +176,7 @@ st.markdown("""
 # FUNCIONES DE UTILIDAD
 # ============================================================================
 
-@st.cache_data(ttl=300)  # Cache por 5 minutos
+@st.cache_data(ttl=300)
 def verificar_api():
     """Verifica que la API esté disponible"""
     try:
@@ -219,7 +230,11 @@ def hacer_prediccion_detallada(home_team, away_team, home_pitcher, away_pitcher,
 
 
 def crear_grafico_probabilidades(prob_home, prob_away, home_team, away_team):
-    """Crea gráfico de barras de probabilidades"""
+    """Crea gráfico de barras de probabilidades con logos"""
+    # Obtener nombres de equipos
+    home_name = get_team_display_name(home_team)
+    away_name = get_team_display_name(away_team)
+    
     fig = go.Figure()
     
     fig.add_trace(go.Bar(
@@ -289,55 +304,6 @@ def crear_gauge_confianza(confianza):
     return fig
 
 
-def mostrar_stats_lanzador(pitcher_stats, titulo):
-    """Muestra las estadísticas de un lanzador"""
-    if pitcher_stats:
-        st.markdown(f"### {titulo}")
-        st.markdown(f"**Nombre:** {pitcher_stats.get('nombre', 'N/A')}")
-        
-        col1, col2, col3, col4, col5 = st.columns(5)
-        with col1:
-            st.metric("ERA", f"{pitcher_stats.get('ERA', 0):.2f}")
-        with col2:
-            st.metric("WHIP", f"{pitcher_stats.get('WHIP', 0):.3f}")
-        with col3:
-            st.metric("H9", f"{pitcher_stats.get('H9', 0):.2f}")
-        with col4:
-            st.metric("Victorias", int(pitcher_stats.get('W', 0)))
-        with col5:
-            st.metric("Derrotas", int(pitcher_stats.get('L', 0)))
-    else:
-        st.warning(f"⚠️ {titulo}: No se encontraron estadísticas")
-
-
-def mostrar_stats_bateadores(batters_list, titulo):
-    """Muestra las estadísticas de los top 3 bateadores"""
-    if batters_list and len(batters_list) > 0:
-        st.markdown(f"### {titulo}")
-        
-        for i, batter in enumerate(batters_list, 1):
-            with st.expander(f"#{i} - {batter.get('nombre', 'N/A')}", expanded=(i==1)):
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("BA", f"{batter.get('BA', 0):.3f}")
-                    st.metric("OBP", f"{batter.get('OBP', 0):.3f}")
-                
-                with col2:
-                    st.metric("SLG", f"{batter.get('SLG', 0):.3f}")
-                    st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
-                
-                with col3:
-                    st.metric("HR", int(batter.get('HR', 0)))
-                    st.metric("RBI", int(batter.get('RBI', 0)))
-                
-                with col4:
-                    st.metric("R", int(batter.get('R', 0)))
-                    st.metric("AB", int(batter.get('AB', 0)))
-    else:
-        st.warning(f"⚠️ {titulo}: No se encontraron estadísticas")
-
-
 def crear_comparacion_lanzadores(home_pitcher, away_pitcher):
     """Crea gráfico de comparación de lanzadores"""
     if not home_pitcher or not away_pitcher:
@@ -403,7 +369,6 @@ def guardar_prediccion_local(home_team, away_team, home_pitcher, away_pitcher, y
     
     st.session_state.historial.insert(0, prediccion)
     
-    # Mantener solo las últimas 50
     if len(st.session_state.historial) > 50:
         st.session_state.historial = st.session_state.historial[:50]
 
@@ -413,9 +378,10 @@ def guardar_prediccion_local(home_team, away_team, home_pitcher, away_pitcher, y
 # ============================================================================
 
 with st.sidebar:
-    st.image("https://img.icons8.com/color/96/000000/baseball.png", width=80)
-    st.title(" MLB Predictor")
-    st.markdown('<span class="hybrid-badge">🔬MODEL V2.0</span>', unsafe_allow_html=True)
+    # CAMBIO 1: Logo de MLB en lugar del bat
+    st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", width=120)
+    st.title("MLB Predictor")
+    st.markdown('<span class="hybrid-badge">🔬 MODEL V2.0</span>', unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -428,12 +394,10 @@ with st.sidebar:
         st.success("✅ API Conectada")
         st.success("✅ Modelo Cargado")
         
-        # Indicar tipo de modelo
         model_type = api_data.get('model_type', 'unknown')
         if model_type == 'hybrid_optimized':
             st.info("🔬 Modelo Híbrido Optimizado")
         
-        # Info del modelo
         info = obtener_info_modelo()
         if info:
             st.markdown("---")
@@ -443,7 +407,6 @@ with st.sidebar:
             st.metric("ROC-AUC", f"{info.get('roc_auc', 0):.4f}")
             st.metric("Features", info.get('n_features', 0))
             
-            # Info adicional del modelo híbrido
             if 'validacion_temporal' in info:
                 if info['validacion_temporal']:
                     st.caption("✅ Validación Temporal Activada")
@@ -454,9 +417,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Configuración
     st.subheader("⚙️ Configuración")
-    
     nueva_url = st.text_input("URL de la API", value=API_URL)
     if nueva_url != API_URL:
         if st.button("Actualizar URL"):
@@ -465,7 +426,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Navegación
     st.subheader("📱 Navegación")
     pagina = st.radio(
         "Ir a:",
@@ -496,12 +456,25 @@ if pagina == "🎯 Predictor":
         
         with col1:
             st.markdown("#### 🏠 Equipo Local")
-            home_team_display = st.selectbox(
+            
+            # CAMBIO 2: Selector con logos
+            home_team_options = []
+            for code in EQUIPOS_CODES:
+                nombre = EQUIPOS_MLB[code]['nombre']
+                home_team_options.append(f"{code} - {nombre}")
+            
+            home_team_selection = st.selectbox(
                 "Selecciona equipo local",
-                EQUIPOS_NAMES,
+                home_team_options,
                 key="home_display"
             )
-            home_team = EQUIPOS_CODES[EQUIPOS_NAMES.index(home_team_display)]
+            home_team = home_team_selection.split(" - ")[0]
+            
+            # Mostrar logo del equipo seleccionado
+            st.markdown(
+                get_team_logo_html(home_team, 50) + f"<b>{get_team_display_name(home_team)}</b>",
+                unsafe_allow_html=True
+            )
             
             home_pitcher = st.text_input(
                 "Lanzador Local",
@@ -511,12 +484,25 @@ if pagina == "🎯 Predictor":
         
         with col2:
             st.markdown("#### ✈️ Equipo Visitante")
-            away_team_display = st.selectbox(
+            
+            # CAMBIO 2: Selector con logos
+            away_team_options = []
+            for code in EQUIPOS_CODES:
+                nombre = EQUIPOS_MLB[code]['nombre']
+                away_team_options.append(f"{code} - {nombre}")
+            
+            away_team_selection = st.selectbox(
                 "Selecciona equipo visitante",
-                EQUIPOS_NAMES,
+                away_team_options,
                 key="away_display"
             )
-            away_team = EQUIPOS_CODES[EQUIPOS_NAMES.index(away_team_display)]
+            away_team = away_team_selection.split(" - ")[0]
+            
+            # Mostrar logo del equipo seleccionado
+            st.markdown(
+                get_team_logo_html(away_team, 50) + f"<b>{get_team_display_name(away_team)}</b>",
+                unsafe_allow_html=True
+            )
             
             away_pitcher = st.text_input(
                 "Lanzador Visitante",
@@ -529,7 +515,7 @@ if pagina == "🎯 Predictor":
         st.markdown("---")
         
         submit_button = st.form_submit_button(
-            " Realizar Predicción",
+            "🔮 Realizar Predicción",
             use_container_width=True,
             type="primary"
         )
@@ -548,12 +534,10 @@ if pagina == "🎯 Predictor":
                 )
             
             if exito:
-                # Guardar en historial
                 guardar_prediccion_local(home_team, away_team, home_pitcher, away_pitcher, year, resultado)
                 
                 st.success("✅ Predicción realizada exitosamente!")
                 
-                # Mostrar resultado
                 st.markdown("---")
                 st.markdown("## 🎯 Resultado de la Predicción")
                 
@@ -562,28 +546,41 @@ if pagina == "🎯 Predictor":
                 prob_away = resultado.get('prob_away', 0)
                 confianza = resultado.get('confianza', 0)
                 
-                # Ganador destacado
-                ganador_nombre = EQUIPOS_MLB.get(ganador, ganador)
+                # CAMBIO 3: Ganador con logo
+                ganador_nombre = get_team_display_name(ganador)
+                ganador_logo = get_team_logo_html(ganador, 60)
+                
                 st.markdown(f"""
                 <div class="winner-box">
                     <h1 style="margin:0; font-size: 2.5rem;">🏆 GANADOR PREDICHO</h1>
-                    <h2 style="margin:0.5rem 0 0 0; font-size: 3rem;">{ganador_nombre}</h2>
+                    <div style="margin:1rem 0;">
+                        {ganador_logo}
+                        <h2 style="display:inline; margin:0; font-size: 3rem; vertical-align: middle;">{ganador_nombre}</h2>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Métricas
+                # Métricas con logos
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
+                    st.markdown(
+                        get_team_logo_html(home_team, 30) + f"**Probabilidad {home_team}**",
+                        unsafe_allow_html=True
+                    )
                     st.metric(
-                        f"Probabilidad {home_team}",
+                        "",
                         f"{prob_home*100:.1f}%",
                         delta=f"{(prob_home-0.5)*100:+.1f}% vs 50%"
                     )
                 
                 with col2:
+                    st.markdown(
+                        get_team_logo_html(away_team, 30) + f"**Probabilidad {away_team}**",
+                        unsafe_allow_html=True
+                    )
                     st.metric(
-                        f"Probabilidad {away_team}",
+                        "",
                         f"{prob_away*100:.1f}%",
                         delta=f"{(prob_away-0.5)*100:+.1f}% vs 50%"
                     )
@@ -606,10 +603,7 @@ if pagina == "🎯 Predictor":
                         conf_emoji = "🤷"
                         conf_text = "BAJA"
                     
-                    st.metric(
-                        "Confianza",
-                        f"{confianza*100:.1f}%"
-                    )
+                    st.metric("Confianza", f"{confianza*100:.1f}%")
                     st.markdown(f'<p class="{conf_class}">{conf_emoji} {conf_text}</p>', unsafe_allow_html=True)
                 
                 # Gráficos de probabilidades
@@ -969,3 +963,4 @@ elif pagina == "ℹ️ Acerca de":
     - Los **modelos ensemble** mejoran la robustez
     - Las **features derivadas** facilitan el aprendizaje del modelo
     """)
+
