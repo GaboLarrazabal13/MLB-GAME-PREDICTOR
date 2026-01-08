@@ -2,7 +2,7 @@
 
 # MLB Game Predictor V3 - Hybrid Intelligence
 
-Sistema avanzado de predicción para partidos de la Major League Baseball (MLB) basado en Machine Learning. Esta versión utiliza un modelo híbrido que integra estadísticas históricas de 20 años con análisis de matchups en tiempo real mediante el cálculo de Super Features.
+Sistema avanzado de predicción para partidos de la Major League Baseball (MLB) basado en Machine Learning. Esta versión utiliza un modelo híbrido que integra estadísticas históricas con análisis de matchups en tiempo real mediante el cálculo de Super Features.
 
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
@@ -31,7 +31,7 @@ Sistema avanzado de predicción para partidos de la Major League Baseball (MLB) 
 
 ### Análisis de Matchups (Super Features)
 
-La V3 introduce tres métricas propietarias que analizan el enfrentamiento directo entre jugadores:
+La V3 introduce métricas propietarias que analizan el enfrentamiento directo entre jugadores:
 
 * **Neutralización**: Evalúa la capacidad del lanzador para dominar el contacto basándose en su WHIP frente al OPS del lineup rival.
 * **Resistencia**: Mide la durabilidad del abridor (Calidad de entradas) frente al poder ofensivo acumulado del equipo contrario.
@@ -133,7 +133,7 @@ python train_model_hybrid_v3.py
 Inicia el backend que procesará las solicitudes de predicción:
 
 ```bash
-uvicorn src.api_hybrid_v3:app --host 0.0.0.0 --port 8002
+uvicorn src.api_hybrid_v3:app --host 0.0.0.0 --port 8000
 
 ```
 
@@ -158,16 +158,7 @@ streamlit run src/web_app_v3.py
 * **Métricas**:
 * Accuracy: ~60.7%
 * ROC-AUC: 0.71
-* Tasa de acierto en Alta Confianza: >78%
-
-
-
-### Variables de Mayor Impacto
-
-1. Diferencial de ERA entre lanzadores.
-2. Índice de Neutralización (Matchup-based).
-3. Rendimiento en los últimos 10 juegos (L10).
-4. Historial Head-to-Head (H2H).
+* Tasa de acierto en Alta Confianza: >68%
 
 ---
 
@@ -238,7 +229,7 @@ mlb-game-predictor-v3/
 
 ## Tecnologías Utilizadas
 
-* **Core**: Python 3.10+
+* **Core**: Python 3.12+
 * **Machine Learning**: XGBoost, Scikit-learn, Pandas, NumPy.
 * **Web Scraping**: Cloudscraper, BeautifulSoup4.
 * **API & Web**: FastAPI, Uvicorn, Streamlit.

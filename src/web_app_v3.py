@@ -769,7 +769,6 @@ elif pagina == " Acerca de":
             padding: 2rem 0;
         }
         .info-card {
-            background: #ffffff;
             padding: 1.5rem;
             border-radius: 0.8rem;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
