@@ -510,7 +510,7 @@ if pagina == " Predictor":
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    col1, col2, col3 = st.columns(3)
+                    col1, col2 = st.columns(2)
                     
                     with col1:
                         st.markdown(
@@ -525,8 +525,7 @@ if pagina == " Predictor":
                             unsafe_allow_html=True
                         )
                         st.metric("", f"{prob_away*100:.1f}%", delta=f"{(prob_away-0.5)*100:+.1f}% vs 50%")
-                    
-                    with col3:
+
                         if confianza > 0.70:
                             conf_class = "confidence-high"
                             conf_emoji = ""
@@ -546,6 +545,8 @@ if pagina == " Predictor":
                         
                         st.metric("Confianza", f"{confianza*100:.1f}%")
                         st.markdown(f'<p class="{conf_class}">{conf_emoji} {conf_text}</p>', unsafe_allow_html=True)
+                    
+                    st.markdown("---")
                     
                     col1, col2 = st.columns(2)
                     
