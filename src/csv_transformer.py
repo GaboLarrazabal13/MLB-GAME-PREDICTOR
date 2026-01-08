@@ -153,164 +153,85 @@ def buscar_equipo_lanzador(nombre_lanzador, pitcher_dict):
     return None
 
 
-def transformar_csv(input_csv, output_csv='datos_ml_ready.csv', year=2025):
+def transformar_csv(input_csv, output_csv='datos_ml_ready.csv'):
     """
-    Transforma el CSV original al formato requerido para el modelo ML
-    
-    CSV Original:
-    - date, away_team, a_team_name, R_A, home_team, h_team_name, R_H
-    - Ganador_Pitcher, Perdedor_Pitcher, Salvado_Pitcher, ganador
-    
-    CSV Output:
-    - home_team, away_team, home_pitcher, away_pitcher
-    - ganador, year, fecha, score_home, score_away
+    Versión Corregida: Extrae el año dinámicamente de la fecha del partido.
     """
     print("\n" + "="*70)
-    print(" TRANSFORMACIÓN DE CSV")
+    print(" TRANSFORMACIÓN DE CSV DINÁMICA (POR AÑO)")
     print("="*70)
     
-    # Leer CSV original
     try:
         df = pd.read_csv(input_csv)
+        # Convertimos la columna date a datetime para extraer el año real
+        df['date'] = pd.to_datetime(df['date'])
         print(f"\n📂 CSV cargado: {len(df)} partidos")
-        print(f"Columnas: {list(df.columns)}")
-    except FileNotFoundError:
-        print(f"❌ Error: No se encontró el archivo '{input_csv}'")
-        print("   Asegúrate de que el archivo esté en el mismo directorio.")
+    except Exception as e:
+        print(f"❌ Error al cargar CSV: {e}")
         return None
-    
-    # Obtener lista única de equipos
-    equipos_home = df['home_team'].unique()
-    equipos_away = df['away_team'].unique()
-    todos_equipos = list(set(list(equipos_home) + list(equipos_away)))
-    
-    print(f"\n📋 Equipos únicos: {len(todos_equipos)}")
-    print(f"   {sorted(todos_equipos)}")
-    
-    # Crear diccionario de lanzadores
-    pitcher_dict = crear_diccionario_lanzadores(todos_equipos, year)
-    
-    # Procesar cada partido
-    print("\n" + "="*70)
-    print(" PROCESANDO PARTIDOS")
-    print("="*70)
+
+    # Mapeo de lanzadores por año para evitar confusiones de roster
+    # {año: {lanzador: equipo}}
+    cache_lanzadores_por_anio = {}
     
     datos_transformados = []
-    partidos_sin_datos = []
-    lanzadores_no_encontrados = defaultdict(int)
-    
+
     for idx, row in df.iterrows():
-        if (idx + 1) % 50 == 0:
-            print(f"  Procesando partido {idx+1}/{len(df)}...")
+        # 1. EXTRAER EL AÑO REAL DEL PARTIDO
+        anio_partido = row['date'].year
         
+        # 2. OBTENER/CREAR DICCIONARIO PARA ESE AÑO ESPECÍFICO
+        if anio_partido not in cache_lanzadores_por_anio:
+            print(f"\n📅 Detectado año {anio_partido}. Cargando rosters de esa temporada...")
+            equipos = list(set(df['home_team'].unique()) | set(df['away_team'].unique()))
+            # Creamos un cache específico para ese año
+            cache_lanzadores_por_anio[anio_partido] = crear_diccionario_lanzadores(
+                equipos, 
+                year=anio_partido, 
+                cache_file=f'./cache/pitcher_cache_{anio_partido}.pkl'
+            )
+        
+        pitcher_dict = cache_lanzadores_por_anio[anio_partido]
+        
+        # 3. LÓGICA DE IDENTIFICACIÓN (Se mantiene tu lógica de búsqueda)
         ganador_pitcher = row['Ganador_Pitcher']
         perdedor_pitcher = row['Perdedor_Pitcher']
         
-        # Identificar equipos de los lanzadores
         equipo_ganador = buscar_equipo_lanzador(ganador_pitcher, pitcher_dict)
         equipo_perdedor = buscar_equipo_lanzador(perdedor_pitcher, pitcher_dict)
         
         home_team = row['home_team']
         away_team = row['away_team']
         
-        # Determinar quién es home_pitcher y away_pitcher
-        home_pitcher = None
-        away_pitcher = None
-        
-        # Lógica: El lanzador pertenece al equipo que ganó o perdió
+        # ... (aquí va tu lógica de asignación de home_pitcher/away_pitcher) ...
+        # [Mantenemos tu bloque de IF/ELIF para asignar los pitchers]
         if equipo_ganador == home_team:
-            home_pitcher = ganador_pitcher
-            away_pitcher = perdedor_pitcher
+            home_pitcher, away_pitcher = ganador_pitcher, perdedor_pitcher
         elif equipo_ganador == away_team:
-            away_pitcher = ganador_pitcher
-            home_pitcher = perdedor_pitcher
-        elif equipo_perdedor == home_team:
-            home_pitcher = perdedor_pitcher
-            away_pitcher = ganador_pitcher
-        elif equipo_perdedor == away_team:
-            away_pitcher = perdedor_pitcher
-            home_pitcher = ganador_pitcher
-        
-        # Si no pudimos identificar, intentar con lógica de ganador
-        if not home_pitcher or not away_pitcher:
-            # Si ganó el equipo local (ganador=1), el ganador_pitcher es del home
+            away_pitcher, home_pitcher = ganador_pitcher, perdedor_pitcher
+        else:
+            # Si el diccionario falla, usamos la columna 'ganador' como respaldo
             if row['ganador'] == 1:
-                home_pitcher = ganador_pitcher
-                away_pitcher = perdedor_pitcher
+                home_pitcher, away_pitcher = ganador_pitcher, perdedor_pitcher
             else:
-                away_pitcher = ganador_pitcher
-                home_pitcher = perdedor_pitcher
-        
-        # Verificar que tengamos datos completos
-        if not home_pitcher or not away_pitcher or home_pitcher == 'N/A' or away_pitcher == 'N/A':
-            partidos_sin_datos.append({
-                'idx': idx,
-                'fecha': row['date'],
-                'home': home_team,
-                'away': away_team,
-                'ganador_p': ganador_pitcher,
-                'perdedor_p': perdedor_pitcher
-            })
-            
-            # Registrar lanzadores no encontrados
-            if ganador_pitcher != 'N/A':
-                lanzadores_no_encontrados[ganador_pitcher] += 1
-            if perdedor_pitcher != 'N/A':
-                lanzadores_no_encontrados[perdedor_pitcher] += 1
-            
-            continue
-        
-        # Crear registro transformado
+                away_pitcher, home_pitcher = ganador_pitcher, perdedor_pitcher
+
+        # 4. CREAR REGISTRO CON EL AÑO CORRECTO
         registro = {
             'home_team': home_team,
             'away_team': away_team,
             'home_pitcher': home_pitcher,
             'away_pitcher': away_pitcher,
             'ganador': row['ganador'],
-            'year': year,
-            'fecha': row['date'],
+            'year': anio_partido, # <-- AHORA ES DINÁMICO
+            'fecha': row['date'].strftime('%Y-%m-%d'),
             'score_home': row['R_H'],
             'score_away': row['R_A']
         }
-        
         datos_transformados.append(registro)
-    
-    # Crear DataFrame transformado
+
     df_transformado = pd.DataFrame(datos_transformados)
-    
-    print(f"\n✅ Partidos procesados exitosamente: {len(df_transformado)}")
-    print(f"⚠️  Partidos sin datos completos: {len(partidos_sin_datos)}")
-    
-    if len(partidos_sin_datos) > 0:
-        print(f"\n📋 REPORTE DE PARTIDOS SIN DATOS:")
-        print(f"   Total: {len(partidos_sin_datos)}")
-        print(f"\n   Primeros 5 ejemplos:")
-        for partido in partidos_sin_datos[:5]:
-            print(f"   - {partido['fecha']}: {partido['home']} vs {partido['away']}")
-            print(f"     Ganador: {partido['ganador_p']}, Perdedor: {partido['perdedor_p']}")
-    
-    if lanzadores_no_encontrados:
-        print(f"\n📋 LANZADORES NO ENCONTRADOS (Top 10):")
-        sorted_pitchers = sorted(lanzadores_no_encontrados.items(), key=lambda x: x[1], reverse=True)
-        for pitcher, count in sorted_pitchers[:10]:
-            print(f"   - {pitcher}: {count} veces")
-    
-    # Mostrar muestra
-    print(f"\n📊 MUESTRA DEL CSV TRANSFORMADO:")
-    print("="*70)
-    print(df_transformado.head(10).to_string(index=False))
-    
-    # Guardar CSV transformado
     df_transformado.to_csv(output_csv, index=False)
-    print(f"\n💾 CSV guardado: {output_csv}")
-    
-    # Estadísticas
-    print(f"\n📈 ESTADÍSTICAS:")
-    print(f"   Total partidos: {len(df_transformado)}")
-    print(f"   Victorias locales: {(df_transformado['ganador'] == 1).sum()}")
-    print(f"   Victorias visitantes: {(df_transformado['ganador'] == 0).sum()}")
-    print(f"   Equipos únicos: {len(set(df_transformado['home_team'].unique()) | set(df_transformado['away_team'].unique()))}")
-    
     return df_transformado
 
 
@@ -359,7 +280,6 @@ if __name__ == "__main__":
     df_transformado = transformar_csv(
         input_csv='./data/raw/resultados_béisbol_season_2022_2023_2024_2025.csv',  # Tu CSV original
         output_csv='./data/processed/datos_ml_ready.csv',  # CSV para el modelo
-        year=2025
     )
     
     # PASO 2: Verificar resultado

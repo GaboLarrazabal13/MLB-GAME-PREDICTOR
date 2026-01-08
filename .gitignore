@@ -121,7 +121,14 @@ Desktop.ini
 *.bak
 *.backup
 *.old
+notebook/
 
 # Test outputs
 test_*.txt
 test_*.json
+
+# ============================================================================
+# EXCEPCIONES PARA BACKUP (V2.0 LOCAL)
+# ============================================================================
+
+backup/

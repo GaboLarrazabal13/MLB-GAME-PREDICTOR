@@ -1,513 +1,193 @@
-# 🚀 Guía Completa: Despliegue de API MLB Predictor
+---
 
-## 📋 Tabla de Contenidos
+# Guía de Despliegue: API MLB Predictor Hybrid V3
 
-1. [Requisitos Previos](#requisitos-previos)
-2. [Despliegue Local](#despliegue-local)
-3. [Pruebas de la API](#pruebas-de-la-api)
-4. [Despliegue en la Nube](#despliegue-en-la-nube)
-5. [Troubleshooting](#troubleshooting)
+## Tabla de Contenidos
+
+1. Requisitos Previos
+2. Estructura del Proyecto V3
+3. Despliegue Local
+4. Pruebas de la API Híbrida
+5. Despliegue en la Nube (Render)
+6. Troubleshooting
 
 ---
 
-## 1️⃣ REQUISITOS PREVIOS
+## 1. REQUISITOS PREVIOS
 
-### ✅ Verificar que tienes:
+### Verificar archivos del modelo:
 
 ```bash
-# 1. Modelo entrenado
+# El Modelo V3 utiliza formato JSON para XGBoost y un pickle para la caché
 ls models/
 # Debe mostrar:
-# mlb_model.pkl
-# mlb_scaler.pkl
-# mlb_feature_names.pkl
-# mlb_model_info.pkl
+# modelo_mlb_v3.json
 
-# 2. Dependencias instaladas
-pip list | grep fastapi
-pip list | grep uvicorn
-
-# Si no están instaladas:
-pip install fastapi uvicorn pydantic
 ```
 
-### 📁 Estructura necesaria:
+### Verificar caché de features:
+
+La V3 utiliza un sistema de caché para acelerar el scraping:
+
+```bash
+ls cache/
+# Debe mostrar:
+# features_hibridas_v3_cache.pkl
+
+```
+
+### Dependencias necesarias:
+
+```bash
+pip install fastapi uvicorn pandas numpy xgboost cloudscraper beautifulsoup4 scikit-learn
+
+```
+
+---
+
+## 2. ESTRUCTURA DEL PROYECTO V3
+
+Para que la API funcione correctamente, respeta la siguiente jerarquía de carpetas:
 
 ```
 tu-proyecto/
 │
-├── api.py                    ← Tu archivo API
+├── src/
+│   ├── api_hybrid_v3.py        <-- Archivo principal de la API
+│   ├── predict_game_v3.py      <-- Lógica de predicción y scraping
+│   └── web_app_v3.py           <-- Interfaz de usuario
 ├── models/
-│   ├── mlb_model.pkl
-│   ├── mlb_scaler.pkl
-│   ├── mlb_feature_names.pkl
-│   └── mlb_model_info.pkl
+│   └── modelo_mlb_v3.json      <-- Modelo XGBoost
+├── cache/
+│   └── features_hibridas_v3_cache.pkl
 └── requirements.txt
+
 ```
 
 ---
 
-## 2️⃣ DESPLIEGUE LOCAL
+## 3. DESPLIEGUE LOCAL
 
-### Paso 1: Verificar el archivo API
+### Paso 1: Configurar rutas en api_hybrid_v3.py
 
-Asegúrate que `api.py` tiene las rutas correctas:
+Asegúrate de que la carga del modelo apunte a la carpeta superior si ejecutas desde `src`:
 
 ```python
-# En api.py, busca estas líneas:
-with open('mlb_model.pkl', 'rb') as f:  # ❌ Sin ./models/
+# Corrección de ruta para el modelo
+MODEL_PATH = "../models/modelo_mlb_v3.json"
 
-# Y cámbialas a:
-with open('./models/mlb_model.pkl', 'rb') as f:  # ✅ Con ./models/
 ```
 
-### Paso 2: Iniciar la API
+### Paso 2: Iniciar el servidor
 
-**Opción A: Usando Python directamente**
+Desde la carpeta `src`, ejecuta:
 
 ```bash
-cd /ruta/a/tu/proyecto
-python api.py
-```
-
-**Opción B: Usando Uvicorn (Recomendado)**
-
-```bash
-uvicorn api:app --reload --host 0.0.0.0 --port 8000
-```
-
-Parámetros:
-- `--reload`: Recarga automática al cambiar código
-- `--host 0.0.0.0`: Accesible desde cualquier IP
-- `--port 8000`: Puerto 8000
-
-### Paso 3: Verificar que funciona
-
-Deberías ver:
+uvicorn api_hybrid_v3:app --reload --host 0.0.0.0 --port 8002
 
 ```
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process
-INFO:     Started server process
-INFO:     Waiting for application startup.
-✅ Modelo cargado exitosamente
-   Modelo: Random Forest
-   Accuracy: 65.43%
-INFO:     Application startup complete.
-```
 
-### Paso 4: Acceder a la documentación
+### Paso 3: Verificación de arranque
 
-Abre tu navegador y ve a:
+Deberías ver en la consola:
 
-**Swagger UI (Interactiva):**
 ```
-http://localhost:8000/docs
-```
+INFO: Loading Hybrid Model V3 (XGBoost)...
+INFO: Model loaded successfully.
+INFO: Uvicorn running on http://localhost:8000
 
-**ReDoc (Documentación):**
-```
-http://localhost:8000/redoc
 ```
 
 ---
 
-## 3️⃣ PRUEBAS DE LA API
+## 4. PRUEBAS DE LA API HÍBRIDA
 
-### 🌐 Método 1: Desde el navegador (Swagger UI)
+### Endpoint de Predicción (POST /predict)
 
-1. Abre http://localhost:8000/docs
-2. Verás todos los endpoints disponibles
-3. Click en `POST /predict`
-4. Click en "Try it out"
-5. Edita el JSON:
+La V3 requiere los nombres de los equipos y los lanzadores para calcular las Super Features en tiempo real.
+
+**Ejemplo de JSON para enviar:**
 
 ```json
 {
-  "home_team": "BOS",
+  "home_team": "ARI",
   "away_team": "NYY",
-  "home_pitcher": "Bello",
-  "away_pitcher": "Cole",
-  "year": 2025
-}
-```
-
-6. Click en "Execute"
-7. Verás la respuesta:
-
-```json
-{
-  "ganador": "BOS",
-  "prob_home": 0.623,
-  "prob_away": 0.377,
-  "confianza": 0.623,
-  "year_usado": 2025,
-  "mensaje": null
-}
-```
-
-### 💻 Método 2: Usando cURL (Terminal)
-
-```bash
-# Prueba básica - Raíz
-curl http://localhost:8000/
-
-# Health check
-curl http://localhost:8000/health
-
-# Info del modelo
-curl http://localhost:8000/info
-
-# Predicción
-curl -X POST "http://localhost:8000/predict" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "home_team": "LAD",
-    "away_team": "SFG",
-    "home_pitcher": "Kershaw",
-    "away_pitcher": "Webb",
-    "year": 2025
-  }'
-```
-
-### 🐍 Método 3: Usando Python
-
-Crea un archivo `test_api.py`:
-
-```python
-import requests
-import json
-
-# URL de la API
-API_URL = "http://localhost:8000"
-
-# Test 1: Health check
-print("🔍 Test 1: Health Check")
-response = requests.get(f"{API_URL}/health")
-print(f"Status: {response.status_code}")
-print(f"Response: {response.json()}\n")
-
-# Test 2: Info del modelo
-print("📊 Test 2: Información del Modelo")
-response = requests.get(f"{API_URL}/info")
-print(json.dumps(response.json(), indent=2))
-print()
-
-# Test 3: Predicción
-print("🎯 Test 3: Predicción de Partido")
-prediccion_data = {
-    "home_team": "BOS",
-    "away_team": "NYY",
-    "home_pitcher": "Bello",
-    "away_pitcher": "Cole",
-    "year": 2025
-}
-
-response = requests.post(
-    f"{API_URL}/predict",
-    json=prediccion_data
-)
-
-if response.status_code == 200:
-    resultado = response.json()
-    print(f"✅ Predicción exitosa!")
-    print(f"Ganador: {resultado['ganador']}")
-    print(f"Probabilidad Local: {resultado['prob_home']*100:.1f}%")
-    print(f"Probabilidad Visitante: {resultado['prob_away']*100:.1f}%")
-    print(f"Confianza: {resultado['confianza']*100:.1f}%")
-else:
-    print(f"❌ Error: {response.status_code}")
-    print(response.json())
-```
-
-Ejecutar:
-
-```bash
-python test_api.py
-```
-
-### 📱 Método 4: Usando Postman
-
-1. Descarga Postman: https://www.postman.com/downloads/
-2. Crear nueva request
-3. Método: `POST`
-4. URL: `http://localhost:8000/predict`
-5. Headers: 
-   - Key: `Content-Type`
-   - Value: `application/json`
-6. Body → raw → JSON:
-
-```json
-{
-  "home_team": "LAD",
-  "away_team": "SEA",
-  "home_pitcher": "Yamamoto",
-  "away_pitcher": "Gilbert",
+  "home_pitcher": "Zac Gallen",
+  "away_pitcher": "Carlos Rodón",
   "year": 2026
 }
+
 ```
 
-7. Click "Send"
+**Respuesta esperada (Esquema V3):**
+
+```json
+{
+  "ganador": "ARI",
+  "probabilidad": 0.584,
+  "confianza": "Media",
+  "stats_detalladas": { ... },
+  "features_usadas": {
+    "super_neutralizacion_whip_ops": -0.16,
+    "super_resistencia_era_ops": 5.55,
+    "super_muro_bullpen": 0.21
+  }
+}
+
+```
 
 ---
 
-## 4️⃣ DESPLIEGUE EN LA NUBE
+## 5. DESPLIEGUE EN LA NUBE (RENDER)
 
-### 🌩️ Opción A: Render (GRATIS y FÁCIL)
+### Paso 1: requirements.txt actualizado
 
-#### Paso 1: Preparar archivos
-
-**1. Crear `requirements.txt`:**
-
-```bash
-# En la raíz del proyecto
-pip freeze > requirements.txt
-```
-
-O crear manualmente:
+Crea el archivo con estas versiones específicas para evitar conflictos con XGBoost:
 
 ```txt
-fastapi==0.95.0
-uvicorn==0.21.0
-pydantic==1.10.0
-pandas==1.5.0
-numpy==1.23.0
-scikit-learn==1.2.0
-cloudscraper==1.2.71
-beautifulsoup4==4.11.0
-requests==2.28.0
-```
-
-**2. Crear archivo `render.yaml`:**
-
-```yaml
-services:
-  - type: web
-    name: mlb-predictor-api
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.0
-```
-
-#### Paso 2: Subir a GitHub
-
-```bash
-# Inicializar git (si no lo has hecho)
-git init
-git add .
-git commit -m "Initial commit - MLB Predictor API"
-
-# Crear repositorio en GitHub y conectar
-git remote add origin https://github.com/tu-usuario/mlb-predictor.git
-git push -u origin main
-```
-
-#### Paso 3: Desplegar en Render
-
-1. Ve a https://render.com/
-2. Sign up / Login
-3. Click "New +" → "Web Service"
-4. Conecta tu repositorio de GitHub
-5. Configuración:
-   - **Name**: mlb-predictor-api
-   - **Environment**: Python 3
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn api:app --host 0.0.0.0 --port $PORT`
-6. Click "Create Web Service"
-7. Espera 5-10 minutos...
-8. Tu API estará en: `https://mlb-predictor-api.onrender.com`
-
-#### Paso 4: Probar API en la nube
-
-```bash
-# Health check
-curl https://mlb-predictor-api.onrender.com/health
-
-# Predicción
-curl -X POST "https://mlb-predictor-api.onrender.com/predict" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "home_team": "BOS",
-    "away_team": "NYY",
-    "home_pitcher": "Bello",
-    "away_pitcher": "Cole",
-    "year": 2025
-  }'
-```
-
-### 🚀 Opción B: Railway (ALTERNATIVA)
-
-1. Ve a https://railway.app/
-2. Sign up con GitHub
-3. Click "New Project" → "Deploy from GitHub repo"
-4. Selecciona tu repo
-5. Railway detecta automáticamente Python
-6. Añade variable de entorno: `PORT=8000`
-7. Deploy automático
-
-### ☁️ Opción C: Heroku (CLÁSICO)
-
-**1. Instalar Heroku CLI:**
-
-```bash
-# Mac
-brew tap heroku/brew && brew install heroku
-
-# Windows
-# Descargar de https://devcenter.heroku.com/articles/heroku-cli
-```
-
-**2. Crear `Procfile`:**
+fastapi
+uvicorn
+pandas
+numpy
+xgboost
+scikit-learn
+cloudscraper
+beautifulsoup4
+requests
+python-multipart
 
 ```
-web: uvicorn api:app --host 0.0.0.0 --port $PORT
-```
 
-**3. Crear `runtime.txt`:**
+### Paso 2: Configuración en Render
 
-```
-python-3.10.0
-```
+1. Crea un "Web Service" conectado a tu repositorio.
+2. **Build Command**: `pip install -r requirements.txt`
+3. **Start Command**: `uvicorn src.api_hybrid_v3:app --host 0.0.0.0 --port $PORT`
+4. **Environment Variables**:
+* `PYTHON_VERSION`: 3.10.0 (mínimo)
 
-**4. Desplegar:**
 
-```bash
-# Login
-heroku login
-
-# Crear app
-heroku create mlb-predictor-api
-
-# Deploy
-git push heroku main
-
-# Abrir
-heroku open
-```
 
 ---
 
-## 5️⃣ TROUBLESHOOTING
+## 6. TROUBLESHOOTING
 
-### ❌ Problema: "Address already in use"
+### Error: "No module named src"
 
-**Solución:**
+Si ejecutas uvicorn desde fuera de la carpeta `src`, usa el punto como separador: `uvicorn src.api_hybrid_v3:app`.
 
-```bash
-# Ver qué está usando el puerto 8000
-lsof -i :8000
+### Valor de Resistencia (555.5%)
 
-# Matar el proceso
-kill -9 <PID>
+Este es un comportamiento esperado en la V3 cuando hay una diferencia amplia de ERA/OPS. Para corregir la visualización, aplica un factor de escala (abs(val) * 10) en el código del frontend, no en la API.
 
-# O usar otro puerto
-uvicorn api:app --port 8001
-```
+### Error de Scraping (403 Forbidden)
 
-### ❌ Problema: "Module not found"
-
-**Solución:**
-
-```bash
-# Verificar que estás en el entorno virtual
-which python
-
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Verificar
-pip list
-```
-
-### ❌ Problema: "Modelo no encontrado"
-
-**Solución:**
-
-```python
-# En api.py, cambiar rutas relativas:
-with open('./models/mlb_model.pkl', 'rb') as f:
-    model = pickle.load(f)
-```
-
-### ❌ Problema: API muy lenta
-
-**Causa:** Scraping en tiempo real
-
-**Solución:**
-- Usar cache
-- Pre-calcular features
-- Implementar Redis para cache
-
-### ❌ Problema: CORS errors en frontend
-
-**Solución:**
-
-Ya está configurado en `api.py`:
-
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar dominios
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
+Baseball-Reference puede bloquear peticiones frecuentes. La V3 incluye `cloudscraper` para mitigar esto, pero si persiste, asegúrate de que la caché en la carpeta `cache/` tenga permisos de escritura.
 
 ---
 
-## 🎓 RESUMEN DE COMANDOS
+**Resumen de Endpoints V3:**
 
-### Desarrollo Local:
-
-```bash
-# Iniciar API
-uvicorn api:app --reload
-
-# Probar
-curl http://localhost:8000/health
-```
-
-### Producción:
-
-```bash
-# Sin auto-reload, más workers
-uvicorn api:app --host 0.0.0.0 --port 8000 --workers 4
-```
-
-### Monitoreo:
-
-```bash
-# Ver logs en Render
-render logs --tail
-
-# Ver logs en Heroku
-heroku logs --tail
-```
-
----
-
-## 📚 PRÓXIMOS PASOS
-
-1. ✅ **Añadir autenticación** (API Keys)
-2. ✅ **Implementar rate limiting** (limitar requests)
-3. ✅ **Agregar logging** (guardar requests)
-4. ✅ **Crear dashboard** (Streamlit/React)
-5. ✅ **Monitoreo** (Sentry para errores)
-
----
-
-## 🔗 ENLACES ÚTILES
-
-- **FastAPI Docs**: https://fastapi.tiangolo.com/
-- **Render**: https://render.com/
-- **Railway**: https://railway.app/
-- **Heroku**: https://www.heroku.com/
-- **Postman**: https://www.postman.com/
-
----
-
-**¡Tu API está lista! 🎉⚾**
+* `GET /`: Estado del sistema.
+* `GET /health`: Verificación de carga de modelo y archivos.
+* `POST /predict`: Predicción híbrida con análisis de Matchups.
