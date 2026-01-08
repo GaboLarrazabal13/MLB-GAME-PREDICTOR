@@ -38,7 +38,7 @@ st.set_page_config(
 # DATOS
 # ============================================================================
 
-API_URL = st.secrets.get("API_URL", "http://localhost:8000")
+API_URL = st.secrets.get("API_URL", "https://mlb-game-predictor.onrender.com")
 
 EQUIPOS_MLB = {
     'ARI': {'nombre': 'Arizona Diamondbacks', 'logo': 'https://www.mlbstatic.com/team-logos/109.svg'},
