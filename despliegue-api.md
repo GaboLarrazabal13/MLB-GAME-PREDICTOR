@@ -83,7 +83,7 @@ MODEL_PATH = "../models/modelo_mlb_v3.json"
 Desde la carpeta `src`, ejecuta:
 
 ```bash
-uvicorn api_hybrid_v3:app --reload --host 0.0.0.0 --port 8002
+uvicorn api_hybrid_v3:app --reload --host 0.0.0.0 --port 8000
 
 ```
 

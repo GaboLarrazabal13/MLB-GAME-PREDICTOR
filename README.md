@@ -3,6 +3,8 @@
 # MLB Game Predictor V3 - Hybrid Intelligence
 
 Sistema avanzado de predicción para partidos de la Major League Baseball (MLB) basado en Machine Learning. Esta versión utiliza un modelo híbrido que integra estadísticas históricas de 20 años con análisis de matchups en tiempo real mediante el cálculo de Super Features.
+
+
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.127+-green.svg)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.52+-red.svg)](https://streamlit.io/)

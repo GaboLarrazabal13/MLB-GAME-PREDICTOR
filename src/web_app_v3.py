@@ -38,7 +38,7 @@ st.set_page_config(
 # DATOS
 # ============================================================================
 
-API_URL = st.secrets.get("API_URL", "http://localhost:8002")
+API_URL = st.secrets.get("API_URL", "http://localhost:8000")
 
 EQUIPOS_MLB = {
     'ARI': {'nombre': 'Arizona Diamondbacks', 'logo': 'https://www.mlbstatic.com/team-logos/109.svg'},
@@ -730,7 +730,7 @@ elif pagina == " Historial":
     col_l1, col_l2, col_l3 = st.columns([1, 0.8, 1])
     with col_l2:
         st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", use_container_width=True)
-        
+
     st.markdown('<div class="main-header"> Historial de Predicciones</div>', unsafe_allow_html=True)
     
     if 'historial' not in st.session_state or not st.session_state.historial:

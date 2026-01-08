@@ -122,6 +122,8 @@ Desktop.ini
 *.backup
 *.old
 notebook/
+documentation/
+docs/
 
 # Test outputs
 test_*.txt
