@@ -736,7 +736,7 @@ if pagina == " Predictor":
                     )
                 except Exception as e:
                     # Captura cualquier otro error inesperado y muestra el mismo mensaje
-                    st.error("Verifique el nombre del lanzador e intente de nuevo")
+                    st.error("Verifique el nombre del **Lanzador** y **Equipo** e intente de nuevo, Probabilidades calcculadas con datos generales del equipo.")
                     st.stop()
 # ============================================================================
 # PÁGINA: HISTORIAL
