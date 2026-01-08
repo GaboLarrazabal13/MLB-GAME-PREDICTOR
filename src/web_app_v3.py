@@ -167,9 +167,9 @@ st.markdown("""
     }
 
     /* Niveles de Confianza */
-    .confidence-high { color: #10b981; font-weight: 800; font-size: 1.2rem; }
-    .confidence-medium { color: #f59e0b; font-weight: 800; font-size: 1.2rem; }
-    .confidence-low { color: #ef4444; font-weight: 800; font-size: 1.2rem; }
+    .confidence-high { color: #10b981; font-weight: 800; font-size: 2rem; }
+    .confidence-medium { color: #f59e0b; font-weight: 800; font-size: 2rem; }
+    .confidence-low { color: #ef4444; font-weight: 800; font-size: 2rem; }
 
     /* Logos de equipos */
     .team-logo-inline {
@@ -736,7 +736,7 @@ if pagina == " Predictor":
                     )
                 except Exception as e:
                     # Captura cualquier otro error inesperado y muestra el mismo mensaje
-                    st.error("Verifique el nombre del **Lanzador** y **Equipo** e intente de nuevo, Probabilidades calcculadas con datos generales del equipo.")
+                    st.error("Verifique el nombre del **Lanzador** y **Equipo** e intente de nuevo, Probabilidades calculadas con datos generales del equipo.")
                     st.stop()
 # ============================================================================
 # PÁGINA: HISTORIAL
