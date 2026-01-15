@@ -1,0 +1,255 @@
+name: MLB Predictor Automation
+
+on:
+  schedule:
+    # Scraping diario: 10 AM y 1 PM EST (15:00 y 18:00 UTC)
+    - cron: '0 15 * * *'  # 10 AM EST
+    - cron: '0 18 * * *'  # 1 PM EST
+    # Actualización de resultados: 5 AM EST del día siguiente (10:00 UTC)
+    - cron: '0 10 * * *'  # 5 AM EST
+    # Reentrenamiento: Diario a las 6 AM EST (11:00 UTC)
+    - cron: '0 11 * * *'  # 6 AM EST
+  
+  workflow_dispatch:  # Permite ejecución manual
+    inputs:
+      job:
+        description: 'Job a ejecutar'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - scrape
+          - update_results
+          - train
+          - predict
+
+jobs:
+  # ============================================================================
+  # JOB 1: SCRAPING DIARIO (10 AM y 1 PM)
+  # ============================================================================
+  scrape_daily_games:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event.schedule == '0 15 * * *' || github.event.schedule == '0 18 * * *') ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'scrape' || github.event.inputs.job == 'all'))
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Restaurar caché de datos
+        uses: actions/cache@v3
+        with:
+          path: |
+            data/
+            models/
+            cache/
+          key: mlb-data-${{ github.sha }}
+          restore-keys: |
+            mlb-data-
+      
+      - name: Ejecutar scraping diario
+        id: scrape
+        run: |
+          cd src
+          python mlb_daily_scraper.py
+        continue-on-error: true
+      
+      - name: Generar predicciones si hay datos nuevos
+        if: steps.scrape.outcome == 'success'
+        run: |
+          cd src
+          python mlb_predict_engine.py
+      
+      - name: Commit y push de datos actualizados
+        if: steps.scrape.outcome == 'success'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/ cache/
+          git diff --quiet && git diff --staged --quiet || git commit -m "📊 Actualización automática: Scraping $(date +'%Y-%m-%d %H:%M')"
+          git push
+        continue-on-error: true
+  
+  # ============================================================================
+  # JOB 2: ACTUALIZACIÓN DE RESULTADOS (5 AM del día siguiente)
+  # ============================================================================
+  update_real_results:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.schedule == '0 10 * * *' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'update_results' || github.event.inputs.job == 'all'))
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Restaurar datos
+        uses: actions/cache@v3
+        with:
+          path: |
+            data/
+            models/
+            cache/
+          key: mlb-data-${{ github.sha }}
+          restore-keys: |
+            mlb-data-
+      
+      - name: Actualizar resultados reales
+        run: |
+          cd src
+          python mlb_update_real_results.py
+      
+      - name: Commit y push de resultados
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/
+          git diff --quiet && git diff --staged --quiet || git commit -m "✅ Resultados reales actualizados: $(date +'%Y-%m-%d')"
+          git push
+        continue-on-error: true
+  
+  # ============================================================================
+  # JOB 3: REENTRENAMIENTO INCREMENTAL (6 AM diario)
+  # ============================================================================
+  incremental_training:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.schedule == '0 11 * * *' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'train' || github.event.inputs.job == 'all'))
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Restaurar datos y modelo
+        uses: actions/cache@v3
+        with:
+          path: |
+            data/
+            models/
+            cache/
+          key: mlb-data-${{ github.sha }}
+          restore-keys: |
+            mlb-data-
+      
+      - name: Verificar juegos pendientes de entrenamiento
+        id: check_training
+        run: |
+          cd src
+          python -c "
+          import sqlite3
+          from mlb_config import DB_PATH
+          with sqlite3.connect(DB_PATH) as conn:
+              conn.execute('CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)')
+              cursor = conn.execute('SELECT COUNT(*) FROM historico_real WHERE game_id NOT IN (SELECT game_id FROM control_entrenamiento)')
+              pending = cursor.fetchone()[0]
+              print(f'PENDING_GAMES={pending}')
+              print(f'Juegos pendientes de entrenamiento: {pending}')
+              # Solo entrenar si hay 150+ juegos nuevos
+              if pending >= 150:
+                  print('SHOULD_TRAIN=true')
+              else:
+                  print('SHOULD_TRAIN=false')
+          " | tee -a $GITHUB_OUTPUT
+      
+      - name: Ejecutar reentrenamiento incremental
+        if: steps.check_training.outputs.SHOULD_TRAIN == 'true'
+        run: |
+          cd src
+          python train_model_hybrid_actions.py
+      
+      - name: Commit modelo actualizado
+        if: steps.check_training.outputs.SHOULD_TRAIN == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add models/ data/ cache/
+          git diff --quiet && git diff --staged --quiet || git commit -m "🤖 Modelo reentrenado: $(date +'%Y-%m-%d') - ${{ steps.check_training.outputs.PENDING_GAMES }} juegos nuevos"
+          git push
+        continue-on-error: true
+  
+  # ============================================================================
+  # JOB 4: GENERAR PREDICCIONES (Después de scraping exitoso)
+  # ============================================================================
+  generate_predictions:
+    runs-on: ubuntu-latest
+    needs: [scrape_daily_games]
+    if: |
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'predict' || github.event.inputs.job == 'all'))
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Restaurar datos
+        uses: actions/cache@v3
+        with:
+          path: |
+            data/
+            models/
+            cache/
+          key: mlb-data-${{ github.sha }}
+          restore-keys: |
+            mlb-data-
+      
+      - name: Generar predicciones
+        run: |
+          cd src
+          python mlb_predict_engine.py
+      
+      - name: Commit predicciones
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/
+          git diff --quiet && git diff --staged --quiet || git commit -m "🎯 Predicciones generadas: $(date +'%Y-%m-%d %H:%M')"
+          git push
+        continue-on-error: true

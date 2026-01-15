@@ -125,6 +125,9 @@ notebook/
 documentation/
 docs/
 
+
+
+
 # Test outputs
 test_*.txt
 test_*.json
@@ -132,5 +135,4 @@ test_*.json
 # ============================================================================
 # EXCEPCIONES PARA BACKUP (V2.0 LOCAL)
 # ============================================================================
-
 backup/
