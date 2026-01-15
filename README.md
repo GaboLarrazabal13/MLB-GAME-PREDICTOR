@@ -15,7 +15,7 @@ Sistema avanzado de predicción para partidos de la Major League Baseball (MLB) 
 
 ## Web API
 
-https://mlb-game-predictor-v3.streamlit.app/
+[https://mlb-game-predictor-v3.streamlit.app/](https://mlb-game-v3.streamlit.app/)
 
 ## Tabla de Contenidos
 
