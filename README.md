@@ -2,6 +2,14 @@
 
 Sistema de machine learning para predecir resultados de partidos de béisbol de las Grandes Ligas (MLB) usando XGBoost y web scraping de Baseball-Reference.
 
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.127+-green.svg)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.52+-red.svg)](https://streamlit.io/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8+-orange.svg)](https://scikit-learn.org/)
+[![XGBoost 3.1.2+](https://img.shields.io/badge/XGBoost-3.1.2+-orange?style=flat-square&logo=anaconda&logoColor=white)](https://xgboost.readthedocs.io/)
+
+---
+
 ## 🎯 Características Principales
 
 - **Predicción híbrida**: Combina features temporales (tendencias) con stats actuales scrapeadas
@@ -415,6 +423,17 @@ Para reportar bugs o solicitar features, abre un issue en GitHub.
 
 ---
 
-**Versión**: 3.5 (Refactorizada)  
-**Última actualización**: Enero 2026  
-**Autor**: [Tu nombre]
+**Versión**: 3.5
+**Última actualización**: Enero 2026
+
+## Contacto y Licencia
+
+**Autor**: Gabriel Larrazabal
+**Email**: gabolarrazabal13@gmail.com
+**GitHub**: [@GaboLarrazabal13](https://github.com/GaboLarrazabal13)
+
+Este proyecto se distribuye bajo la Licencia MIT.
+
+---
+
+**MLB Game Predictor V3** - Inteligencia estadística aplicada al diamante.

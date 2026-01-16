@@ -210,6 +210,127 @@ async def crear_prediccion_manual(request: PrediccionRequest):
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
+@app.post("/predict/detailed")
+async def crear_prediccion_detallada(request: PrediccionRequest):
+    """
+    Crea una predicción detallada con todas las estadísticas de jugadores
+    Incluye: lanzadores, bateadores, super features, etc.
+    """
+    try:
+        # Validar códigos de equipos
+        home_code = get_team_code(request.home_team)
+        away_code = get_team_code(request.away_team)
+        
+        if not home_code:
+            raise HTTPException(status_code=400, detail=f"Equipo local no válido: {request.home_team}")
+        if not away_code:
+            raise HTTPException(status_code=400, detail=f"Equipo visitante no válido: {request.away_team}")
+        if home_code == away_code:
+            raise HTTPException(status_code=400, detail="Los equipos no pueden ser iguales")
+        
+        # Importar funciones de scraping desde train_model
+        from train_model_hybrid_actions import (
+            scrape_player_stats,
+            encontrar_lanzador,
+            encontrar_mejor_bateador,
+            extraer_top_relevistas,
+            calcular_stats_equipo,
+            calcular_super_features
+        )
+        
+        # Realizar predicción básica primero
+        resultado = predecir_juego(
+            home_team=home_code,
+            away_team=away_code,
+            home_pitcher=request.home_pitcher,
+            away_pitcher=request.away_pitcher,
+            year=request.year,
+            modo_auto=True
+        )
+        
+        if not resultado:
+            raise HTTPException(
+                status_code=500,
+                detail="No se pudo completar la predicción"
+            )
+        
+        # Ahora hacer scraping para estadísticas detalladas
+        session_cache = {}
+        
+        # Scrapear stats de ambos equipos
+        bat_home, pit_home = scrape_player_stats(home_code, request.year, session_cache)
+        bat_away, pit_away = scrape_player_stats(away_code, request.year, session_cache)
+        
+        # Extraer estadísticas de lanzadores
+        home_pitcher_stats = encontrar_lanzador(pit_home, request.home_pitcher)
+        away_pitcher_stats = encontrar_lanzador(pit_away, request.away_pitcher)
+        
+        # Extraer Top 3 bateadores
+        home_batters_stats = encontrar_mejor_bateador(bat_home)
+        away_batters_stats = encontrar_mejor_bateador(bat_away)
+        
+        # Extraer stats de bullpen
+        home_bullpen = extraer_top_relevistas(pit_home)
+        away_bullpen = extraer_top_relevistas(pit_away)
+        
+        # Calcular stats generales de equipos
+        stats_home = calcular_stats_equipo(bat_home, pit_home)
+        stats_away = calcular_stats_equipo(bat_away, pit_away)
+        
+        # Construir features para super features
+        features_dict = {
+            'home_team_OPS': stats_home.get('team_OPS_mean', 0.75),
+            'away_team_OPS': stats_away.get('team_OPS_mean', 0.75),
+            'home_starter_ERA': home_pitcher_stats['ERA'] if home_pitcher_stats else 4.0,
+            'away_starter_ERA': away_pitcher_stats['ERA'] if away_pitcher_stats else 4.0,
+            'home_starter_WHIP': home_pitcher_stats['WHIP'] if home_pitcher_stats else 1.3,
+            'away_starter_WHIP': away_pitcher_stats['WHIP'] if away_pitcher_stats else 1.3,
+            'home_best_OPS': home_batters_stats['best_bat_OPS'] if home_batters_stats else 0.85,
+            'away_best_OPS': away_batters_stats['best_bat_OPS'] if away_batters_stats else 0.85,
+            'home_bullpen_WHIP': home_bullpen['bullpen_WHIP_mean'] if home_bullpen else 1.3,
+            'away_bullpen_WHIP': away_bullpen['bullpen_WHIP_mean'] if away_bullpen else 1.3,
+            'home_bullpen_ERA': home_bullpen['bullpen_ERA_mean'] if home_bullpen else 4.0,
+            'away_bullpen_ERA': away_bullpen['bullpen_ERA_mean'] if away_bullpen else 4.0,
+        }
+        
+        # Calcular super features
+        from mlb_feature_engineering import calcular_super_features
+        features_dict = calcular_super_features(features_dict)
+        
+        # Formatear bateadores para respuesta detallada
+        home_batters_list = []
+        away_batters_list = []
+        
+        if home_batters_stats and 'detalles_visuales' in home_batters_stats:
+            home_batters_list = home_batters_stats['detalles_visuales']
+        
+        if away_batters_stats and 'detalles_visuales' in away_batters_stats:
+            away_batters_list = away_batters_stats['detalles_visuales']
+        
+        # Construir respuesta detallada
+        return {
+            "ganador": resultado['prediccion'],
+            "prob_home": resultado['prob_home'],
+            "prob_away": resultado['prob_away'],
+            "confianza": max(resultado['prob_home'], resultado['prob_away']),
+            "year_usado": request.year,
+            "features_usadas": features_dict,
+            "stats_detalladas": {
+                "home_pitcher": home_pitcher_stats,
+                "away_pitcher": away_pitcher_stats,
+                "home_batters": home_batters_list,
+                "away_batters": away_batters_list
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+
 @app.get("/games/today", response_model=List[PartidoHoy])
 async def obtener_partidos_hoy():
     """Obtiene los partidos programados para hoy"""

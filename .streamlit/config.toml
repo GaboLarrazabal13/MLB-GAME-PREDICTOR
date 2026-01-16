@@ -1,0 +1,29 @@
+# ============================================================================
+# Configuración de Streamlit para MLB Predictor Pro V3.5
+# ============================================================================
+
+[server]
+port = 8501
+enableCORS = true
+enableXsrfProtection = true
+maxUploadSize = 200
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501
+
+[theme]
+primaryColor = "#3b82f6"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f8fafc"
+textColor = "#0f172a"
+font = "sans serif"
+
+[client]
+showErrorDetails = true
+toolbarMode = "minimal"
+
+[runner]
+magicEnabled = true
+fastReruns = true
