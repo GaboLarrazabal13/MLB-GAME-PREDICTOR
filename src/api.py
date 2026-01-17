@@ -1,5 +1,5 @@
 """
-API FastAPI para MLB Predictor V3.5
+API FastAPI para MLB Predictor V3.5 - VERSIÓN CORREGIDA
 Endpoints para predicciones manuales, automáticas y análisis de rendimiento
 """
 
@@ -32,7 +32,7 @@ app = FastAPI(
 # CORS para permitir acceso desde el frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especifica tus dominios
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -116,6 +116,7 @@ async def root():
         "docs": "/docs",
         "endpoints": {
             "prediccion_manual": "/predict",
+            "prediccion_detallada": "/predict/detailed",
             "partidos_hoy": "/games/today",
             "predicciones_hoy": "/predictions/today",
             "resultados": "/results",
@@ -182,7 +183,7 @@ async def crear_prediccion_manual(request: PrediccionRequest):
             home_pitcher=request.home_pitcher,
             away_pitcher=request.away_pitcher,
             year=request.year,
-            modo_auto=True  # Modo silencioso para API
+            modo_auto=True
         )
         
         if not resultado:
@@ -213,8 +214,7 @@ async def crear_prediccion_manual(request: PrediccionRequest):
 @app.post("/predict/detailed")
 async def crear_prediccion_detallada(request: PrediccionRequest):
     """
-    Crea una predicción detallada con todas las estadísticas de jugadores
-    Incluye: lanzadores, bateadores, super features, etc.
+    VERSIÓN CORREGIDA: Crea predicción detallada con stats completas
     """
     try:
         # Validar códigos de equipos
@@ -228,15 +228,15 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         if home_code == away_code:
             raise HTTPException(status_code=400, detail="Los equipos no pueden ser iguales")
         
-        # Importar funciones de scraping desde train_model
+        # Importar funciones de scraping
         from train_model_hybrid_actions import (
             scrape_player_stats,
             encontrar_lanzador,
             encontrar_mejor_bateador,
             extraer_top_relevistas,
-            calcular_stats_equipo,
-            calcular_super_features
+            calcular_stats_equipo
         )
+        from mlb_feature_engineering import calcular_super_features
         
         # Realizar predicción básica primero
         resultado = predecir_juego(
@@ -254,16 +254,22 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
                 detail="No se pudo completar la predicción"
             )
         
-        # Ahora hacer scraping para estadísticas detalladas
+        # Scraping para estadísticas detalladas
         session_cache = {}
         
-        # Scrapear stats de ambos equipos
         bat_home, pit_home = scrape_player_stats(home_code, request.year, session_cache)
         bat_away, pit_away = scrape_player_stats(away_code, request.year, session_cache)
         
-        # Extraer estadísticas de lanzadores
+        # Extraer estadísticas de lanzadores (con nombres reales)
         home_pitcher_stats = encontrar_lanzador(pit_home, request.home_pitcher)
         away_pitcher_stats = encontrar_lanzador(pit_away, request.away_pitcher)
+        
+        # Validar que se encontraron los lanzadores
+        if not home_pitcher_stats or not away_pitcher_stats:
+            raise HTTPException(
+                status_code=404,
+                detail="No se encontraron uno o ambos lanzadores. Verifica los nombres."
+            )
         
         # Extraer Top 3 bateadores
         home_batters_stats = encontrar_mejor_bateador(bat_home)
@@ -281,10 +287,10 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         features_dict = {
             'home_team_OPS': stats_home.get('team_OPS_mean', 0.75),
             'away_team_OPS': stats_away.get('team_OPS_mean', 0.75),
-            'home_starter_ERA': home_pitcher_stats['ERA'] if home_pitcher_stats else 4.0,
-            'away_starter_ERA': away_pitcher_stats['ERA'] if away_pitcher_stats else 4.0,
-            'home_starter_WHIP': home_pitcher_stats['WHIP'] if home_pitcher_stats else 1.3,
-            'away_starter_WHIP': away_pitcher_stats['WHIP'] if away_pitcher_stats else 1.3,
+            'home_starter_ERA': home_pitcher_stats['ERA'],
+            'away_starter_ERA': away_pitcher_stats['ERA'],
+            'home_starter_WHIP': home_pitcher_stats['WHIP'],
+            'away_starter_WHIP': away_pitcher_stats['WHIP'],
             'home_best_OPS': home_batters_stats['best_bat_OPS'] if home_batters_stats else 0.85,
             'away_best_OPS': away_batters_stats['best_bat_OPS'] if away_batters_stats else 0.85,
             'home_bullpen_WHIP': home_bullpen['bullpen_WHIP_mean'] if home_bullpen else 1.3,
@@ -294,32 +300,70 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         }
         
         # Calcular super features
-        from mlb_feature_engineering import calcular_super_features
         features_dict = calcular_super_features(features_dict)
         
-        # Formatear bateadores para respuesta detallada
+        # CORRECCIÓN: Formatear bateadores correctamente
         home_batters_list = []
         away_batters_list = []
         
         if home_batters_stats and 'detalles_visuales' in home_batters_stats:
-            home_batters_list = home_batters_stats['detalles_visuales']
+            for batter in home_batters_stats['detalles_visuales']:
+                home_batters_list.append({
+                    'nombre': batter.get('n', 'N/A'),
+                    'BA': batter.get('ba', 0.0),
+                    'OBP': batter.get('obp', 0.0),
+                    'SLG': batter.get('slg', 0.0),
+                    'OPS': batter.get('ops', 0.0),
+                    'HR': int(batter.get('hr', 0)),
+                    'RBI': int(batter.get('rbi', 0))
+                })
         
         if away_batters_stats and 'detalles_visuales' in away_batters_stats:
-            away_batters_list = away_batters_stats['detalles_visuales']
+            for batter in away_batters_stats['detalles_visuales']:
+                away_batters_list.append({
+                    'nombre': batter.get('n', 'N/A'),
+                    'BA': batter.get('ba', 0.0),
+                    'OBP': batter.get('obp', 0.0),
+                    'SLG': batter.get('slg', 0.0),
+                    'OPS': batter.get('ops', 0.0),
+                    'HR': int(batter.get('hr', 0)),
+                    'RBI': int(batter.get('rbi', 0))
+                })
+        
+        # CORRECCIÓN: Calcular confianza correctamente (es una probabilidad 0-1, no porcentaje)
+        prob_home_decimal = resultado['prob_home'] / 100.0 if resultado['prob_home'] > 1 else resultado['prob_home']
+        prob_away_decimal = resultado['prob_away'] / 100.0 if resultado['prob_away'] > 1 else resultado['prob_away']
+        confianza_decimal = max(prob_home_decimal, prob_away_decimal)
         
         # Construir respuesta detallada
         return {
             "ganador": resultado['prediccion'],
-            "prob_home": resultado['prob_home'],
-            "prob_away": resultado['prob_away'],
-            "confianza": max(resultado['prob_home'], resultado['prob_away']),
+            "prob_home": prob_home_decimal,
+            "prob_away": prob_away_decimal,
+            "confianza": confianza_decimal,  # CORREGIDO: valor entre 0-1
             "year_usado": request.year,
             "features_usadas": features_dict,
             "stats_detalladas": {
-                "home_pitcher": home_pitcher_stats,
-                "away_pitcher": away_pitcher_stats,
-                "home_batters": home_batters_list,
-                "away_batters": away_batters_list
+                "home_pitcher": {
+                    "nombre": home_pitcher_stats.get('nombre_real', request.home_pitcher),  # NOMBRE REAL
+                    "ERA": home_pitcher_stats['ERA'],
+                    "WHIP": home_pitcher_stats['WHIP'],
+                    "H9": home_pitcher_stats.get('H9', 0),
+                    "SO9": home_pitcher_stats['SO9'],
+                    "W": int(home_pitcher_stats.get('W', 0)),
+                    "L": int(home_pitcher_stats.get('L', 0))
+                },
+                "away_pitcher": {
+                    "nombre": away_pitcher_stats.get('nombre_real', request.away_pitcher),  # NOMBRE REAL
+                    "ERA": away_pitcher_stats['ERA'],
+                    "WHIP": away_pitcher_stats['WHIP'],
+                    "H9": away_pitcher_stats.get('H9', 0),
+                    "SO9": away_pitcher_stats['SO9'],
+                    "W": int(away_pitcher_stats.get('W', 0)),
+                    "L": int(away_pitcher_stats.get('L', 0))
+                },
+                "home_batters": home_batters_list,  # CORREGIDO: lista formateada
+                "away_batters": away_batters_list   # CORREGIDO: lista formateada
             }
         }
         
@@ -453,10 +497,7 @@ async def obtener_ultimos_resultados(
 
 @app.get("/compare/{fecha}")
 async def comparar_predicciones_resultados(fecha: str):
-    """
-    Compara las predicciones con los resultados reales de una fecha específica
-    Formato de fecha: YYYY-MM-DD
-    """
+    """Compara predicciones con resultados reales de una fecha"""
     try:
         # Validar formato de fecha
         try:
