@@ -10,6 +10,13 @@ Sistema de machine learning para predecir resultados de partidos de béisbol de 
 
 ---
 
+
+## Fast API:
+[https://mlb-game-predictor-live.onrender.com](https://mlb-game-predictor-live.onrender.com)
+
+## Web App:
+
+
 ## 🎯 Características Principales
 
 - **Predicción híbrida**: Combina features temporales (tendencias) con stats actuales scrapeadas
