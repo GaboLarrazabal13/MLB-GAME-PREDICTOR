@@ -1,6 +1,5 @@
 """
-MLB Game Predictor V3.5 - VERSIÓN DEFINITIVA
-Combina lo mejor de V3.0 (detalles) + nueva estructura profesional
+MLB Game Predictor V3.5 - Aplicación Streamlit
 Ejecutar: streamlit run app.py
 """
 
@@ -16,15 +15,22 @@ import sys
 import subprocess
 import time
 from PIL import Image
-import unicodedata
-import re
+import calendar
+
+# Importar configuración del proyecto
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from mlb_config import get_team_code, get_team_name, TEAM_CODE_TO_NAME, DB_PATH
+except:
+    TEAM_CODE_TO_NAME = {}
+    DB_PATH = "./data/mlb_reentrenamiento.db"
 
 # ============================================================================
 # CONFIGURACIÓN
 # ============================================================================
 
 st.set_page_config(
-    page_title="MLB Predictor V3.5",
+    page_title="MLB Predictor Pro V3.5",
     page_icon="⚾",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -68,97 +74,159 @@ EQUIPOS_MLB = {
 }
 
 # ============================================================================
-# ESTILOS CSS (Combinación de ambas versiones)
+# ESTILOS CSS PROFESIONALES
 # ============================================================================
 
 st.markdown("""
 <style>
-    /* Header Principal */
-    .main-header {
-        font-size: 3.2rem;
-        font-weight: 800;
+    :root {
+        --primary-blue: #1e40af;
+        --secondary-blue: #3b82f6;
+        --success-green: #10b981;
+        --warning-yellow: #f59e0b;
+        --danger-red: #ef4444;
+        --dark-bg: #0f172a;
+        --light-bg: #f8fafc;
+    }
+    
+    .main-title {
+        font-size: 3.5rem;
+        font-weight: 900;
         text-align: center;
-        background: linear-gradient(90deg, #1f77b4, #764ba2);
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
+        margin: 1rem 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
     
-    .sub-header {
-        font-size: 1.3rem;
+    .subtitle {
         text-align: center;
-        color: #555;
+        color: #64748b;
+        font-size: 1.2rem;
         margin-bottom: 2rem;
-        font-weight: 400;
+        font-weight: 500;
     }
     
-    /* Badges */
-    .v3-badge {
+    .badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 700;
+        font-size: 0.875rem;
+        margin: 0.25rem;
+    }
+    
+    .badge-pro {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 0.4rem 1.2rem;
-        border-radius: 2rem;
-        font-size: 0.85rem;
-        font-weight: bold;
-        box-shadow: 0 4px 15px rgba(118, 75, 162, 0.3);
-        display: inline-block;
+        box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
     }
-
-    /* Caja de Ganador */
+    
+    .badge-live {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
     .winner-box {
         background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        padding: 2rem;
-        border-radius: 1rem;
+        padding: 2.5rem;
+        border-radius: 1.25rem;
         text-align: center;
         color: white;
-        margin: 1.5rem 0;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        border: 1px solid rgba(255,255,255,0.1);
+        margin: 2rem 0;
+        box-shadow: 0 10px 30px rgba(30, 58, 138, 0.3);
+        border: 2px solid rgba(255,255,255,0.1);
     }
-
-    /* Tarjetas de Lanzadores */
-    .pitcher-card {
-        background: #ffffff;
-        padding: 1.5rem;
-        border-radius: 0.75rem;
-        color: #1e293b;
+    
+    .winner-title {
+        font-size: 2rem;
+        font-weight: 900;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    
+    .winner-team {
+        font-size: 3.5rem;
+        font-weight: 900;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border-left: 8px solid #1f77b4;
+    }
+    
+    .stats-card {
+        background: white;
+        padding: 1.75rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border-left: 5px solid var(--primary-blue);
+        margin: 1rem 0;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+    
+    .pitcher-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        padding: 2rem;
+        border-radius: 1rem;
+        border-left: 8px solid var(--secondary-blue);
+        margin: 1.5rem 0;
+        box-shadow: 0 6px 25px rgba(0,0,0,0.1);
     }
     
     .pitcher-name {
-        font-size: 1.4rem;
-        font-weight: bold;
+        font-size: 1.75rem;
+        font-weight: 800;
         color: #0f172a;
-        margin-bottom: 0.5rem;
+        margin-bottom: 1rem;
     }
-
-    /* Super Features */
-    .super-feature-box {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        padding: 1.2rem;
-        border-radius: 0.8rem;
+    
+    .super-feature {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.75rem;
+        border-radius: 1rem;
         color: white;
-        margin: 0.5rem 0;
-        min-height: 160px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        border: 1px solid rgba(255,255,255,0.1);
+        margin: 1rem 0;
+        min-height: 200px;
+        box-shadow: 0 8px 25px rgba(118, 75, 162, 0.3);
+        border: 2px solid rgba(255,255,255,0.2);
     }
-
-    /* Niveles de Confianza */
-    .confidence-high { color: #10b981; font-weight: 900; font-size: 2.5rem; }
-    .confidence-medium { color: #f59e0b; font-weight: 900; font-size: 2.5rem; }
-    .confidence-low { color: #ef4444; font-weight: 900; font-size: 2.5rem; }
-
-    /* Partido Card */
+    
+    .super-feature h4 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .super-feature-advantage {
+        font-size: 1.25rem;
+        font-weight: 700;
+        background: rgba(255,255,255,0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        display: inline-block;
+        margin: 0.5rem 0;
+    }
+    
     .game-card {
         background: white;
         padding: 1.5rem;
         border-radius: 1rem;
         margin: 1rem 0;
         box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        border-top: 4px solid #3b82f6;
+        border-top: 4px solid var(--primary-blue);
         transition: transform 0.2s;
     }
     
@@ -166,24 +234,17 @@ st.markdown("""
         transform: scale(1.02);
         box-shadow: 0 6px 20px rgba(0,0,0,0.12);
     }
+    
+    .confidence-muy-alta { color: #10b981; font-weight: 900; font-size: 2.5rem; }
+    .confidence-alta { color: #3b82f6; font-weight: 900; font-size: 2.5rem; }
+    .confidence-moderada { color: #f59e0b; font-weight: 900; font-size: 2.5rem; }
+    .confidence-baja { color: #ef4444; font-weight: 900; font-size: 2.5rem; }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================================================
 # FUNCIONES AUXILIARES
 # ============================================================================
-
-def normalizar_texto(texto):
-    """Normaliza texto para comparaciones (igual que tu API)"""
-    if not texto:
-        return ""
-    texto = str(texto).strip()
-    texto = "".join(
-        c for c in unicodedata.normalize('NFD', texto)
-        if unicodedata.category(c) != 'Mn'
-    )
-    texto = re.sub(r'[^a-zA-Z0-9\s]', '', texto)
-    return texto
 
 @st.cache_data(ttl=60)
 def verificar_api_salud():
@@ -219,7 +280,6 @@ def ejecutar_scraper_manual():
                 text=True,
                 timeout=120
             )
-            
             if result.returncode == 0:
                 return True, "✅ Scraping completado exitosamente"
             else:
@@ -229,81 +289,70 @@ def ejecutar_scraper_manual():
     except Exception as e:
         return False, f"❌ Error: {str(e)}"
 
-def hacer_prediccion_detallada(home_team, away_team, home_pitcher, away_pitcher, year):
-    """Llama a /predict/detailed de tu API"""
-    data = {
-        "home_team": home_team,
-        "away_team": away_team,
-        "home_pitcher": home_pitcher,
-        "away_pitcher": away_pitcher,
-        "year": year
-    }
-    
-    try:
-        response = requests.post(
-            f"{API_URL}/predict/detailed",
-            json=data,
-            timeout=120
-        )
-        
-        if response.status_code == 200:
-            return True, response.json()
-        else:
-            error = response.json()
-            return False, error.get('detail', 'Error desconocido')
-    except requests.exceptions.Timeout:
-        return False, "Timeout: La predicción tardó demasiado"
-    except Exception as e:
-        return False, f"Error: {str(e)}"
+def normalizar_probabilidad(prob):
+    """
+    FIX CRÍTICO: Normaliza probabilidades a rango 0-1
+    La API puede devolver en porcentaje (82.5) o decimal (0.825)
+    """
+    if prob is None:
+        return 0.5
+    if prob > 1:
+        return prob / 100.0
+    return prob
 
 def crear_grafico_probabilidades(prob_home, prob_away, home_team, away_team):
-    """Crea gráfico de barras de probabilidades"""
-    home_name = get_team_display_name(home_team)
-    away_name = get_team_display_name(away_team)
+    """Crea gráfico de barras de probabilidades - CORREGIDO"""
+    # Normalizar probabilidades
+    prob_home = normalizar_probabilidad(prob_home)
+    prob_away = normalizar_probabilidad(prob_away)
     
     fig = go.Figure()
     
+    colors = ['#3b82f6' if prob_home > prob_away else '#94a3b8',
+              '#ef4444' if prob_away > prob_home else '#94a3b8']
+    
     fig.add_trace(go.Bar(
         x=[prob_home * 100, prob_away * 100],
-        y=[f'{home_team} (Local)', f'{away_team} (Visitante)'],
+        y=[f'{home_team}', f'{away_team}'],
         orientation='h',
-        marker=dict(
-            color=['#3b82f6', '#ef4444'],
-            line=dict(color='white', width=2)
-        ),
+        marker=dict(color=colors, line=dict(color='white', width=3)),
         text=[f'{prob_home*100:.1f}%', f'{prob_away*100:.1f}%'],
         textposition='auto',
-        textfont=dict(size=16, color='white', family='Arial Black')
+        textfont=dict(size=18, color='white', family='Arial Black'),
+        hovertemplate='<b>%{y}</b><br>Probabilidad: %{x:.1f}%<extra></extra>'
     ))
     
     fig.update_layout(
-        title="Probabilidades de Victoria",
+        title={'text': "Probabilidades de Victoria", 'font': {'size': 24, 'weight': 'bold'}},
         xaxis_title="Probabilidad (%)",
-        yaxis_title="",
-        height=300,
+        height=350,
         showlegend=False,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(size=14),
-        xaxis=dict(range=[0, 100])
+        font=dict(size=14, family='Arial'),
+        xaxis=dict(range=[0, 100], gridcolor='rgba(0,0,0,0.1)'),
+        yaxis=dict(gridcolor='rgba(0,0,0,0)')
     )
     
     return fig
 
 def crear_gauge_confianza(confianza):
-    """Crea gauge de nivel de confianza"""
+    """Crea gauge de nivel de confianza - CORREGIDO"""
+    # Normalizar confianza
+    confianza = normalizar_probabilidad(confianza)
+    
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=confianza * 100,
         domain={'x': [0, 1], 'y': [0, 1]},
-        title={'text': "Nivel de Confianza", 'font': {'size': 24}},
-        number={'suffix': "%", 'font': {'size': 36}},
+        title={'text': "Nivel de Confianza", 'font': {'size': 24, 'weight': 'bold'}},
+        number={'suffix': "%", 'font': {'size': 48, 'weight': 'bold'}},
         gauge={
-            'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
-            'bar': {'color': "darkblue"},
+            'axis': {'range': [None, 100], 'tickwidth': 2, 'tickcolor': "#1e40af"},
+            'bar': {'color': "#3b82f6", 'thickness': 0.8},
             'bgcolor': "white",
-            'borderwidth': 2,
-            'bordercolor': "gray",
+            'borderwidth': 3,
+            'bordercolor': "#cbd5e1",
             'steps': [
                 {'range': [0, 55], 'color': '#fee2e2'},
                 {'range': [55, 60], 'color': '#fed7aa'},
@@ -311,18 +360,18 @@ def crear_gauge_confianza(confianza):
                 {'range': [70, 100], 'color': '#bbf7d0'}
             ],
             'threshold': {
-                'line': {'color': "red", 'width': 4},
-                'thickness': 0.75,
-                'value': 60
+                'line': {'color': "#ef4444", 'width': 6},
+                'thickness': 0.85,
+                'value': 70
             }
         }
     ))
     
     fig.update_layout(
-        height=300,
-        margin=dict(l=20, r=20, t=50, b=20),
+        height=350,
+        margin=dict(l=30, r=30, t=60, b=30),
         paper_bgcolor='rgba(0,0,0,0)',
-        font={'color': "gray", 'family': "Arial"}
+        font={'color': "#334155", 'family': "Arial"}
     )
     
     return fig
@@ -332,347 +381,434 @@ def crear_gauge_confianza(confianza):
 # ============================================================================
 
 with st.sidebar:
-    st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", width=120)
-    st.title("MLB Predictor")
-    st.markdown('''
-    <div style="text-align: center; margin: 0.5rem 0;">
-        <span class="v3-badge">MODEL V3.5</span>
-        <span class="badge-live" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 0.4rem 1.2rem; border-radius: 2rem; font-size: 0.85rem; font-weight: bold; box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4); display: inline-block; margin-left: 0.5rem;">LIVE</span>
+    st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", width=140)
+    
+    st.markdown("""
+    <div style="text-align: center; margin: 1rem 0;">
+        <h2 style="margin: 0;">MLB Predictor</h2>
+        <span class="badge badge-pro">PRO V3.5</span>
+        <span class="badge badge-live">LIVE</span>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    st.subheader("Estado del Sistema")
+    st.subheader("🔧 Estado del Sistema")
     api_ok, api_data = verificar_api_salud()
     
     if api_ok:
         st.success("✅ API Conectada")
-        st.success("✅ Modelo V3.5 Cargado")
-        st.info("🎯 Super Features Activas")
+        st.success("✅ Modelo Cargado")
+        st.info("Sistema Operativo")
     else:
         st.error("❌ API No Disponible")
-        st.warning("Inicia la API:")
-        st.code("python api_hybrid_v3.py", language="python")
+        st.warning("Inicia la API con:")
+        st.code("uvicorn api:app --reload", language="bash")
     
     st.markdown("---")
     
-    st.subheader("🧭 Navegación")
+    st.subheader("Navegación")
     pagina = st.radio(
-        "Ir a:",
-        ["🎯 Predicción Manual", "📅 Partidos de Hoy", "📊 Comparación & Historial", "ℹ️ Acerca de"],
+        "Selecciona una sección:",
+        [
+            "Predicción Manual",
+            "Partidos de Hoy",
+            "Comparación & Historial",
+            "Acerca del Modelo"
+        ],
         label_visibility="collapsed"
     )
+    
+    st.markdown("---")
+    
+    with st.expander("Configuración"):
+        nueva_url = st.text_input("URL de la API", value=API_URL)
+        if nueva_url != API_URL:
+            st.info("Recarga la página para aplicar cambios")
 
 # ============================================================================
-# PÁGINA: PREDICCIÓN MANUAL
+# PÁGINA: PREDICCIÓN MANUAL - COMPLETAMENTE CORREGIDA
 # ============================================================================
 
-if pagina == "🎯 Predicción Manual":
-    st.markdown('<div class="main-header">⚾ MLB Game Predictor</div>', unsafe_allow_html=True)
+if pagina == "Predicción Manual":
+    st.markdown('<div class="main-title">Predicción Manual de Partidos</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Análisis profundo con estadísticas en tiempo real</div>', unsafe_allow_html=True)
     
     if not api_ok:
-        st.error("❌ La API V3 no está disponible")
+        st.error("La API no está disponible. Por favor inicia el servidor.")
         st.stop()
-
-    st.subheader("📋 Datos del Partido")
-    col_input1, col_input2 = st.columns(2)
-
-    team_options = [f"{code} - {EQUIPOS_MLB[code]['nombre']}" for code in sorted(EQUIPOS_MLB.keys())]
-
-    with col_input1:
-        st.markdown("#### 🏠 Equipo Local")
-        home_sel = st.selectbox("Selecciona equipo local", team_options, key="home_display_v3")
-        home_team = home_sel.split(" - ")[0]
-        st.markdown(f'<div style="text-align: center; padding:10px;">{get_team_logo_html(home_team, 80)}</div>', unsafe_allow_html=True)
-
-    with col_input2:
-        st.markdown("#### ✈️ Equipo Visitante")
-        away_sel = st.selectbox("Selecciona equipo visitante", team_options, key="away_display_v3")
-        away_team = away_sel.split(" - ")[0]
-        st.markdown(f'<div style="text-align: center; padding:10px;">{get_team_logo_html(away_team, 80)}</div>', unsafe_allow_html=True)
-
-    with st.form("prediction_form"):
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            home_pitcher = st.text_input("Lanzador Local", placeholder="Ej: Gerrit Cole, Bello...", key="hp_input_v3")
-        with col_p2:
-            away_pitcher = st.text_input("Lanzador Visitante", placeholder="Ej: Webb, Bieber...", key="ap_input_v3")
     
-        year = st.number_input("Temporada", min_value=2020, max_value=2030, value=2026)
-        submit_button = st.form_submit_button("🚀 Realizar Predicción", use_container_width=True, type="primary")
-
-    if submit_button:
+    st.markdown("### Configurar Partido")
+    
+    col1, col2 = st.columns(2)
+    
+    team_options = [f"{code} - {EQUIPOS_MLB[code]['nombre']}" for code in sorted(EQUIPOS_MLB.keys())]
+    
+    with col1:
+        st.markdown("#### Equipo Local")
+        home_sel = st.selectbox("Selecciona equipo local", team_options, key="home_sel_manual")
+        home_team = home_sel.split(" - ")[0]
+        st.markdown(f'<div style="text-align: center; padding: 10px;">{get_team_logo_html(home_team, 100)}</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("#### Equipo Visitante")
+        away_sel = st.selectbox("Selecciona equipo visitante", team_options, key="away_sel_manual")
+        away_team = away_sel.split(" - ")[0]
+        st.markdown(f'<div style="text-align: center; padding: 10px;">{get_team_logo_html(away_team, 100)}</div>', unsafe_allow_html=True)
+    
+    with st.form("prediction_form_manual"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            home_pitcher = st.text_input(
+                "Lanzador Abridor Local",
+                placeholder="Ej: Gerrit Cole, Sandy Alcantara...",
+                help="Nombre completo del lanzador"
+            )
+        
+        with col2:
+            away_pitcher = st.text_input(
+                "Lanzador Abridor Visitante",
+                placeholder="Ej: Spencer Strider, Shane Bieber...",
+                help="Nombre completo del lanzador"
+            )
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            year = st.number_input(
+                "Temporada para estadísticas",
+                min_value=2020,
+                max_value=2026,
+                value=2026,
+                help="Año de las estadísticas a utilizar"
+            )
+        
+        with col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            submit = st.form_submit_button(
+                "Realizar Predicción",
+                use_container_width=True,
+                type="primary"
+            )
+    
+    if submit:
         if not home_pitcher or not away_pitcher:
-            st.error("❌ Por favor ingresa los nombres de ambos lanzadores")
+            st.error("Por favor ingresa los nombres de ambos lanzadores")
         elif home_team == away_team:
-            st.error("❌ Los equipos deben ser diferentes")
+            st.error("Los equipos deben ser diferentes")
         else:
-            h_clean = normalizar_texto(home_pitcher)
-            a_clean = normalizar_texto(away_pitcher)
-            
-            with st.spinner(f"🔍 Analizando: {home_team} vs {away_team}..."):
+            with st.spinner(f"Analizando {home_team} vs {away_team}... Esto puede tardar varios segundos"):
                 try:
-                    exito, resultado = hacer_prediccion_detallada(
-                        home_team, away_team, h_clean, a_clean, year
+                    # Llamada a la API
+                    response = requests.post(
+                        f"{API_URL}/predict/detailed",
+                        json={
+                            "home_team": home_team,
+                            "away_team": away_team,
+                            "home_pitcher": home_pitcher,
+                            "away_pitcher": away_pitcher,
+                            "year": year
+                        },
+                        timeout=120
                     )
                     
-                    if not exito or not resultado.get('stats_detalladas'):
-                        st.error("❌ Lanzador/es no encontrado/s. Verifique el nombre e intente de nuevo")
-                        st.stop()
-                    
-                    st.success("✅ Predicción realizada exitosamente!")
-                    
-                    st.markdown("---")
-                    st.markdown("## 🏆 Resultado")
-                    
-                    ganador = resultado.get('ganador')
-                    prob_home = resultado.get('prob_home', 0)
-                    prob_away = resultado.get('prob_away', 0)
-                    confianza = resultado.get('confianza', 0)
-                    
-                    ganador_nombre = get_team_display_name(ganador)
-                    ganador_logo = get_team_logo_html(ganador, 60)
-                    
-                    st.markdown(f"""
-                    <div class="winner-box">
-                        <h1 style="margin:0; font-size: 2.5rem;">GANADOR PREDICHO</h1>
-                        <div style="margin:1rem 0;">
-                            {ganador_logo}
-                            <h2 style="display:inline; margin:0; font-size: 3rem; vertical-align: middle;">{ganador_nombre}</h2>
+                    if response.status_code == 200:
+                        resultado = response.json()
+                        st.success("¡Predicción completada exitosamente!")
+                        
+                        # FIX: Extraer y normalizar probabilidades
+                        ganador = resultado.get('ganador', home_team)
+                        prob_home_raw = resultado.get('prob_home', 0.5)
+                        prob_away_raw = resultado.get('prob_away', 0.5)
+                        confianza_raw = resultado.get('confianza', 0.5)
+                        
+                        # Normalizar a rango 0-1
+                        prob_home = normalizar_probabilidad(prob_home_raw)
+                        prob_away = normalizar_probabilidad(prob_away_raw)
+                        confianza = normalizar_probabilidad(confianza_raw)
+                        
+                        prob_ganador = prob_home if ganador == home_team else prob_away
+                        
+                        # Renderizar ganador
+                        team_name = get_team_display_name(ganador)
+                        team_logo = get_team_logo_html(ganador, 80)
+                        
+                        st.markdown(f"""
+                        <div class="winner-box">
+                            <div class="winner-title">Ganador Predicho</div>
+                            <div style="margin: 1.5rem 0;">
+                                {team_logo}
+                                <span class="winner-team">{team_name}</span>
+                            </div>
+                            <div style="font-size: 2rem; font-weight: 700;">
+                                {prob_ganador*100:.1f}% de probabilidad
+                            </div>
                         </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.markdown(
-                            get_team_logo_html(home_team, 30) + f"**Probabilidad de {home_team}**",
-                            unsafe_allow_html=True
-                        )
-                        st.metric("", f"{prob_home:.1f}%", delta=f"{(prob_home-50):+.1f}% vs 50%")
-                    
-                    with col2:
-                        st.markdown(
-                            get_team_logo_html(away_team, 30) + f"**Probabilidad de {away_team}**",
-                            unsafe_allow_html=True
-                        )
-                        st.metric("", f"{prob_away:.1f}%", delta=f"{(prob_away-50):+.1f}% vs 50%")
-                    
-                    with col3:
-                        if confianza > 0.70:
-                            conf_class = "confidence-high"
-                            conf_text = "MUY ALTA"
-                        elif confianza > 0.60:
-                            conf_class = "confidence-medium"
-                            conf_text = "ALTA"
-                        elif confianza > 0.55:
-                            conf_class = "confidence-medium"
-                            conf_text = "MODERADA"
+                        """, unsafe_allow_html=True)
+                        
+                        # Métricas principales
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.markdown(f"**{home_team}**")
+                            st.metric(
+                                "Probabilidad",
+                                f"{prob_home*100:.1f}%",
+                                delta=f"{(prob_home-0.5)*100:+.1f}% vs 50%"
+                            )
+                        
+                        with col2:
+                            st.markdown(f"**{away_team}**")
+                            st.metric(
+                                "Probabilidad",
+                                f"{prob_away*100:.1f}%",
+                                delta=f"{(prob_away-0.5)*100:+.1f}% vs 50%"
+                            )
+                        
+                        with col3:
+                            conf_val = max(prob_home, prob_away)
+                            if conf_val > 0.70:
+                                conf_label = "MUY ALTA"
+                                conf_class = "confidence-muy-alta"
+                            elif conf_val > 0.60:
+                                conf_label = "ALTA"
+                                conf_class = "confidence-alta"
+                            elif conf_val > 0.55:
+                                conf_label = "MODERADA"
+                                conf_class = "confidence-moderada"
+                            else:
+                                conf_label = "BAJA"
+                                conf_class = "confidence-baja"
+                            
+                            st.metric("Confianza", f"{conf_val*100:.1f}%")
+                            st.markdown(f'<p class="{conf_class}" style="text-align: center;">{conf_label}</p>', unsafe_allow_html=True)
+                        
+                        # Gráficos
+                        st.markdown("---")
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.plotly_chart(
+                                crear_grafico_probabilidades(prob_home, prob_away, home_team, away_team),
+                                use_container_width=True
+                            )
+                        
+                        with col2:
+                            st.plotly_chart(
+                                crear_gauge_confianza(conf_val),
+                                use_container_width=True
+                            )
+                        
+                        # FIX: Super Features - Validar existencia
+                        st.markdown("---")
+                        st.markdown("### Super Features: Análisis Dinámico de Matchups")
+                        
+                        features = resultado.get('features_usadas', {})
+                        
+                        if not features or not any(['super_' in k for k in features.keys()]):
+                            st.info("ℹ️ Las Super Features no están disponibles en esta respuesta de la API")
                         else:
-                            conf_class = "confidence-low"
-                            conf_text = "BAJA"
+                            col1, col2, col3 = st.columns(3)
+                            
+                            # 1. Neutralización
+                            neut = features.get('super_neutralizacion_whip_ops', 0)
+                            ventaja_n = home_team if neut < 0 else away_team
+                            pitcher_n = home_pitcher if neut < 0 else away_pitcher
+                            rival_n = away_team if neut < 0 else home_team
+                            
+                            with col1:
+                                st.markdown(f"""
+                                <div class="super-feature">
+                                    <h4>Neutralización WHIP vs OPS</h4>
+                                    <div class="super-feature-advantage">Ventaja: {ventaja_n}</div>
+                                    <p style="font-size: 1.1rem; line-height: 1.6; margin-top: 1rem;">
+                                        <strong>{pitcher_n}</strong> tiene un WHIP que neutraliza efectivamente 
+                                        el OPS del lineup de <strong>{rival_n}</strong>, limitando su producción ofensiva.
+                                    </p>
+                                    <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
+                                        Impacto: <strong>{abs(neut):.4f}</strong>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            # 2. Resistencia
+                            res = features.get('super_resistencia_era_ops', 0)
+                            ventaja_r = home_team if res < 0 else away_team
+                            pitcher_r = home_pitcher if res < 0 else away_pitcher
+                            
+                            with col2:
+                                st.markdown(f"""
+                                <div class="super-feature">
+                                    <h4>Resistencia ERA vs Poder</h4>
+                                    <div class="super-feature-advantage">Ventaja: {ventaja_r}</div>
+                                    <p style="font-size: 1.1rem; line-height: 1.6; margin-top: 1rem;">
+                                        <strong>{pitcher_r}</strong> demuestra mayor resistencia ante bateadores 
+                                        de poder, manteniendo su ERA bajo presión ofensiva.
+                                    </p>
+                                    <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
+                                        Impacto: <strong>{abs(res):.4f}</strong>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            # 3. Muro Bullpen
+                            muro = features.get('super_muro_bullpen', 0)
+                            ventaja_m = home_team if muro < 0 else away_team
+                            
+                            with col3:
+                                st.markdown(f"""
+                                <div class="super-feature">
+                                    <h4>Muro del Bullpen</h4>
+                                    <div class="super-feature-advantage">Ventaja: {ventaja_m}</div>
+                                    <p style="font-size: 1.1rem; line-height: 1.6; margin-top: 1rem;">
+                                        El bullpen de <strong>{ventaja_m}</strong> es más efectivo 
+                                        contra los mejores bateadores rivales en innings críticos.
+                                    </p>
+                                    <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
+                                        Impacto: <strong>{abs(muro):.4f}</strong>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
                         
-                        st.metric("Confianza", f"{confianza*100:.1f}%")
-                        st.markdown(f'<p class="{conf_class}">{conf_text}</p>', unsafe_allow_html=True)
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.plotly_chart(
-                            crear_grafico_probabilidades(prob_home, prob_away, home_team, away_team),
-                            use_container_width=True
-                        )
-                    
-                    with col2:
-                        st.plotly_chart(
-                            crear_gauge_confianza(confianza),
-                            use_container_width=True
-                        )
-                    
-                    # SUPER FEATURES
-                    features = resultado.get('features_usadas', {})
-                    stats_det = resultado.get('stats_detalladas', {})
-                    
-                    name_h = stats_det.get('home_pitcher', {}).get('nombre', home_pitcher) if stats_det.get('home_pitcher') else home_pitcher
-                    name_a = stats_det.get('away_pitcher', {}).get('nombre', away_pitcher) if stats_det.get('away_pitcher') else away_pitcher
-
-                    st.markdown("---")
-                    st.markdown("## 🚀 Super Features: Análisis Dinámico")
-                    st.info("Comparativa de dominio directo basada en el cruce de estadísticas de lanzadores vs. bateadores.")
-
-                    col1, col2, col3 = st.columns(3)
-
-                    # 1. Neutralización
-                    neut = features.get('super_neutralizacion_whip_ops', 0)
-                    ventaja_n = home_team if neut < 0 else away_team
-                    pitcher_n = name_h if neut < 0 else name_a
-                    rival_n = away_team if neut < 0 else home_team
-                    pct_n = abs(neut) * 100
-
-                    with col1:
-                        st.markdown(f"""
-                        <div class="super-feature-box">
-                            <h4>🛡️ Neutralización</h4>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: bold;">Ventaja {ventaja_n}</p>
-                            <p style="font-size: 0.9rem;"><b>{pitcher_n}</b> controla el bateo de {rival_n} con una eficiencia del <b>{pct_n:.1f}%</b> superior al promedio.</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                    # 2. Resistencia
-                    res = features.get('super_resistencia_era_ops', 0)
-                    ventaja_r = home_team if res < 0 else away_team
-                    pitcher_r = name_h if res < 0 else name_a
-                    pct_r = min(abs(res) * 10, 100.0)
-
-                    with col2:
-                        st.markdown(f"""
-                        <div class="super-feature-box">
-                            <h4>💪 Resistencia</h4>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: bold;">Ventaja {ventaja_r}</p>
-                            <p style="font-size: 0.9rem;"><b>{pitcher_r}</b> es un <b>{pct_r:.1f}%</b> más sólido ante el poder (OPS) de los bateadores rivales.</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                    # 3. Muro Bullpen
-                    muro = features.get('super_muro_bullpen', 0)
-                    ventaja_m = home_team if muro < 0 else away_team
-                    pct_m = abs(muro) * 100
-
-                    with col3:
-                        st.markdown(f"""
-                        <div class="super-feature-box">
-                            <h4>🧱 Muro Bullpen</h4>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: bold;">Ventaja {ventaja_m}</p>
-                            <p style="font-size: 0.9rem;">El relevo de {ventaja_m} domina a los mejores bateadores rivales en un <b>{pct_m:.1f}%</b>.</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # ESTADÍSTICAS DETALLADAS
-                    if stats_det:
+                        # FIX: Estadísticas detalladas - Validación completa
+                        stats_det = resultado.get('stats_detalladas', {})
+                        
+                        if stats_det and (stats_det.get('home_pitcher') or stats_det.get('away_pitcher') or 
+                                         stats_det.get('home_batters') or stats_det.get('away_batters')):
+                            st.markdown("---")
+                            st.markdown("## Estadísticas Detalladas")
+                            
+                            st.markdown("### Lanzadores Iniciales")
+                            
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                home_pitcher_stats = stats_det.get('home_pitcher')
+                                if home_pitcher_stats and isinstance(home_pitcher_stats, dict):
+                                    pitcher_nombre_real = home_pitcher_stats.get('nombre', home_pitcher)
+                                    
+                                    st.markdown(
+                                        get_team_logo_html(home_team, 40) + 
+                                        f" {home_team} - {pitcher_nombre_real}",
+                                        unsafe_allow_html=True
+                                    )
+                                    
+                                    subcol1, subcol2, subcol3 = st.columns(3)
+                                    with subcol1:
+                                        st.metric("ERA", f"{home_pitcher_stats.get('ERA', 0):.2f}")
+                                    with subcol2:
+                                        st.metric("WHIP", f"{home_pitcher_stats.get('WHIP', 0):.3f}")
+                                    with subcol3:
+                                        st.metric("SO9", f"{home_pitcher_stats.get('SO9', 0):.2f}")
+                                else:
+                                    st.warning(f"⚠️ No se encontraron estadísticas para {home_pitcher}")
+                            
+                            with col2:
+                                away_pitcher_stats = stats_det.get('away_pitcher')
+                                if away_pitcher_stats and isinstance(away_pitcher_stats, dict):
+                                    pitcher_nombre_real = away_pitcher_stats.get('nombre', away_pitcher)
+                                    
+                                    st.markdown(
+                                        get_team_logo_html(away_team, 40) + 
+                                        f" {away_team} - {pitcher_nombre_real}",
+                                        unsafe_allow_html=True
+                                    )
+                                    
+                                    subcol1, subcol2, subcol3 = st.columns(3)
+                                    with subcol1:
+                                        st.metric("ERA", f"{away_pitcher_stats.get('ERA', 0):.2f}")
+                                    with subcol2:
+                                        st.metric("WHIP", f"{away_pitcher_stats.get('WHIP', 0):.3f}")
+                                    with subcol3:
+                                        st.metric("SO9", f"{away_pitcher_stats.get('SO9', 0):.2f}")
+                                else:
+                                    st.warning(f" No se encontraron estadísticas para {away_pitcher}")
+                            
+                            st.markdown("---")
+                            st.markdown("### Top 3 Bateadores")
+                            
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                home_batters = stats_det.get('home_batters', [])
+                                if home_batters and isinstance(home_batters, list) and len(home_batters) > 0:
+                                    st.markdown(
+                                        get_team_logo_html(home_team, 40) + f"- {home_team}",
+                                        unsafe_allow_html=True
+                                    )
+                                    for i, batter in enumerate(home_batters[:3], 1):
+                                        if batter and isinstance(batter, dict):
+                                            nombre_batter = batter.get('nombre', 'N/A')
+                                            if nombre_batter and nombre_batter != 'N/A':
+                                                with st.expander(f"#{i} - {nombre_batter}", expanded=(i==1)):
+                                                    subcol1, subcol2, subcol3, subcol4 = st.columns(4)
+                                                    with subcol1:
+                                                        st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
+                                                    with subcol2:
+                                                        st.metric("BA", f"{batter.get('BA', 0):.3f}")
+                                                    with subcol3:
+                                                        st.metric("HR", int(batter.get('HR', 0)))
+                                                    with subcol4:
+                                                        st.metric("RBI", int(batter.get('RBI', 0)))
+                                else:
+                                    st.info(f"ℹ️ No hay datos de bateadores disponibles para {home_team}")
+                            
+                            with col2:
+                                away_batters = stats_det.get('away_batters', [])
+                                if away_batters and isinstance(away_batters, list) and len(away_batters) > 0:
+                                    st.markdown(
+                                        get_team_logo_html(away_team, 40) + f"- {away_team}",
+                                        unsafe_allow_html=True
+                                    )
+                                    for i, batter in enumerate(away_batters[:3], 1):
+                                        if batter and isinstance(batter, dict):
+                                            nombre_batter = batter.get('nombre', 'N/A')
+                                            if nombre_batter and nombre_batter != 'N/A':
+                                                with st.expander(f"#{i} - {nombre_batter}", expanded=(i==1)):
+                                                    subcol1, subcol2, subcol3, subcol4 = st.columns(4)
+                                                    with subcol1:
+                                                        st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
+                                                    with subcol2:
+                                                        st.metric("BA", f"{batter.get('BA', 0):.3f}")
+                                                    with subcol3:
+                                                        st.metric("HR", int(batter.get('HR', 0)))
+                                                    with subcol4:
+                                                        st.metric("RBI", int(batter.get('RBI', 0)))
+                                else:
+                                    st.info(f"ℹ️ No hay datos de bateadores disponibles para {away_team}")
+                        
+                        # Descargar reporte
                         st.markdown("---")
-                        st.markdown("## 📊 Estadísticas Detalladas")
+                        result_json = json.dumps(resultado, indent=2)
+                        st.download_button(
+                            label="📥 Descargar Reporte Técnico (JSON)",
+                            data=result_json,
+                            file_name=f"prediccion_{home_team}_vs_{away_team}_{year}.json",
+                            mime="application/json",
+                        )
+                    else:
+                        error = response.json()
+                        st.error(f"❌ Error: {error.get('detail', 'Error desconocido')}")
+                        st.info("💡 Verifica que los nombres de los lanzadores o el año de busqueda sean correctos.")
                         
-                        st.markdown("### 🎯 Lanzadores Iniciales")
-                        
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            home_pitcher_stats = stats_det.get('home_pitcher')
-                            if home_pitcher_stats:
-                                st.markdown(
-                                    get_team_logo_html(home_team, 40) + 
-                                    f"🏠 {home_team} - {home_pitcher_stats.get('nombre', home_pitcher)}",
-                                    unsafe_allow_html=True
-                                )
-                                
-                                subcol1, subcol2, subcol3 = st.columns(3)
-                                with subcol1:
-                                    st.metric("ERA", f"{home_pitcher_stats.get('ERA', 0):.2f}")
-                                with subcol2:
-                                    st.metric("WHIP", f"{home_pitcher_stats.get('WHIP', 0):.3f}")
-                                with subcol3:
-                                    st.metric("SO9", f"{home_pitcher_stats.get('SO9', 0):.2f}")
-                            else:
-                                st.warning(f"⚠️ No se encontró {home_pitcher}")
-                        
-                        with col2:
-                            away_pitcher_stats = stats_det.get('away_pitcher')
-                            if away_pitcher_stats:
-                                st.markdown(
-                                    get_team_logo_html(away_team, 40) + 
-                                    f"✈️ {away_team} - {away_pitcher_stats.get('nombre', away_pitcher)}",
-                                    unsafe_allow_html=True
-                                )
-                                
-                                subcol1, subcol2, subcol3 = st.columns(3)
-                                with subcol1:
-                                    st.metric("ERA", f"{away_pitcher_stats.get('ERA', 0):.2f}")
-                                with subcol2:
-                                    st.metric("WHIP", f"{away_pitcher_stats.get('WHIP', 0):.3f}")
-                                with subcol3:
-                                    st.metric("SO9", f"{away_pitcher_stats.get('SO9', 0):.2f}")
-                            else:
-                                st.warning(f"⚠️ No se encontró {away_pitcher}")
-                        
-                        st.markdown("---")
-                        st.markdown("### 🔥 Top 3 Bateadores")
-                        
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            home_batters = stats_det.get('home_batters', [])
-                            if home_batters:
-                                st.markdown(
-                                    get_team_logo_html(home_team, 40) + f"🏠 {home_team}",
-                                    unsafe_allow_html=True
-                                )
-                                for i, batter in enumerate(home_batters, 1):
-                                    with st.expander(f"#{i} - {batter.get('nombre', 'N/A')}", expanded=(i==1)):
-                                        subcol1, subcol2, subcol3, subcol4 = st.columns(4)
-                                        with subcol1:
-                                            st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
-                                        with subcol2:
-                                            st.metric("BA", f"{batter.get('BA', 0):.3f}")
-                                        with subcol3:
-                                            st.metric("HR", int(batter.get('HR', 0)))
-                                        with subcol4:
-                                            st.metric("RBI", int(batter.get('RBI', 0)))
-                            else:
-                                st.warning(f"⚠️ No se encontraron bateadores")
-                        
-                        with col2:
-                            away_batters = stats_det.get('away_batters', [])
-                            if away_batters:
-                                st.markdown(
-                                    get_team_logo_html(away_team, 40) + f"✈️ {away_team}",
-                                    unsafe_allow_html=True
-                                )
-                                for i, batter in enumerate(away_batters, 1):
-                                    with st.expander(f"#{i} - {batter.get('nombre', 'N/A')}", expanded=(i==1)):
-                                        subcol1, subcol2, subcol3, subcol4 = st.columns(4)
-                                        with subcol1:
-                                            st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
-                                        with subcol2:
-                                            st.metric("BA", f"{batter.get('BA', 0):.3f}")
-                                        with subcol3:
-                                            st.metric("HR", int(batter.get('HR', 0)))
-                                        with subcol4:
-                                            st.metric("RBI", int(batter.get('RBI', 0)))
-                            else:
-                                st.warning(f"⚠️ No se encontraron bateadores")
-                    
-                    # Mensaje si se usó año diferente
-                    if resultado.get('mensaje'):
-                        st.info(f"ℹ️ {resultado.get('mensaje')}")
-                    
-                    # Botón para descargar JSON
-                    st.markdown("---")
-                    result_json = json.dumps(resultado, indent=2)
-                    st.download_button(
-                        label="📥 Descargar Reporte Técnico (JSON)",
-                        data=result_json,
-                        file_name=f"prediccion_{home_team}_{away_team}_{year}.json",
-                        mime="application/json",
-                    )
+                except requests.exceptions.Timeout:
+                    st.error("⏱️ Timeout: La predicción tardó más de 2 minutos")
                 except Exception as e:
-                    st.error("❌ Error al procesar la predicción. Verifique los datos e intente nuevamente.")
+                    st.error("❌ Error al procesar la predicción")
                     st.exception(e)
 
 # ============================================================================
 # PÁGINA: PARTIDOS DE HOY
 # ============================================================================
 
-elif pagina == "📅 Partidos de Hoy":
-    st.markdown('<div class="main-header">📅 Partidos y Predicciones del Día</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Predicciones automáticas basadas en lineups scrapeados</div>', unsafe_allow_html=True)
+elif pagina == "Partidos de Hoy":
+    st.markdown('<div class="main-title">Partidos y Predicciones del Día</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Predicciones automáticas basadas en lineups scrapeados</div>', unsafe_allow_html=True)
     
     if not api_ok:
         st.error("❌ La API no está disponible")
         st.stop()
     
-    # Intentar obtener datos de la API
     try:
         response_partidos = requests.get(f"{API_URL}/games/today", timeout=10)
         response_predicciones = requests.get(f"{API_URL}/predictions/today", timeout=10)
@@ -690,7 +826,7 @@ elif pagina == "📅 Partidos de Hoy":
         if not partidos:
             st.markdown("""
             <div style="text-align: center; padding: 4rem 2rem; color: #64748b;">
-                <div style="font-size: 5rem; margin-bottom: 1rem;">⚾</div>
+                <div style="font-size: 5rem; margin-bottom: 1rem;"></div>
                 <h2>No hay partidos programados para hoy</h2>
                 <p style="font-size: 1.1rem; margin: 1rem 0;">
                     Los partidos aún no han sido scrapeados o no hay juegos programados
@@ -698,8 +834,7 @@ elif pagina == "📅 Partidos de Hoy":
             </div>
             """, unsafe_allow_html=True)
             
-            # Botón para ejecutar scraper manualmente
-            if st.button("🔄 Buscar Partidos Manualmente", type="primary", use_container_width=True):
+            if st.button("Buscar Partidos Manualmente", type="primary", use_container_width=True):
                 exito, mensaje = ejecutar_scraper_manual()
                 if exito:
                     st.success(mensaje)
@@ -707,9 +842,8 @@ elif pagina == "📅 Partidos de Hoy":
                 else:
                     st.warning(mensaje)
         else:
-            st.success(f"✅ Se encontraron {len(partidos)} partidos para hoy")
+            st.success(f"Se encontraron {len(partidos)} partidos para hoy")
             
-            # Mostrar cada partido
             for partido in partidos:
                 with st.container():
                     home_logo = get_team_logo_html(partido['home_team'], 50)
@@ -724,17 +858,19 @@ elif pagina == "📅 Partidos de Hoy":
                                 {away_logo}{partido['away_team']} @ {home_logo}{partido['home_team']}
                             </div>
                             <div style="color: #64748b; margin: 0.5rem 0;">
-                                🎯 {partido.get('away_pitcher', 'TBD')} vs {partido.get('home_pitcher', 'TBD')}
+                                {partido.get('away_pitcher', 'TBD')} vs {partido.get('home_pitcher', 'TBD')}
                             </div>
                         """, unsafe_allow_html=True)
                         
                         if 'prediccion' in partido:
                             pred_team = get_team_display_name(partido['prediccion'])
                             prob = partido.get('prob_home', 0) if partido['prediccion'] == partido['home_team'] else partido.get('prob_away', 0)
+                            # FIX: Normalizar probabilidad
+                            prob_normalizada = normalizar_probabilidad(prob)
                             
                             st.markdown(f"""
                             <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 0.75rem; border-radius: 0.5rem; margin: 0.5rem 0; font-weight: 600;">
-                                🏆 Predicho: <strong>{pred_team}</strong> ({prob*100:.1f}%)
+                                Predicho: <strong>{pred_team}</strong> ({prob_normalizada*100:.1f}%)
                             </div>
                             </div>
                             """, unsafe_allow_html=True)
@@ -744,10 +880,11 @@ elif pagina == "📅 Partidos de Hoy":
                     with col2:
                         if 'prediccion' in partido:
                             prob = partido.get('prob_home', 0) if partido['prediccion'] == partido['home_team'] else partido.get('prob_away', 0)
+                            prob_normalizada = normalizar_probabilidad(prob)
                             
                             st.metric(
                                 "Confianza",
-                                f"{prob*100:.1f}%",
+                                f"{prob_normalizada*100:.1f}%",
                                 delta=partido.get('confianza', 'N/A')
                             )
                         else:
@@ -761,15 +898,14 @@ elif pagina == "📅 Partidos de Hoy":
 # PÁGINA: COMPARACIÓN & HISTORIAL
 # ============================================================================
 
-elif pagina == "📊 Comparación & Historial":
-    st.markdown('<div class="main-header">📊 Comparación de Predicciones vs Resultados</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Analiza el rendimiento histórico del modelo</div>', unsafe_allow_html=True)
+elif pagina == "Comparación & Historial":
+    st.markdown('<div class="main-title"> Comparación de Predicciones vs Resultados</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Analiza el rendimiento histórico del modelo</div>', unsafe_allow_html=True)
     
     if not api_ok:
         st.error("❌ La API no está disponible")
         st.stop()
     
-    # Selector de fecha
     st.markdown("### 📅 Selecciona una Fecha")
     
     col1, col2, col3 = st.columns([2, 1, 1])
@@ -782,11 +918,11 @@ elif pagina == "📊 Comparación & Historial":
         )
     
     with col2:
-        if st.button("🔍 Analizar Fecha", type="primary", use_container_width=True):
+        if st.button(" Analizar Fecha", type="primary", use_container_width=True):
             st.session_state.fecha_analizar = fecha_seleccionada
     
     with col3:
-        if st.button("📊 Ver Estadísticas", use_container_width=True):
+        if st.button("Ver Estadísticas", use_container_width=True):
             try:
                 response = requests.get(f"{API_URL}/stats/accuracy?dias=30")
                 if response.status_code == 200:
@@ -795,7 +931,6 @@ elif pagina == "📊 Comparación & Historial":
             except:
                 st.error("Error obteniendo estadísticas")
     
-    # Mostrar comparación si hay fecha seleccionada
     if 'fecha_analizar' in st.session_state:
         fecha_str = st.session_state.fecha_analizar.strftime("%Y-%m-%d")
         
@@ -810,8 +945,7 @@ elif pagina == "📊 Comparación & Historial":
             partidos = comparacion['partidos']
             stats = comparacion['estadisticas']
             
-            # Métricas generales
-            st.markdown("### 📈 Rendimiento del Día")
+            st.markdown("### Rendimiento del Día")
             
             col1, col2, col3, col4 = st.columns(4)
             
@@ -825,8 +959,7 @@ elif pagina == "📊 Comparación & Historial":
                 errores = stats['total'] - stats['aciertos']
                 st.metric("Errores", errores)
             
-            # Tabla de resultados
-            st.markdown("### 🎯 Resultados Detallados")
+            st.markdown("### Resultados Detallados")
             
             for partido in partidos:
                 acierto = partido.get('acierto', 0)
@@ -838,13 +971,18 @@ elif pagina == "📊 Comparación & Historial":
                     col1, col2, col3 = st.columns(3)
                     
                     with col1:
-                        st.markdown("**🎯 Predicción**")
+                        st.markdown("** Predicción**")
                         st.write(f"Ganador: {partido.get('prediccion', 'N/A')}")
-                        st.write(f"Prob Home: {partido.get('prob_home', 0)*100:.1f}%")
-                        st.write(f"Prob Away: {partido.get('prob_away', 0)*100:.1f}%")
+                        prob_h = partido.get('prob_home', 0)
+                        prob_a = partido.get('prob_away', 0)
+                        # FIX: Normalizar probabilidades
+                        prob_h_norm = normalizar_probabilidad(prob_h)
+                        prob_a_norm = normalizar_probabilidad(prob_a)
+                        st.write(f"Prob Home: {prob_h_norm*100:.1f}%")
+                        st.write(f"Prob Away: {prob_a_norm*100:.1f}%")
                     
                     with col2:
-                        st.markdown("**📊 Resultado Real**")
+                        st.markdown("** Resultado Real**")
                         ganador_real = partido['home_team'] if partido['ganador_real'] == 1 else partido['away_team']
                         st.write(f"Ganador: {ganador_real}")
                         st.write(f"Score: {partido['score_away']}-{partido['score_home']}")
@@ -857,98 +995,114 @@ elif pagina == "📊 Comparación & Historial":
                             st.error("❌ ERROR")
                         st.write(f"Confianza: {partido.get('confianza', 'N/A')}")
         else:
-            st.info(f"📭 No hay datos disponibles para {fecha_str}")
+            st.info(f" No hay datos disponibles para {fecha_str}")
 
 # ============================================================================
-# PÁGINA: ACERCA DE
+# PÁGINA: ACERCA DEL MODELO
 # ============================================================================
 
-elif pagina == "ℹ️ Acerca de":
-    col1, col2, col3 = st.columns([1, 0.8, 1])
+elif pagina == "Acerca del Modelo":
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", use_container_width=True)
     
-    st.markdown('<div class="main-header">Sobre el Modelo V3.5</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Sistema Híbrido de Predicción Estadística</div>', unsafe_allow_html=True)
-
+    st.markdown('<div class="main-title">MLB Predictor Pro V3.5</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Sistema Híbrido de Predicción con Machine Learning</div>', unsafe_allow_html=True)
+    
     st.markdown("""
-    <div style="background: white; padding: 1.75rem; border-radius: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-left: 5px solid #3b82f6; margin: 1rem 0;">
-        <h3>🎯 ¿Qué es MLB Game Predictor?</h3>
+    <div class="stats-card">
+        <h3> ¿Qué es MLB Predictor Pro?</h3>
         <p style="font-size: 1.1rem; line-height: 1.8;">
-            Sistema de predicción de partidos MLB usando <b>Machine Learning con Modelo Híbrido</b> 
-            entrenado con datos históricos y en tiempo real para analizar estadísticas de equipos y jugadores,
-            enfocándose en la ventaja competitiva de los <b>matchups directos</b>.
+            Sistema avanzado de predicción de partidos MLB que utiliza <strong>XGBoost</strong> 
+            y <strong>web scraping en tiempo real</strong> para analizar más de 26 características 
+            estadísticas por partido, incluyendo matchups específicos de lanzadores vs bateadores.
         </p>
     </div>
     """, unsafe_allow_html=True)
-
+    
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("""
-        <div style="background: white; padding: 1.75rem; border-radius: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin: 1rem 0;">
-            <h4>🚀 Novedades V3.5</h4>
+        <div class="stats-card">
+            <h4> Características V3.5</h4>
             <ul style="font-size: 1.05rem; line-height: 1.8;">
-                <li><b>XGBoost Optimizado</b>: 20+ años de datos</li>
-                <li><b>SelectKBest Features</b>: 26 variables clave</li>
-                <li><b>Dynamic Scraping</b>: Baseball-Reference en vivo</li>
-                <li><b>Modelo Híbrido</b>: Temporal + Real-time</li>
+                <li><strong>Modelo Híbrido</strong>: Temporal + Scraping en vivo</li>
+                <li><strong>Super Features</strong>: Análisis de matchups directos</li>
+                <li><strong>XGBoost Optimizado</strong>: GridSearchCV para hiperparámetros</li>
+                <li><strong>Reentrenamiento Incremental</strong>: Se actualiza cada 150 juegos</li>
+                <li><strong>API FastAPI</strong>: Endpoints RESTful para integración</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
-
+    
     with col2:
         st.markdown("""
-        <div style="background: white; padding: 1.75rem; border-radius: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin: 1rem 0;">
-            <h4>📊 Características</h4>
+        <div class="stats-card">
+            <h4> Fuentes de Datos</h4>
             <ul style="font-size: 1.05rem; line-height: 1.8;">
-                <li>Análisis de lanzadores y bateadores</li>
-                <li>Logos oficiales MLB</li>
-                <li>Métricas de confianza por partido</li>
-                <li>Interfaz profesional optimizada</li>
+                <li><strong>Baseball-Reference</strong>: Stats de jugadores</li>
+                <li><strong>Histórico 2020-2026</strong>: Más de 10,000 partidos</li>
+                <li><strong>Scraping Diario</strong>: Lineups y lanzadores</li>
+                <li><strong>Actualización Automática</strong>: GitHub Actions</li>
+                <li><strong>Base de Datos SQLite</strong>: Almacenamiento local</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
-
-    st.markdown("### 🎯 Super Features Explicadas")
-    sf1, sf2, sf3 = st.columns(3)
     
-    with sf1:
+    st.markdown("### Super Features Explicadas")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
         st.markdown("""
-        <div style="background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin: 0.5rem 0;">
-            <b>🛡️ Neutralización</b><br>
-            <small>Cruza el WHIP del lanzador con el OPS rival.</small>
+        <div class="stats-card" style="border-left-color: #667eea;">
+            <h4> Neutralización</h4>
+            <p style="font-size: 1rem; line-height: 1.6;">
+                Mide cómo el <strong>WHIP del lanzador</strong> neutraliza el 
+                <strong>OPS del lineup rival</strong>, limitando su producción ofensiva.
+            </p>
         </div>
         """, unsafe_allow_html=True)
     
-    with sf2:
+    with col2:
         st.markdown("""
-        <div style="background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin: 0.5rem 0;">
-            <b>💪 Resistencia</b><br>
-            <small>Entradas de calidad frente al poder del lineup.</small>
+        <div class="stats-card" style="border-left-color: #f093fb;">
+            <h4> Resistencia</h4>
+            <p style="font-size: 1rem; line-height: 1.6;">
+                Evalúa la capacidad del lanzador de mantener su <strong>ERA bajo presión</strong> 
+                contra bateadores de poder (alto OPS).
+            </p>
         </div>
         """, unsafe_allow_html=True)
     
-    with sf3:
+    with col3:
         st.markdown("""
-        <div style="background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin: 0.5rem 0;">
-            <b>🧱 Muro Bullpen</b><br>
-            <small>Efectividad del relevo vs bateadores de cierre.</small>
+        <div class="stats-card" style="border-left-color: #a8edea;">
+            <h4> Muro Bullpen</h4>
+            <p style="font-size: 1rem; line-height: 1.6;">
+                Analiza la efectividad del <strong>bullpen</strong> contra los 
+                <strong>mejores bateadores rivales</strong> en innings críticos.
+            </p>
         </div>
         """, unsafe_allow_html=True)
-
-    st.markdown("### 🛠️ Stack Tecnológico")
-    tech_badges = ["FastAPI", "XGBoost", "Scikit-learn", "Streamlit", "BeautifulSoup", "Plotly"]
+    
+    st.markdown("### Stack Tecnológico")
+    
+    tech_badges = [
+        "Python 3.10+", "XGBoost", "Scikit-learn", "FastAPI", "Streamlit",
+        "Pandas", "NumPy", "Plotly", "BeautifulSoup", "Cloudscraper",
+        "SQLite", "GitHub Actions", "Uvicorn"
+    ]
+    
     badges_html = " ".join([
-        f'<span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.5rem 1rem; border-radius: 2rem; font-size: 0.875rem; font-weight: 700; margin: 0.25rem; display: inline-block;">{tech}</span>' 
+        f'<span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin: 0.25rem;">{tech}</span>' 
         for tech in tech_badges
     ])
     st.markdown(f'<div style="text-align: center; margin: 2rem 0;">{badges_html}</div>', unsafe_allow_html=True)
-
-    st.info("⚠️ **Disclaimer**: Este sistema es una herramienta estadística para análisis. El béisbol es impredecible, ¡disfruta el juego!")
-
-    # Equipos MLB
-    st.markdown("### ⚾ Equipos de la MLB")
+    
+    st.markdown("### Equipos de la Liga")
+    
     cols = st.columns(6)
     teams_sorted = sorted(EQUIPOS_MLB.items(), key=lambda x: x[1]['nombre'])
     
@@ -956,13 +1110,28 @@ elif pagina == "ℹ️ Acerca de":
         with cols[i % 6]:
             st.image(info['logo'], width=60)
             st.caption(f"**{code}**")
+    
+    st.markdown("---")
+    st.info("""
+    ⚠️ Este sistema es una herramienta estadística para análisis y entretenimiento. 
+    El béisbol es inherentemente impredecible. No utilices estas predicciones para apuestas deportivas.
+    """)
 
 # ============================================================================
 # FOOTER
 # ============================================================================
 
 st.markdown("---")
-st.markdown(
-    f"<center><p style='color: #666;'>MLB Predictor V3.5 | 2026 | Datos: Baseball-Reference</p></center>", 
-    unsafe_allow_html=True
-)
+st.markdown("""
+<div style="text-align: center; color: #64748b; padding: 2rem 0;">
+    <p style="margin: 0; font-size: 1rem;">
+        <strong>MLB Predictor Pro V3.5</strong> | 2026
+    </p>
+    <p style="margin: 0.5rem 0; font-size: 0.9rem;">
+        Datos: Baseball-Reference | Powered by XGBoost & FastAPI
+    </p>
+    <p style="margin: 0.5rem 0; font-size: 0.85rem;">
+        🔄 Actualización automática vía GitHub Actions
+    </p>
+</div>
+""", unsafe_allow_html=True)
