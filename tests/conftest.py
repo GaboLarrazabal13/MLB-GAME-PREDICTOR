@@ -3,10 +3,11 @@ Fixtures compartidos para tests de MLB Predictor
 """
 
 import os
-import sys
 import sqlite3
-import pytest
+import sys
 from pathlib import Path
+
+import pytest
 
 # Agregar src al path
 SRC_DIR = Path(__file__).parent.parent / "src"
@@ -66,14 +67,14 @@ def test_db_path(tmp_path_factory):
 
     # Insertar datos de prueba
     c.execute("""
-        INSERT INTO historico_real VALUES 
+        INSERT INTO historico_real VALUES
         ('test_001', '2024-06-01', 'NYY', 'BOS', 'Gerrit Cole', 'Tanner Houck', 5, 3, 1),
         ('test_002', '2024-06-02', 'LAD', 'SFG', 'Clayton Kershaw', 'Logan Webb', 4, 2, 1),
         ('test_003', '2024-06-03', 'CHC', 'STL', 'Justin Steele', 'Sonny Gray', 2, 5, 0)
     """)
 
     c.execute("""
-        INSERT INTO predicciones_historico VALUES 
+        INSERT INTO predicciones_historico VALUES
         (1, '2024-06-01', 'NYY', 'BOS', 'Gerrit Cole', 'Tanner Houck', 68.5, 31.5, 'NYY', 'ALTA', 'MANUAL'),
         (2, '2024-06-02', 'LAD', 'SFG', 'Clayton Kershaw', 'Logan Webb', 72.0, 28.0, 'LAD', 'ALTA', 'MANUAL')
     """)

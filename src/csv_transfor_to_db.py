@@ -1,8 +1,8 @@
-import pandas as pd
-import sqlite3
 import os
-import time
 import re
+import sqlite3
+
+import pandas as pd
 
 # CONFIGURACIÓN DE RUTAS
 CSV_PATH = './data/processed/datos_ml_ready.csv'
@@ -48,13 +48,13 @@ def importar_y_transformar():
 
     print(f"📖 Cargando datos desde {CSV_PATH}...")
     df = pd.read_csv(CSV_PATH)
-    
+
     # 1. Limpieza y Formateo
     df['fecha'] = pd.to_datetime(df['fecha'])
     df['year'] = df['fecha'].dt.year
-    
+
     print("🛠️ Generando Game IDs oficiales (Formato: TEAMYYYYMMDD0)...")
-    
+
     def generar_id(row):
         team_code = limpiar_nombre_equipo(row['home_team'])
         fecha_str = row['fecha'].strftime('%Y%m%d')
@@ -65,9 +65,9 @@ def importar_y_transformar():
     # 2. Conectar e Insertar
     inicializar_db()
     conn = sqlite3.connect(DB_PATH)
-    
+
     print(f"🚀 Intentando integrar {len(df)} juegos a la base de datos...")
-    
+
     registros_nuevos = 0
     errores = 0
 
@@ -75,16 +75,16 @@ def importar_y_transformar():
         try:
             # Insertar en la tabla de juegos (Ignorar si ya existe el ID)
             conn.execute('''
-                INSERT OR IGNORE INTO historico_real 
+                INSERT OR IGNORE INTO historico_real
                 (game_id, home_team, away_team, home_pitcher, away_pitcher, ganador, year, fecha)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                row['game_id'], row['home_team'], row['away_team'], 
-                row['home_pitcher'], row['away_pitcher'], 
+                row['game_id'], row['home_team'], row['away_team'],
+                row['home_pitcher'], row['away_pitcher'],
                 int(row['ganador']), int(row['year']), row['fecha'].strftime('%Y-%m-%d')
             ))
             registros_nuevos += 1
-        except Exception as e:
+        except Exception:
             errores += 1
 
         # Lógica de bloques y feedback visual
@@ -105,7 +105,7 @@ def importar_y_transformar():
     conn.close()
 
     print("\n" + "="*50)
-    print(f"✅ PROCESO FINALIZADO")
+    print("✅ PROCESO FINALIZADO")
     print(f"📊 Juegos procesados: {len(df)}")
     print(f"📦 Registros en DB: {registros_nuevos}")
     print(f"⚠️  Duplicados ignorados o errores: {len(df) - registros_nuevos}")
@@ -168,13 +168,13 @@ if __name__ == "__main__":
 
 #     print(f"📖 Cargando datos desde {CSV_PATH}...")
 #     df = pd.read_csv(CSV_PATH)
-    
+
 #     # 1. Limpieza y Formateo
 #     df['fecha'] = pd.to_datetime(df['fecha'])
 #     df['year'] = df['fecha'].dt.year
-    
+
 #     print("🛠️ Generando Game IDs oficiales (Formato: TEAMYYYYMMDD0)...")
-    
+
 #     def generar_id(row):
 #         team_code = limpiar_nombre_equipo(row['home_team'])
 #         fecha_str = row['fecha'].strftime('%Y%m%d')
@@ -185,9 +185,9 @@ if __name__ == "__main__":
 #     # 2. Conectar e Insertar
 #     inicializar_db()
 #     conn = sqlite3.connect(DB_PATH)
-    
+
 #     print(f"🚀 Intentando integrar {len(df)} juegos a la base de datos...")
-    
+
 #     registros_nuevos = 0
 #     errores = 0
 
@@ -195,12 +195,12 @@ if __name__ == "__main__":
 #         try:
 #             # Insertar en la tabla de juegos (Ignorar si ya existe el ID)
 #             conn.execute('''
-#                 INSERT OR IGNORE INTO juegos 
+#                 INSERT OR IGNORE INTO juegos
 #                 (game_id, home_team, away_team, home_pitcher, away_pitcher, ganador, year, fecha)
 #                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 #             ''', (
-#                 row['game_id'], row['home_team'], row['away_team'], 
-#                 row['home_pitcher'], row['away_pitcher'], 
+#                 row['game_id'], row['home_team'], row['away_team'],
+#                 row['home_pitcher'], row['away_pitcher'],
 #                 int(row['ganador']), int(row['year']), row['fecha'].strftime('%Y-%m-%d')
 #             ))
 #             registros_nuevos += 1

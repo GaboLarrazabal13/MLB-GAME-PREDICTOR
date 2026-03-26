@@ -65,13 +65,13 @@ TEAM_NAME_TO_CODE = {}
 for code, full_name in TEAM_CODE_TO_NAME.items():
     TEAM_NAME_TO_CODE[full_name] = code
     TEAM_NAME_TO_CODE[full_name.lower()] = code
-    
+
     # Nombre corto (última palabra)
     short_name = full_name.split()[-1]
     if short_name not in TEAM_NAME_TO_CODE:
         TEAM_NAME_TO_CODE[short_name] = code
         TEAM_NAME_TO_CODE[short_name.lower()] = code
-    
+
     # Códigos (ya normalizados)
     TEAM_NAME_TO_CODE[code] = code
     TEAM_NAME_TO_CODE[code.lower()] = code
@@ -147,16 +147,16 @@ SUPER_FEATURES = [
 def get_team_code(team_input):
     """
     Convierte cualquier variación de nombre de equipo a código MLB
-    
+
     Args:
         team_input: Nombre, código o apodo del equipo
-        
+
     Returns:
         Código de 3 letras o None si no se encuentra
     """
     if not team_input:
         return None
-    
+
     team_clean = str(team_input).strip().lower()
     return TEAM_NAME_TO_CODE.get(team_clean)
 
@@ -164,16 +164,16 @@ def get_team_code(team_input):
 def get_team_name(team_code):
     """
     Convierte código MLB a nombre completo
-    
+
     Args:
         team_code: Código de 3 letras (ej: 'NYY')
-        
+
     Returns:
         Nombre completo o el código si no se encuentra
     """
     if not team_code:
         return None
-    
+
     return TEAM_CODE_TO_NAME.get(team_code.upper(), team_code)
 
 
@@ -183,7 +183,7 @@ def ensure_directories():
     for d in dirs:
         dir_path = os.path.join(BASE_DIR, d)
         os.makedirs(dir_path, exist_ok=True)
-        
+
     # Verificar que los directorios se crearon correctamente
     for d in dirs:
         dir_path = os.path.join(BASE_DIR, d)
@@ -197,18 +197,18 @@ def ensure_directories():
 def validate_config():
     """Valida que todos los paths y configuraciones sean correctos"""
     errors = []
-    
+
     # Verificar directorios
     ensure_directories()
-    
+
     # Verificar que hay exactamente 30 equipos
     if len(TEAM_CODE_TO_NAME) != 30:
         errors.append(f"Se esperan 30 equipos MLB, se encontraron {len(TEAM_CODE_TO_NAME)}")
-    
+
     # Verificar coherencia de mapeos
     if len(TEAM_CODE_TO_NAME) != len(set(TEAM_CODE_TO_NAME.values())):
         errors.append("Hay nombres de equipos duplicados")
-    
+
     return errors
 
 
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     print(f"📁 Directorio base detectado: {BASE_DIR}")
     print(f"📁 Directorio actual: {CURRENT_DIR}")
     print()
-    
+
     errors = validate_config()
     if errors:
         print("❌ Errores de configuración:")

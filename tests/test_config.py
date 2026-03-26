@@ -2,7 +2,6 @@
 Tests para mlb_config.py
 """
 
-import pytest
 import sys
 from pathlib import Path
 
@@ -10,13 +9,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from mlb_config import (
+    MODEL_CONFIG,
+    SCRAPING_CONFIG,
+    TEAM_CODE_TO_NAME,
     get_team_code,
     get_team_name,
-    TEAM_CODE_TO_NAME,
-    TEAM_NAME_TO_CODE,
     validate_config,
-    SCRAPING_CONFIG,
-    MODEL_CONFIG,
 )
 
 
@@ -63,7 +61,7 @@ class TestTeamMapping:
     def test_all_teams_have_names(self):
         """Test que todos los equipos tienen nombre"""
         assert len(TEAM_CODE_TO_NAME) == 30
-        for code, name in TEAM_CODE_TO_NAME.items():
+        for _code, name in TEAM_CODE_TO_NAME.items():
             assert name is not None
             assert len(name) > 0
 

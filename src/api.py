@@ -3,21 +3,20 @@ API FastAPI para MLB Predictor V3.5 - VERSIÓN CORREGIDA
 Endpoints para predicciones manuales, automáticas y análisis de rendimiento
 """
 
+import os
+import sqlite3
+import sys
+from datetime import datetime, timedelta
+
+import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
-from datetime import datetime, timedelta
-import sqlite3
-import pandas as pd
-import os
-import sys
 
 # Importar módulos del proyecto
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mlb_config import DB_PATH, get_team_code, get_team_name, TEAM_CODE_TO_NAME
+from mlb_config import DB_PATH, TEAM_CODE_TO_NAME, get_team_code, get_team_name
 from mlb_predict_engine import predecir_juego
-from mlb_utils import analizar_accuracy_historico, generar_reporte_equipos
 
 # ============================================================================
 # CONFIGURACIÓN DE LA API
@@ -48,8 +47,8 @@ class PrediccionRequest(BaseModel):
     away_team: str = Field(..., description="Código del equipo visitante (ej: BOS)")
     home_pitcher: str = Field(..., description="Nombre del lanzador local")
     away_pitcher: str = Field(..., description="Nombre del lanzador visitante")
-    year: Optional[int] = Field(2026, description="Año para scraping de stats")
-    
+    year: int | None = Field(2026, description="Año para scraping de stats")
+
     class Config:
         schema_extra = {
             "example": {
@@ -74,7 +73,7 @@ class PrediccionResponse(BaseModel):
     prob_away: float
     prediccion: str
     confianza: str
-    detalles: Optional[Dict] = None
+    detalles: dict | None = None
 
 
 class PartidoHoy(BaseModel):
@@ -85,10 +84,10 @@ class PartidoHoy(BaseModel):
     away_team: str
     home_pitcher: str
     away_pitcher: str
-    prediccion: Optional[str] = None
-    prob_home: Optional[float] = None
-    prob_away: Optional[float] = None
-    confianza: Optional[str] = None
+    prediccion: str | None = None
+    prob_home: float | None = None
+    prob_away: float | None = None
+    confianza: str | None = None
 
 
 class ResultadoReal(BaseModel):
@@ -100,8 +99,8 @@ class ResultadoReal(BaseModel):
     score_home: int
     score_away: int
     ganador: int
-    prediccion: Optional[str] = None
-    acierto: Optional[bool] = None
+    prediccion: str | None = None
+    acierto: bool | None = None
 
 
 # ============================================================================
@@ -131,11 +130,12 @@ async def root():
 async def health_check():
     """Verifica el estado de la API y recursos"""
     import os
-    from mlb_config import MODELO_PATH, DB_PATH
-    
+
+    from mlb_config import DB_PATH, MODELO_PATH
+
     modelo_exists = os.path.exists(MODELO_PATH)
     db_exists = os.path.exists(DB_PATH)
-    
+
     return {
         "status": "healthy" if (modelo_exists and db_exists) else "degraded",
         "modelo_disponible": modelo_exists,
@@ -144,7 +144,7 @@ async def health_check():
     }
 
 
-@app.get("/teams", response_model=List[Dict[str, str]])
+@app.get("/teams", response_model=list[dict[str, str]])
 async def listar_equipos():
     """Lista todos los equipos MLB disponibles"""
     equipos = [
@@ -168,14 +168,14 @@ async def crear_prediccion_manual(request: PrediccionRequest):
         # Validar códigos de equipos
         home_code = get_team_code(request.home_team)
         away_code = get_team_code(request.away_team)
-        
+
         if not home_code:
             raise HTTPException(status_code=400, detail=f"Equipo local no válido: {request.home_team}")
         if not away_code:
             raise HTTPException(status_code=400, detail=f"Equipo visitante no válido: {request.away_team}")
         if home_code == away_code:
             raise HTTPException(status_code=400, detail="Los equipos no pueden ser iguales")
-        
+
         # Realizar predicción
         resultado = predecir_juego(
             home_team=home_code,
@@ -185,13 +185,13 @@ async def crear_prediccion_manual(request: PrediccionRequest):
             year=request.year,
             modo_auto=True
         )
-        
+
         if not resultado:
             raise HTTPException(
-                status_code=500, 
+                status_code=500,
                 detail="No se pudo completar la predicción. Verifica los nombres de los lanzadores."
             )
-        
+
         return PrediccionResponse(
             success=True,
             fecha=resultado['fecha'],
@@ -204,11 +204,11 @@ async def crear_prediccion_manual(request: PrediccionRequest):
             prediccion=resultado['prediccion'],
             confianza=resultado['confianza']
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}") from e
 
 
 @app.post("/predict/detailed")
@@ -220,24 +220,24 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         # Validar códigos de equipos
         home_code = get_team_code(request.home_team)
         away_code = get_team_code(request.away_team)
-        
+
         if not home_code:
             raise HTTPException(status_code=400, detail=f"Equipo local no válido: {request.home_team}")
         if not away_code:
             raise HTTPException(status_code=400, detail=f"Equipo visitante no válido: {request.away_team}")
         if home_code == away_code:
             raise HTTPException(status_code=400, detail="Los equipos no pueden ser iguales")
-        
+
         # Importar funciones de scraping
+        from mlb_feature_engineering import calcular_super_features
         from train_model_hybrid_actions import (
-            scrape_player_stats,
+            calcular_stats_equipo,
             encontrar_lanzador,
             encontrar_mejor_bateador,
             extraer_top_relevistas,
-            calcular_stats_equipo
+            scrape_player_stats,
         )
-        from mlb_feature_engineering import calcular_super_features
-        
+
         # Realizar predicción básica primero
         resultado = predecir_juego(
             home_team=home_code,
@@ -247,42 +247,42 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             year=request.year,
             modo_auto=True
         )
-        
+
         if not resultado:
             raise HTTPException(
                 status_code=500,
                 detail="No se pudo completar la predicción"
             )
-        
+
         # Scraping para estadísticas detalladas
         session_cache = {}
-        
+
         bat_home, pit_home = scrape_player_stats(home_code, request.year, session_cache)
         bat_away, pit_away = scrape_player_stats(away_code, request.year, session_cache)
-        
+
         # Extraer estadísticas de lanzadores (con nombres reales)
         home_pitcher_stats = encontrar_lanzador(pit_home, request.home_pitcher)
         away_pitcher_stats = encontrar_lanzador(pit_away, request.away_pitcher)
-        
+
         # Validar que se encontraron los lanzadores
         if not home_pitcher_stats or not away_pitcher_stats:
             raise HTTPException(
                 status_code=404,
                 detail="No se encontraron uno o ambos lanzadores. Verifica los nombres."
             )
-        
+
         # Extraer Top 3 bateadores
         home_batters_stats = encontrar_mejor_bateador(bat_home)
         away_batters_stats = encontrar_mejor_bateador(bat_away)
-        
+
         # Extraer stats de bullpen
         home_bullpen = extraer_top_relevistas(pit_home)
         away_bullpen = extraer_top_relevistas(pit_away)
-        
+
         # Calcular stats generales de equipos
         stats_home = calcular_stats_equipo(bat_home, pit_home)
         stats_away = calcular_stats_equipo(bat_away, pit_away)
-        
+
         # Construir features para super features
         features_dict = {
             'home_team_OPS': stats_home.get('team_OPS_mean', 0.75),
@@ -298,14 +298,14 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             'home_bullpen_ERA': home_bullpen['bullpen_ERA_mean'] if home_bullpen else 4.0,
             'away_bullpen_ERA': away_bullpen['bullpen_ERA_mean'] if away_bullpen else 4.0,
         }
-        
+
         # Calcular super features
         features_dict = calcular_super_features(features_dict)
-        
+
         # CORRECCIÓN: Formatear bateadores correctamente
         home_batters_list = []
         away_batters_list = []
-        
+
         if home_batters_stats and 'detalles_visuales' in home_batters_stats:
             for batter in home_batters_stats['detalles_visuales']:
                 home_batters_list.append({
@@ -317,7 +317,7 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
                     'HR': int(batter.get('hr', 0)),
                     'RBI': int(batter.get('rbi', 0))
                 })
-        
+
         if away_batters_stats and 'detalles_visuales' in away_batters_stats:
             for batter in away_batters_stats['detalles_visuales']:
                 away_batters_list.append({
@@ -329,12 +329,12 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
                     'HR': int(batter.get('hr', 0)),
                     'RBI': int(batter.get('rbi', 0))
                 })
-        
+
         # CORRECCIÓN: Calcular confianza correctamente (es una probabilidad 0-1, no porcentaje)
         prob_home_decimal = resultado['prob_home'] / 100.0 if resultado['prob_home'] > 1 else resultado['prob_home']
         prob_away_decimal = resultado['prob_away'] / 100.0 if resultado['prob_away'] > 1 else resultado['prob_away']
         confianza_decimal = max(prob_home_decimal, prob_away_decimal)
-        
+
         # Construir respuesta detallada
         return {
             "ganador": resultado['prediccion'],
@@ -366,21 +366,21 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
                 "away_batters": away_batters_list   # CORREGIDO: lista formateada
             }
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}") from e
 
 
-@app.get("/games/today", response_model=List[PartidoHoy])
+@app.get("/games/today", response_model=list[PartidoHoy])
 async def obtener_partidos_hoy():
     """Obtiene los partidos programados para hoy"""
     try:
         fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-        
+
         with sqlite3.connect(DB_PATH) as conn:
             query = f"""
                 SELECT game_id, fecha, home_team, away_team, home_pitcher, away_pitcher
@@ -389,10 +389,10 @@ async def obtener_partidos_hoy():
                 ORDER BY home_team
             """
             df = pd.read_sql(query, conn)
-        
+
         if df.empty:
             return []
-        
+
         return [
             PartidoHoy(
                 game_id=row['game_id'],
@@ -404,40 +404,40 @@ async def obtener_partidos_hoy():
             )
             for _, row in df.iterrows()
         ]
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo partidos: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo partidos: {str(e)}") from e
 
 
-@app.get("/predictions/today", response_model=List[Dict])
+@app.get("/predictions/today", response_model=list[dict])
 async def obtener_predicciones_hoy():
     """Obtiene las predicciones generadas para hoy"""
     try:
         fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-        
+
         with sqlite3.connect(DB_PATH) as conn:
             query = f"""
                 SELECT p.*, hp.game_id
                 FROM predicciones_historico p
-                LEFT JOIN historico_partidos hp 
-                    ON p.fecha = hp.fecha 
-                    AND p.home_team = hp.home_team 
+                LEFT JOIN historico_partidos hp
+                    ON p.fecha = hp.fecha
+                    AND p.home_team = hp.home_team
                     AND p.away_team = hp.away_team
                 WHERE p.fecha = '{fecha_hoy}'
                 ORDER BY p.prob_home DESC
             """
             df = pd.read_sql(query, conn)
-        
+
         if df.empty:
             return []
-        
+
         return df.to_dict('records')
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo predicciones: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo predicciones: {str(e)}") from e
 
 
-@app.get("/predictions/latest", response_model=List[Dict])
+@app.get("/predictions/latest", response_model=list[dict])
 async def obtener_ultimas_predicciones(
     limit: int = Query(20, ge=1, le=100, description="Número de predicciones a retornar")
 ):
@@ -450,18 +450,18 @@ async def obtener_ultimas_predicciones(
                 LIMIT {limit}
             """
             df = pd.read_sql(query, conn)
-        
+
         return df.to_dict('records')
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo predicciones: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo predicciones: {str(e)}") from e
 
 
 # ============================================================================
 # ENDPOINTS - RESULTADOS Y COMPARACIÓN
 # ============================================================================
 
-@app.get("/results/latest", response_model=List[ResultadoReal])
+@app.get("/results/latest", response_model=list[ResultadoReal])
 async def obtener_ultimos_resultados(
     limit: int = Query(20, ge=1, le=100, description="Número de resultados a retornar")
 ):
@@ -474,10 +474,10 @@ async def obtener_ultimos_resultados(
                 LIMIT {limit}
             """
             df = pd.read_sql(query, conn)
-        
+
         if df.empty:
             return []
-        
+
         return [
             ResultadoReal(
                 game_id=row['game_id'],
@@ -490,9 +490,9 @@ async def obtener_ultimos_resultados(
             )
             for _, row in df.iterrows()
         ]
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo resultados: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo resultados: {str(e)}") from e
 
 
 @app.get("/compare/{fecha}")
@@ -503,11 +503,11 @@ async def comparar_predicciones_resultados(fecha: str):
         try:
             datetime.strptime(fecha, "%Y-%m-%d")
         except ValueError:
-            raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD")
-        
+            raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD") from None
+
         with sqlite3.connect(DB_PATH) as conn:
             query = f"""
-                SELECT 
+                SELECT
                     r.game_id,
                     r.fecha,
                     r.home_team,
@@ -521,22 +521,22 @@ async def comparar_predicciones_resultados(fecha: str):
                     p.prob_home,
                     p.prob_away,
                     p.confianza,
-                    CASE 
-                        WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR 
+                    CASE
+                        WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
                              (r.ganador = 0 AND p.prediccion = r.away_team)
-                        THEN 1 
-                        ELSE 0 
+                        THEN 1
+                        ELSE 0
                     END as acierto
                 FROM historico_real r
-                LEFT JOIN predicciones_historico p 
-                    ON r.fecha = p.fecha 
-                    AND r.home_team = p.home_team 
+                LEFT JOIN predicciones_historico p
+                    ON r.fecha = p.fecha
+                    AND r.home_team = p.home_team
                     AND r.away_team = p.away_team
                 WHERE r.fecha = '{fecha}'
                 ORDER BY r.home_team
             """
             df = pd.read_sql(query, conn)
-        
+
         if df.empty:
             return {
                 "fecha": fecha,
@@ -547,14 +547,14 @@ async def comparar_predicciones_resultados(fecha: str):
                     "accuracy": 0.0
                 }
             }
-        
+
         # Calcular estadísticas
         total = len(df)
         aciertos = df['acierto'].sum() if 'acierto' in df.columns else 0
         accuracy = (aciertos / total * 100) if total > 0 else 0.0
-        
+
         partidos = df.to_dict('records')
-        
+
         return {
             "fecha": fecha,
             "partidos": partidos,
@@ -565,11 +565,11 @@ async def comparar_predicciones_resultados(fecha: str):
                 "por_confianza": df.groupby('confianza')['acierto'].agg(['count', 'sum', 'mean']).to_dict('index') if 'confianza' in df.columns else {}
             }
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en comparación: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error en comparación: {str(e)}") from e
 
 
 # ============================================================================
@@ -583,31 +583,31 @@ async def obtener_estadisticas_accuracy(
     """Obtiene estadísticas de accuracy del modelo"""
     try:
         fecha_limite = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d")
-        
+
         with sqlite3.connect(DB_PATH) as conn:
             query = f"""
-                SELECT 
+                SELECT
                     r.fecha,
                     r.home_team,
                     r.away_team,
                     r.ganador as ganador_real,
                     p.prediccion,
                     p.confianza,
-                    CASE 
-                        WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR 
+                    CASE
+                        WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
                              (r.ganador = 0 AND p.prediccion = r.away_team)
-                        THEN 1 
-                        ELSE 0 
+                        THEN 1
+                        ELSE 0
                     END as acierto
                 FROM historico_real r
-                INNER JOIN predicciones_historico p 
-                    ON r.fecha = p.fecha 
-                    AND r.home_team = p.home_team 
+                INNER JOIN predicciones_historico p
+                    ON r.fecha = p.fecha
+                    AND r.home_team = p.home_team
                     AND r.away_team = p.away_team
                 WHERE r.fecha >= '{fecha_limite}'
             """
             df = pd.read_sql(query, conn)
-        
+
         if df.empty:
             return {
                 "periodo": f"Últimos {dias} días",
@@ -616,11 +616,11 @@ async def obtener_estadisticas_accuracy(
                 "accuracy_general": 0.0,
                 "por_confianza": {}
             }
-        
+
         total = len(df)
         aciertos = df['acierto'].sum()
         accuracy = (aciertos / total * 100) if total > 0 else 0.0
-        
+
         # Estadísticas por nivel de confianza
         por_confianza = {}
         if 'confianza' in df.columns:
@@ -631,7 +631,7 @@ async def obtener_estadisticas_accuracy(
                     "aciertos": int(df_conf['acierto'].sum()),
                     "accuracy": round(df_conf['acierto'].mean() * 100, 2)
                 }
-        
+
         return {
             "periodo": f"Últimos {dias} días",
             "total": int(total),
@@ -639,9 +639,9 @@ async def obtener_estadisticas_accuracy(
             "accuracy_general": round(accuracy, 2),
             "por_confianza": por_confianza
         }
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calculando accuracy: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error calculando accuracy: {str(e)}") from e
 
 
 @app.get("/stats/team/{team_code}")
@@ -654,7 +654,7 @@ async def obtener_estadisticas_equipo(
         # Validar equipo
         if not get_team_name(team_code):
             raise HTTPException(status_code=400, detail=f"Código de equipo no válido: {team_code}")
-        
+
         with sqlite3.connect(DB_PATH) as conn:
             query = f"""
                 SELECT * FROM predicciones_historico
@@ -663,25 +663,25 @@ async def obtener_estadisticas_equipo(
                 LIMIT {ultimos_n}
             """
             df = pd.read_sql(query, conn)
-        
+
         if df.empty:
             return {
                 "equipo": team_code,
                 "nombre": get_team_name(team_code),
                 "predicciones": []
             }
-        
+
         return {
             "equipo": team_code,
             "nombre": get_team_name(team_code),
             "total_predicciones": len(df),
             "predicciones": df.to_dict('records')
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo stats del equipo: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo stats del equipo: {str(e)}") from e
 
 
 # ============================================================================
