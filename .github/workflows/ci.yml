@@ -51,6 +51,8 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
     
     steps:
       - name: Checkout code
