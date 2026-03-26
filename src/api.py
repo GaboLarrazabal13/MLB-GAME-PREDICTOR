@@ -25,7 +25,7 @@ from mlb_predict_engine import predecir_juego
 app = FastAPI(
     title="MLB Predictor API",
     description="API para predicciones de partidos MLB usando Machine Learning",
-    version="3.5.0"
+    version="3.5.0",
 )
 
 # CORS para permitir acceso desde el frontend
@@ -41,8 +41,10 @@ app.add_middleware(
 # MODELOS DE DATOS (Pydantic)
 # ============================================================================
 
+
 class PrediccionRequest(BaseModel):
     """Modelo para solicitud de predicción manual"""
+
     home_team: str = Field(..., description="Código del equipo local (ej: NYY)")
     away_team: str = Field(..., description="Código del equipo visitante (ej: BOS)")
     home_pitcher: str = Field(..., description="Nombre del lanzador local")
@@ -56,13 +58,14 @@ class PrediccionRequest(BaseModel):
                 "away_team": "BOS",
                 "home_pitcher": "Gerrit Cole",
                 "away_pitcher": "Tanner Houck",
-                "year": 2024
+                "year": 2024,
             }
         }
 
 
 class PrediccionResponse(BaseModel):
     """Modelo para respuesta de predicción"""
+
     success: bool
     fecha: str
     home_team: str
@@ -78,6 +81,7 @@ class PrediccionResponse(BaseModel):
 
 class PartidoHoy(BaseModel):
     """Modelo para partido del día"""
+
     game_id: str
     fecha: str
     home_team: str
@@ -92,6 +96,7 @@ class PartidoHoy(BaseModel):
 
 class ResultadoReal(BaseModel):
     """Modelo para resultado real"""
+
     game_id: str
     fecha: str
     home_team: str
@@ -107,6 +112,7 @@ class ResultadoReal(BaseModel):
 # ENDPOINTS - INFORMACIÓN GENERAL
 # ============================================================================
 
+
 @app.get("/")
 async def root():
     """Endpoint raíz con información de la API"""
@@ -121,8 +127,8 @@ async def root():
             "resultados": "/results",
             "comparacion": "/compare/{fecha}",
             "accuracy": "/stats/accuracy",
-            "equipos": "/teams"
-        }
+            "equipos": "/teams",
+        },
     }
 
 
@@ -140,7 +146,7 @@ async def health_check():
         "status": "healthy" if (modelo_exists and db_exists) else "degraded",
         "modelo_disponible": modelo_exists,
         "base_datos_disponible": db_exists,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
 
@@ -148,15 +154,15 @@ async def health_check():
 async def listar_equipos():
     """Lista todos los equipos MLB disponibles"""
     equipos = [
-        {"codigo": code, "nombre": name}
-        for code, name in TEAM_CODE_TO_NAME.items()
+        {"codigo": code, "nombre": name} for code, name in TEAM_CODE_TO_NAME.items()
     ]
-    return sorted(equipos, key=lambda x: x['nombre'])
+    return sorted(equipos, key=lambda x: x["nombre"])
 
 
 # ============================================================================
 # ENDPOINTS - PREDICCIONES
 # ============================================================================
+
 
 @app.post("/predict", response_model=PrediccionResponse)
 async def crear_prediccion_manual(request: PrediccionRequest):
@@ -170,11 +176,18 @@ async def crear_prediccion_manual(request: PrediccionRequest):
         away_code = get_team_code(request.away_team)
 
         if not home_code:
-            raise HTTPException(status_code=400, detail=f"Equipo local no válido: {request.home_team}")
+            raise HTTPException(
+                status_code=400, detail=f"Equipo local no válido: {request.home_team}"
+            )
         if not away_code:
-            raise HTTPException(status_code=400, detail=f"Equipo visitante no válido: {request.away_team}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Equipo visitante no válido: {request.away_team}",
+            )
         if home_code == away_code:
-            raise HTTPException(status_code=400, detail="Los equipos no pueden ser iguales")
+            raise HTTPException(
+                status_code=400, detail="Los equipos no pueden ser iguales"
+            )
 
         # Realizar predicción
         resultado = predecir_juego(
@@ -183,26 +196,26 @@ async def crear_prediccion_manual(request: PrediccionRequest):
             home_pitcher=request.home_pitcher,
             away_pitcher=request.away_pitcher,
             year=request.year,
-            modo_auto=True
+            modo_auto=True,
         )
 
         if not resultado:
             raise HTTPException(
                 status_code=500,
-                detail="No se pudo completar la predicción. Verifica los nombres de los lanzadores."
+                detail="No se pudo completar la predicción. Verifica los nombres de los lanzadores.",
             )
 
         return PrediccionResponse(
             success=True,
-            fecha=resultado['fecha'],
-            home_team=resultado['home_team'],
-            away_team=resultado['away_team'],
-            home_pitcher=resultado['home_pitcher'],
-            away_pitcher=resultado['away_pitcher'],
-            prob_home=resultado['prob_home'],
-            prob_away=resultado['prob_away'],
-            prediccion=resultado['prediccion'],
-            confianza=resultado['confianza']
+            fecha=resultado["fecha"],
+            home_team=resultado["home_team"],
+            away_team=resultado["away_team"],
+            home_pitcher=resultado["home_pitcher"],
+            away_pitcher=resultado["away_pitcher"],
+            prob_home=resultado["prob_home"],
+            prob_away=resultado["prob_away"],
+            prediccion=resultado["prediccion"],
+            confianza=resultado["confianza"],
         )
 
     except HTTPException:
@@ -222,11 +235,18 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         away_code = get_team_code(request.away_team)
 
         if not home_code:
-            raise HTTPException(status_code=400, detail=f"Equipo local no válido: {request.home_team}")
+            raise HTTPException(
+                status_code=400, detail=f"Equipo local no válido: {request.home_team}"
+            )
         if not away_code:
-            raise HTTPException(status_code=400, detail=f"Equipo visitante no válido: {request.away_team}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Equipo visitante no válido: {request.away_team}",
+            )
         if home_code == away_code:
-            raise HTTPException(status_code=400, detail="Los equipos no pueden ser iguales")
+            raise HTTPException(
+                status_code=400, detail="Los equipos no pueden ser iguales"
+            )
 
         # Importar funciones de scraping
         from mlb_feature_engineering import calcular_super_features
@@ -245,13 +265,12 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             home_pitcher=request.home_pitcher,
             away_pitcher=request.away_pitcher,
             year=request.year,
-            modo_auto=True
+            modo_auto=True,
         )
 
         if not resultado:
             raise HTTPException(
-                status_code=500,
-                detail="No se pudo completar la predicción"
+                status_code=500, detail="No se pudo completar la predicción"
             )
 
         # Scraping para estadísticas detalladas
@@ -268,7 +287,7 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         if not home_pitcher_stats or not away_pitcher_stats:
             raise HTTPException(
                 status_code=404,
-                detail="No se encontraron uno o ambos lanzadores. Verifica los nombres."
+                detail="No se encontraron uno o ambos lanzadores. Verifica los nombres.",
             )
 
         # Extraer Top 3 bateadores
@@ -285,18 +304,30 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
 
         # Construir features para super features
         features_dict = {
-            'home_team_OPS': stats_home.get('team_OPS_mean', 0.75),
-            'away_team_OPS': stats_away.get('team_OPS_mean', 0.75),
-            'home_starter_ERA': home_pitcher_stats['ERA'],
-            'away_starter_ERA': away_pitcher_stats['ERA'],
-            'home_starter_WHIP': home_pitcher_stats['WHIP'],
-            'away_starter_WHIP': away_pitcher_stats['WHIP'],
-            'home_best_OPS': home_batters_stats['best_bat_OPS'] if home_batters_stats else 0.85,
-            'away_best_OPS': away_batters_stats['best_bat_OPS'] if away_batters_stats else 0.85,
-            'home_bullpen_WHIP': home_bullpen['bullpen_WHIP_mean'] if home_bullpen else 1.3,
-            'away_bullpen_WHIP': away_bullpen['bullpen_WHIP_mean'] if away_bullpen else 1.3,
-            'home_bullpen_ERA': home_bullpen['bullpen_ERA_mean'] if home_bullpen else 4.0,
-            'away_bullpen_ERA': away_bullpen['bullpen_ERA_mean'] if away_bullpen else 4.0,
+            "home_team_OPS": stats_home.get("team_OPS_mean", 0.75),
+            "away_team_OPS": stats_away.get("team_OPS_mean", 0.75),
+            "home_starter_ERA": home_pitcher_stats["ERA"],
+            "away_starter_ERA": away_pitcher_stats["ERA"],
+            "home_starter_WHIP": home_pitcher_stats["WHIP"],
+            "away_starter_WHIP": away_pitcher_stats["WHIP"],
+            "home_best_OPS": home_batters_stats["best_bat_OPS"]
+            if home_batters_stats
+            else 0.85,
+            "away_best_OPS": away_batters_stats["best_bat_OPS"]
+            if away_batters_stats
+            else 0.85,
+            "home_bullpen_WHIP": home_bullpen["bullpen_WHIP_mean"]
+            if home_bullpen
+            else 1.3,
+            "away_bullpen_WHIP": away_bullpen["bullpen_WHIP_mean"]
+            if away_bullpen
+            else 1.3,
+            "home_bullpen_ERA": home_bullpen["bullpen_ERA_mean"]
+            if home_bullpen
+            else 4.0,
+            "away_bullpen_ERA": away_bullpen["bullpen_ERA_mean"]
+            if away_bullpen
+            else 4.0,
         }
 
         # Calcular super features
@@ -306,38 +337,50 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         home_batters_list = []
         away_batters_list = []
 
-        if home_batters_stats and 'detalles_visuales' in home_batters_stats:
-            for batter in home_batters_stats['detalles_visuales']:
-                home_batters_list.append({
-                    'nombre': batter.get('n', 'N/A'),
-                    'BA': batter.get('ba', 0.0),
-                    'OBP': batter.get('obp', 0.0),
-                    'SLG': batter.get('slg', 0.0),
-                    'OPS': batter.get('ops', 0.0),
-                    'HR': int(batter.get('hr', 0)),
-                    'RBI': int(batter.get('rbi', 0))
-                })
+        if home_batters_stats and "detalles_visuales" in home_batters_stats:
+            for batter in home_batters_stats["detalles_visuales"]:
+                home_batters_list.append(
+                    {
+                        "nombre": batter.get("n", "N/A"),
+                        "BA": batter.get("ba", 0.0),
+                        "OBP": batter.get("obp", 0.0),
+                        "SLG": batter.get("slg", 0.0),
+                        "OPS": batter.get("ops", 0.0),
+                        "HR": int(batter.get("hr", 0)),
+                        "RBI": int(batter.get("rbi", 0)),
+                    }
+                )
 
-        if away_batters_stats and 'detalles_visuales' in away_batters_stats:
-            for batter in away_batters_stats['detalles_visuales']:
-                away_batters_list.append({
-                    'nombre': batter.get('n', 'N/A'),
-                    'BA': batter.get('ba', 0.0),
-                    'OBP': batter.get('obp', 0.0),
-                    'SLG': batter.get('slg', 0.0),
-                    'OPS': batter.get('ops', 0.0),
-                    'HR': int(batter.get('hr', 0)),
-                    'RBI': int(batter.get('rbi', 0))
-                })
+        if away_batters_stats and "detalles_visuales" in away_batters_stats:
+            for batter in away_batters_stats["detalles_visuales"]:
+                away_batters_list.append(
+                    {
+                        "nombre": batter.get("n", "N/A"),
+                        "BA": batter.get("ba", 0.0),
+                        "OBP": batter.get("obp", 0.0),
+                        "SLG": batter.get("slg", 0.0),
+                        "OPS": batter.get("ops", 0.0),
+                        "HR": int(batter.get("hr", 0)),
+                        "RBI": int(batter.get("rbi", 0)),
+                    }
+                )
 
         # CORRECCIÓN: Calcular confianza correctamente (es una probabilidad 0-1, no porcentaje)
-        prob_home_decimal = resultado['prob_home'] / 100.0 if resultado['prob_home'] > 1 else resultado['prob_home']
-        prob_away_decimal = resultado['prob_away'] / 100.0 if resultado['prob_away'] > 1 else resultado['prob_away']
+        prob_home_decimal = (
+            resultado["prob_home"] / 100.0
+            if resultado["prob_home"] > 1
+            else resultado["prob_home"]
+        )
+        prob_away_decimal = (
+            resultado["prob_away"] / 100.0
+            if resultado["prob_away"] > 1
+            else resultado["prob_away"]
+        )
         confianza_decimal = max(prob_home_decimal, prob_away_decimal)
 
         # Construir respuesta detallada
         return {
-            "ganador": resultado['prediccion'],
+            "ganador": resultado["prediccion"],
             "prob_home": prob_home_decimal,
             "prob_away": prob_away_decimal,
             "confianza": confianza_decimal,  # CORREGIDO: valor entre 0-1
@@ -345,32 +388,37 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             "features_usadas": features_dict,
             "stats_detalladas": {
                 "home_pitcher": {
-                    "nombre": home_pitcher_stats.get('nombre_real', request.home_pitcher),  # NOMBRE REAL
-                    "ERA": home_pitcher_stats['ERA'],
-                    "WHIP": home_pitcher_stats['WHIP'],
-                    "H9": home_pitcher_stats.get('H9', 0),
-                    "SO9": home_pitcher_stats['SO9'],
-                    "W": int(home_pitcher_stats.get('W', 0)),
-                    "L": int(home_pitcher_stats.get('L', 0))
+                    "nombre": home_pitcher_stats.get(
+                        "nombre_real", request.home_pitcher
+                    ),  # NOMBRE REAL
+                    "ERA": home_pitcher_stats["ERA"],
+                    "WHIP": home_pitcher_stats["WHIP"],
+                    "H9": home_pitcher_stats.get("H9", 0),
+                    "SO9": home_pitcher_stats["SO9"],
+                    "W": int(home_pitcher_stats.get("W", 0)),
+                    "L": int(home_pitcher_stats.get("L", 0)),
                 },
                 "away_pitcher": {
-                    "nombre": away_pitcher_stats.get('nombre_real', request.away_pitcher),  # NOMBRE REAL
-                    "ERA": away_pitcher_stats['ERA'],
-                    "WHIP": away_pitcher_stats['WHIP'],
-                    "H9": away_pitcher_stats.get('H9', 0),
-                    "SO9": away_pitcher_stats['SO9'],
-                    "W": int(away_pitcher_stats.get('W', 0)),
-                    "L": int(away_pitcher_stats.get('L', 0))
+                    "nombre": away_pitcher_stats.get(
+                        "nombre_real", request.away_pitcher
+                    ),  # NOMBRE REAL
+                    "ERA": away_pitcher_stats["ERA"],
+                    "WHIP": away_pitcher_stats["WHIP"],
+                    "H9": away_pitcher_stats.get("H9", 0),
+                    "SO9": away_pitcher_stats["SO9"],
+                    "W": int(away_pitcher_stats.get("W", 0)),
+                    "L": int(away_pitcher_stats.get("L", 0)),
                 },
                 "home_batters": home_batters_list,  # CORREGIDO: lista formateada
-                "away_batters": away_batters_list   # CORREGIDO: lista formateada
-            }
+                "away_batters": away_batters_list,  # CORREGIDO: lista formateada
+            },
         }
 
     except HTTPException:
         raise
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}") from e
 
@@ -395,18 +443,20 @@ async def obtener_partidos_hoy():
 
         return [
             PartidoHoy(
-                game_id=row['game_id'],
-                fecha=row['fecha'],
-                home_team=row['home_team'],
-                away_team=row['away_team'],
-                home_pitcher=row['home_pitcher'],
-                away_pitcher=row['away_pitcher']
+                game_id=row["game_id"],
+                fecha=row["fecha"],
+                home_team=row["home_team"],
+                away_team=row["away_team"],
+                home_pitcher=row["home_pitcher"],
+                away_pitcher=row["away_pitcher"],
             )
             for _, row in df.iterrows()
         ]
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo partidos: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error obteniendo partidos: {str(e)}"
+        ) from e
 
 
 @app.get("/predictions/today", response_model=list[dict])
@@ -431,15 +481,19 @@ async def obtener_predicciones_hoy():
         if df.empty:
             return []
 
-        return df.to_dict('records')
+        return df.to_dict("records")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo predicciones: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error obteniendo predicciones: {str(e)}"
+        ) from e
 
 
 @app.get("/predictions/latest", response_model=list[dict])
 async def obtener_ultimas_predicciones(
-    limit: int = Query(20, ge=1, le=100, description="Número de predicciones a retornar")
+    limit: int = Query(
+        20, ge=1, le=100, description="Número de predicciones a retornar"
+    ),
 ):
     """Obtiene las últimas N predicciones generadas"""
     try:
@@ -451,19 +505,22 @@ async def obtener_ultimas_predicciones(
             """
             df = pd.read_sql(query, conn)
 
-        return df.to_dict('records')
+        return df.to_dict("records")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo predicciones: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error obteniendo predicciones: {str(e)}"
+        ) from e
 
 
 # ============================================================================
 # ENDPOINTS - RESULTADOS Y COMPARACIÓN
 # ============================================================================
 
+
 @app.get("/results/latest", response_model=list[ResultadoReal])
 async def obtener_ultimos_resultados(
-    limit: int = Query(20, ge=1, le=100, description="Número de resultados a retornar")
+    limit: int = Query(20, ge=1, le=100, description="Número de resultados a retornar"),
 ):
     """Obtiene los últimos resultados reales"""
     try:
@@ -480,19 +537,21 @@ async def obtener_ultimos_resultados(
 
         return [
             ResultadoReal(
-                game_id=row['game_id'],
-                fecha=row['fecha'],
-                home_team=row['home_team'],
-                away_team=row['away_team'],
-                score_home=int(row['score_home']),
-                score_away=int(row['score_away']),
-                ganador=int(row['ganador'])
+                game_id=row["game_id"],
+                fecha=row["fecha"],
+                home_team=row["home_team"],
+                away_team=row["away_team"],
+                score_home=int(row["score_home"]),
+                score_away=int(row["score_away"]),
+                ganador=int(row["ganador"]),
             )
             for _, row in df.iterrows()
         ]
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo resultados: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error obteniendo resultados: {str(e)}"
+        ) from e
 
 
 @app.get("/compare/{fecha}")
@@ -503,7 +562,9 @@ async def comparar_predicciones_resultados(fecha: str):
         try:
             datetime.strptime(fecha, "%Y-%m-%d")
         except ValueError:
-            raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD") from None
+            raise HTTPException(
+                status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD"
+            ) from None
 
         with sqlite3.connect(DB_PATH) as conn:
             query = f"""
@@ -541,19 +602,15 @@ async def comparar_predicciones_resultados(fecha: str):
             return {
                 "fecha": fecha,
                 "partidos": [],
-                "estadisticas": {
-                    "total": 0,
-                    "aciertos": 0,
-                    "accuracy": 0.0
-                }
+                "estadisticas": {"total": 0, "aciertos": 0, "accuracy": 0.0},
             }
 
         # Calcular estadísticas
         total = len(df)
-        aciertos = df['acierto'].sum() if 'acierto' in df.columns else 0
+        aciertos = df["acierto"].sum() if "acierto" in df.columns else 0
         accuracy = (aciertos / total * 100) if total > 0 else 0.0
 
-        partidos = df.to_dict('records')
+        partidos = df.to_dict("records")
 
         return {
             "fecha": fecha,
@@ -562,23 +619,30 @@ async def comparar_predicciones_resultados(fecha: str):
                 "total": int(total),
                 "aciertos": int(aciertos),
                 "accuracy": round(accuracy, 2),
-                "por_confianza": df.groupby('confianza')['acierto'].agg(['count', 'sum', 'mean']).to_dict('index') if 'confianza' in df.columns else {}
-            }
+                "por_confianza": df.groupby("confianza")["acierto"]
+                .agg(["count", "sum", "mean"])
+                .to_dict("index")
+                if "confianza" in df.columns
+                else {},
+            },
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en comparación: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error en comparación: {str(e)}"
+        ) from e
 
 
 # ============================================================================
 # ENDPOINTS - ESTADÍSTICAS Y ANÁLISIS
 # ============================================================================
 
+
 @app.get("/stats/accuracy")
 async def obtener_estadisticas_accuracy(
-    dias: int = Query(30, ge=1, le=365, description="Número de días hacia atrás")
+    dias: int = Query(30, ge=1, le=365, description="Número de días hacia atrás"),
 ):
     """Obtiene estadísticas de accuracy del modelo"""
     try:
@@ -614,22 +678,22 @@ async def obtener_estadisticas_accuracy(
                 "total": 0,
                 "aciertos": 0,
                 "accuracy_general": 0.0,
-                "por_confianza": {}
+                "por_confianza": {},
             }
 
         total = len(df)
-        aciertos = df['acierto'].sum()
+        aciertos = df["acierto"].sum()
         accuracy = (aciertos / total * 100) if total > 0 else 0.0
 
         # Estadísticas por nivel de confianza
         por_confianza = {}
-        if 'confianza' in df.columns:
-            for conf in df['confianza'].unique():
-                df_conf = df[df['confianza'] == conf]
+        if "confianza" in df.columns:
+            for conf in df["confianza"].unique():
+                df_conf = df[df["confianza"] == conf]
                 por_confianza[conf] = {
                     "total": len(df_conf),
-                    "aciertos": int(df_conf['acierto'].sum()),
-                    "accuracy": round(df_conf['acierto'].mean() * 100, 2)
+                    "aciertos": int(df_conf["acierto"].sum()),
+                    "accuracy": round(df_conf["acierto"].mean() * 100, 2),
                 }
 
         return {
@@ -637,23 +701,27 @@ async def obtener_estadisticas_accuracy(
             "total": int(total),
             "aciertos": int(aciertos),
             "accuracy_general": round(accuracy, 2),
-            "por_confianza": por_confianza
+            "por_confianza": por_confianza,
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calculando accuracy: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error calculando accuracy: {str(e)}"
+        ) from e
 
 
 @app.get("/stats/team/{team_code}")
 async def obtener_estadisticas_equipo(
     team_code: str,
-    ultimos_n: int = Query(20, ge=1, le=100, description="Número de partidos")
+    ultimos_n: int = Query(20, ge=1, le=100, description="Número de partidos"),
 ):
     """Obtiene estadísticas de predicciones para un equipo específico"""
     try:
         # Validar equipo
         if not get_team_name(team_code):
-            raise HTTPException(status_code=400, detail=f"Código de equipo no válido: {team_code}")
+            raise HTTPException(
+                status_code=400, detail=f"Código de equipo no válido: {team_code}"
+            )
 
         with sqlite3.connect(DB_PATH) as conn:
             query = f"""
@@ -668,20 +736,22 @@ async def obtener_estadisticas_equipo(
             return {
                 "equipo": team_code,
                 "nombre": get_team_name(team_code),
-                "predicciones": []
+                "predicciones": [],
             }
 
         return {
             "equipo": team_code,
             "nombre": get_team_name(team_code),
             "total_predicciones": len(df),
-            "predicciones": df.to_dict('records')
+            "predicciones": df.to_dict("records"),
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo stats del equipo: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error obteniendo stats del equipo: {str(e)}"
+        ) from e
 
 
 # ============================================================================
@@ -690,4 +760,5 @@ async def obtener_estadisticas_equipo(
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

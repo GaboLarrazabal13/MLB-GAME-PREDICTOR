@@ -15,6 +15,7 @@ from mlb_config import CACHE_PATH, DB_PATH, MODELO_PATH, get_team_name
 # ANÁLISIS DE RENDIMIENTO DEL MODELO
 # ============================================================================
 
+
 def analizar_accuracy_historico(dias=30):
     """
     Analiza el accuracy del modelo en predicciones recientes
@@ -35,7 +36,7 @@ def analizar_accuracy_historico(dias=30):
         # Obtener predicciones
         query_pred = f"""
             SELECT * FROM predicciones_historico
-            WHERE fecha >= '{fecha_limite.strftime('%Y-%m-%d')}'
+            WHERE fecha >= '{fecha_limite.strftime("%Y-%m-%d")}'
             ORDER BY fecha DESC
         """
         df_pred = pd.read_sql(query_pred, conn)
@@ -43,7 +44,7 @@ def analizar_accuracy_historico(dias=30):
         # Obtener resultados reales
         query_real = f"""
             SELECT * FROM historico_real
-            WHERE fecha >= '{fecha_limite.strftime('%Y-%m-%d')}'
+            WHERE fecha >= '{fecha_limite.strftime("%Y-%m-%d")}'
         """
         df_real = pd.read_sql(query_real, conn)
 
@@ -52,41 +53,53 @@ def analizar_accuracy_historico(dias=30):
         return None
 
     # Merge para comparar
-    df_pred['match_key'] = df_pred['fecha'] + '_' + df_pred['home_team'] + '_' + df_pred['away_team']
-    df_real['match_key'] = df_real['fecha'].astype(str) + '_' + df_real['home_team'] + '_' + df_real['away_team']
+    df_pred["match_key"] = (
+        df_pred["fecha"] + "_" + df_pred["home_team"] + "_" + df_pred["away_team"]
+    )
+    df_real["match_key"] = (
+        df_real["fecha"].astype(str)
+        + "_"
+        + df_real["home_team"]
+        + "_"
+        + df_real["away_team"]
+    )
 
-    merged = df_pred.merge(df_real[['match_key', 'ganador']], on='match_key', how='inner')
+    merged = df_pred.merge(
+        df_real[["match_key", "ganador"]], on="match_key", how="inner"
+    )
 
     if merged.empty:
         print("⚠️ No se pudieron emparejar predicciones con resultados")
         return None
 
     # Calcular aciertos
-    merged['acierto'] = merged.apply(
-        lambda row: (row['prediccion'] == row['home_team'] and row['ganador'] == 1) or
-                   (row['prediccion'] == row['away_team'] and row['ganador'] == 0),
-        axis=1
+    merged["acierto"] = merged.apply(
+        lambda row: (
+            (row["prediccion"] == row["home_team"] and row["ganador"] == 1)
+            or (row["prediccion"] == row["away_team"] and row["ganador"] == 0)
+        ),
+        axis=1,
     )
 
     # Estadísticas generales
     total = len(merged)
-    aciertos = merged['acierto'].sum()
+    aciertos = merged["acierto"].sum()
     accuracy = (aciertos / total * 100) if total > 0 else 0
 
     # Estadísticas por confianza
-    stats_confianza = merged.groupby('confianza').agg({
-        'acierto': ['count', 'sum', 'mean']
-    }).round(3)
+    stats_confianza = (
+        merged.groupby("confianza").agg({"acierto": ["count", "sum", "mean"]}).round(3)
+    )
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(f"📊 ANÁLISIS DE RENDIMIENTO - Últimos {dias} días")
-    print("="*60)
+    print("=" * 60)
     print(f"Total de predicciones: {total}")
     print(f"Aciertos: {aciertos}")
     print(f"Accuracy General: {accuracy:.2f}%")
     print("\n📈 Accuracy por Nivel de Confianza:")
     print(stats_confianza)
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     return merged
 
@@ -118,26 +131,32 @@ def generar_reporte_equipos(equipo_code, ultimos_n=20):
 
     team_name = get_team_name(equipo_code)
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(f"📊 REPORTE DE PREDICCIONES - {team_name} ({equipo_code})")
-    print("="*60)
+    print("=" * 60)
 
     # Estadísticas como local y visitante
-    como_local = df[df['home_team'] == equipo_code]
-    como_visitante = df[df['away_team'] == equipo_code]
+    como_local = df[df["home_team"] == equipo_code]
+    como_visitante = df[df["away_team"] == equipo_code]
 
-    predicho_ganar_local = (como_local['prediccion'] == equipo_code).sum()
-    predicho_ganar_visitante = (como_visitante['prediccion'] == equipo_code).sum()
+    predicho_ganar_local = (como_local["prediccion"] == equipo_code).sum()
+    predicho_ganar_visitante = (como_visitante["prediccion"] == equipo_code).sum()
 
     print(f"\nComo Local: {len(como_local)} juegos")
-    print(f"  Predicho ganar: {predicho_ganar_local} ({predicho_ganar_local/len(como_local)*100:.1f}%)")
+    print(
+        f"  Predicho ganar: {predicho_ganar_local} ({predicho_ganar_local / len(como_local) * 100:.1f}%)"
+    )
 
     print(f"\nComo Visitante: {len(como_visitante)} juegos")
-    print(f"  Predicho ganar: {predicho_ganar_visitante} ({predicho_ganar_visitante/len(como_visitante)*100:.1f}%)")
+    print(
+        f"  Predicho ganar: {predicho_ganar_visitante} ({predicho_ganar_visitante / len(como_visitante) * 100:.1f}%)"
+    )
 
     # Probabilidad promedio
-    prob_promedio_local = como_local['prob_home'].mean() if len(como_local) > 0 else 0
-    prob_promedio_visitante = (100 - como_visitante['prob_home']).mean() if len(como_visitante) > 0 else 0
+    prob_promedio_local = como_local["prob_home"].mean() if len(como_local) > 0 else 0
+    prob_promedio_visitante = (
+        (100 - como_visitante["prob_home"]).mean() if len(como_visitante) > 0 else 0
+    )
 
     print(f"\nProbabilidad promedio como local: {prob_promedio_local:.1f}%")
     print(f"Probabilidad promedio como visitante: {prob_promedio_visitante:.1f}%")
@@ -145,17 +164,20 @@ def generar_reporte_equipos(equipo_code, ultimos_n=20):
     print("\n📋 Últimas 5 predicciones:")
     print("-" * 60)
     for _, row in df.head(5).iterrows():
-        es_local = row['home_team'] == equipo_code
-        rival = row['away_team'] if es_local else row['home_team']
-        prob = row['prob_home'] if es_local else row['prob_away']
-        print(f"{row['fecha']}: vs {rival} - Pred: {row['prediccion']} ({prob:.1f}%) [{row['confianza']}]")
+        es_local = row["home_team"] == equipo_code
+        rival = row["away_team"] if es_local else row["home_team"]
+        prob = row["prob_home"] if es_local else row["prob_away"]
+        print(
+            f"{row['fecha']}: vs {rival} - Pred: {row['prediccion']} ({prob:.1f}%) [{row['confianza']}]"
+        )
 
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
 
 # ============================================================================
 # MANTENIMIENTO DE BASE DE DATOS
 # ============================================================================
+
 
 def limpiar_cache():
     """Elimina el caché de features para forzar re-scraping"""
@@ -230,7 +252,8 @@ def verificar_integridad_db():
 # EXPORTACIÓN DE DATOS
 # ============================================================================
 
-def exportar_predicciones_csv(output_path='predicciones_export.csv', dias=30):
+
+def exportar_predicciones_csv(output_path="predicciones_export.csv", dias=30):
     """
     Exporta predicciones recientes a CSV
 
@@ -247,7 +270,7 @@ def exportar_predicciones_csv(output_path='predicciones_export.csv', dias=30):
     with sqlite3.connect(DB_PATH) as conn:
         query = f"""
             SELECT * FROM predicciones_historico
-            WHERE fecha >= '{fecha_limite.strftime('%Y-%m-%d')}'
+            WHERE fecha >= '{fecha_limite.strftime("%Y-%m-%d")}'
             ORDER BY fecha DESC
         """
         df = pd.read_sql(query, conn)
@@ -260,7 +283,7 @@ def exportar_predicciones_csv(output_path='predicciones_export.csv', dias=30):
     print(f"✅ {len(df)} predicciones exportadas a: {output_path}")
 
 
-def exportar_resultados_csv(output_path='resultados_export.csv', dias=30):
+def exportar_resultados_csv(output_path="resultados_export.csv", dias=30):
     """
     Exporta resultados reales a CSV
 
@@ -277,7 +300,7 @@ def exportar_resultados_csv(output_path='resultados_export.csv', dias=30):
     with sqlite3.connect(DB_PATH) as conn:
         query = f"""
             SELECT * FROM historico_real
-            WHERE fecha >= '{fecha_limite.strftime('%Y-%m-%d')}'
+            WHERE fecha >= '{fecha_limite.strftime("%Y-%m-%d")}'
             ORDER BY fecha DESC
         """
         df = pd.read_sql(query, conn)
@@ -294,11 +317,12 @@ def exportar_resultados_csv(output_path='resultados_export.csv', dias=30):
 # MONITOREO DEL MODELO
 # ============================================================================
 
+
 def verificar_estado_modelo():
     """Verifica el estado del modelo y archivos necesarios"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🔍 VERIFICACIÓN DEL SISTEMA MLB PREDICTOR")
-    print("="*60)
+    print("=" * 60)
 
     # Modelo
     if os.path.exists(MODELO_PATH):
@@ -328,7 +352,7 @@ def verificar_estado_modelo():
     else:
         print(f"\n⚠️ Caché NO encontrado: {CACHE_PATH}")
 
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
 
 # ============================================================================
@@ -353,11 +377,11 @@ if __name__ == "__main__":
 
     comando = sys.argv[1].lower()
 
-    if comando == 'accuracy':
+    if comando == "accuracy":
         dias = int(sys.argv[2]) if len(sys.argv) > 2 else 30
         analizar_accuracy_historico(dias)
 
-    elif comando == 'equipo':
+    elif comando == "equipo":
         if len(sys.argv) < 3:
             print("❌ Debes especificar el código del equipo")
         else:
@@ -365,24 +389,24 @@ if __name__ == "__main__":
             n = int(sys.argv[3]) if len(sys.argv) > 3 else 20
             generar_reporte_equipos(codigo, n)
 
-    elif comando == 'limpiar_cache':
+    elif comando == "limpiar_cache":
         limpiar_cache()
 
-    elif comando == 'compactar':
+    elif comando == "compactar":
         compactar_base_datos()
 
-    elif comando == 'verificar':
+    elif comando == "verificar":
         verificar_integridad_db()
 
-    elif comando == 'exportar_pred':
+    elif comando == "exportar_pred":
         dias = int(sys.argv[2]) if len(sys.argv) > 2 else 30
         exportar_predicciones_csv(dias=dias)
 
-    elif comando == 'exportar_real':
+    elif comando == "exportar_real":
         dias = int(sys.argv[2]) if len(sys.argv) > 2 else 30
         exportar_resultados_csv(dias=dias)
 
-    elif comando == 'estado':
+    elif comando == "estado":
         verificar_estado_modelo()
 
     else:
