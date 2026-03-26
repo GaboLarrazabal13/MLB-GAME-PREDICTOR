@@ -1,0 +1,187 @@
+# =============================================================================
+# MLB Predictor V3.5 - CI Pipeline
+# Runs on every push and PR to main branch
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lint - Code quality checks
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff (linting)
+        run: ruff check src/
+
+      - name: Run ruff (formatting check)
+        run: ruff format --check src/
+
+      - name: Check for common issues
+        run: |
+          pip install mypy types-requests types-python-dateutil
+          mypy src/ --ignore-missing-imports --no-error-summary || true
+
+  # ---------------------------------------------------------------------------
+  # Test - Unit tests with pytest
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio httpx
+
+      - name: Create test database
+        run: |
+          python -c "
+          import sqlite3
+          conn = sqlite3.connect('data/mlb_reentrenamiento.db')
+          c = conn.cursor()
+          c.execute('''CREATE TABLE IF NOT EXISTS historico_real (
+            game_id TEXT PRIMARY KEY,
+            fecha TEXT,
+            home_team TEXT,
+            away_team TEXT,
+            home_pitcher TEXT,
+            away_pitcher TEXT,
+            score_home INTEGER,
+            score_away INTEGER,
+            ganador INTEGER
+          )''')
+          c.execute('''CREATE TABLE IF NOT EXISTS predicciones_historico (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha TEXT,
+            home_team TEXT,
+            away_team TEXT,
+            home_pitcher TEXT,
+            away_pitcher TEXT,
+            prob_home REAL,
+            prob_away REAL,
+            prediccion TEXT,
+            confianza TEXT,
+            tipo TEXT
+          )''')
+          conn.commit()
+          conn.close()
+          "
+
+      - name: Create necessary directories
+        run: |
+          mkdir -p models cache
+          echo '{}' > models/modelo_mlb_v3.5.json
+
+      - name: Run pytest
+        run: pytest tests/ -v --cov=src --cov-report=xml --cov-report=html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          retention-days: 7
+
+      - name: Check coverage
+        run: |
+          pip install coverage
+          coverage report --fail-under=60 || echo "Coverage below target (60%)"
+
+  # ---------------------------------------------------------------------------
+  # Build - Docker image verification
+  # ---------------------------------------------------------------------------
+  build-docker:
+    name: Build Docker
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          tags: mlb-predictor:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify image exists
+        run: docker images mlb-predictor:test
+
+      - name: Run health check
+        run: |
+          docker run -d --name test-container -p 8001:8000 mlb-predictor:test
+          sleep 10
+          docker exec test-container python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+          docker stop test-container
+          docker rm test-container
+
+  # ---------------------------------------------------------------------------
+  # Security audit
+  # ---------------------------------------------------------------------------
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run safety check
+        run: pip install safety && safety check --json | tee security-report.json || true
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report
+          path: security-report.json
+          retention-days: 7

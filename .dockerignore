@@ -1,0 +1,79 @@
+# =============================================================================
+# .dockerignore - Archivos a excluir del build de Docker
+# =============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Testing
+htmlcov/
+.coverage
+.coverage.*
+.tox/
+.nox/
+
+# Documentation
+*.md
+!README.md
+docs/
+LICENSE
+
+# Backup
+backup/
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit secrets (no incluir en imagen)
+.streamlit/secrets.toml
+
+# Database files (se montan como volumen)
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+
+# Docker
+Dockerfile
+docker-compose.yml
+.docker/
+
+# GitHub
+.github/
+
+# Notebooks
+notebook/
+*.ipynb
