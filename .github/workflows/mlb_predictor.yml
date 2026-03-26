@@ -24,6 +24,9 @@ on:
           - train
           - predict
 
+permissions:
+  contents: write
+
 jobs:
   # ============================================================================
   # JOB 1: SCRAPING DIARIO (10 AM y 1 PM)
