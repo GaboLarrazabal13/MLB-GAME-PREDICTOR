@@ -131,7 +131,9 @@ def extraer_equipos_del_dia(soup):
 
         if sibling.name == "p" and "game" in sibling.get("class", []):
             try:
-                team_links = sibling.find_all("a", href=re.compile(r"/teams/\w+/\d+\.shtml"))
+                team_links = sibling.find_all(
+                    "a", href=re.compile(r"/teams/\w+/\d+\.shtml")
+                )
                 if len(team_links) >= 2:
                     away_href = team_links[0].get("href", "")
                     home_href = team_links[1].get("href", "")
@@ -411,9 +413,13 @@ def ejecutar_pipeline_diario():
 
         with sqlite3.connect(DB_PATH) as conn:
             # Verificar esquema existente y migrar si es necesario
-            table_info = conn.execute("PRAGMA table_info(historico_partidos)").fetchall()
+            table_info = conn.execute(
+                "PRAGMA table_info(historico_partidos)"
+            ).fetchall()
             if not table_info or len(table_info) < 20:
-                print("  ℹ️ Creando o recreando tabla historico_partidos con esquema completo")
+                print(
+                    "  ℹ️ Creando o recreando tabla historico_partidos con esquema completo"
+                )
                 conn.execute("DROP TABLE IF EXISTS historico_partidos")
                 conn.execute(
                     """CREATE TABLE historico_partidos
