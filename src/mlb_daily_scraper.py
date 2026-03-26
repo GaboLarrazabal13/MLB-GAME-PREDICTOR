@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup, Comment
 
 # Importar configuración centralizada
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mlb_config import DB_PATH, SCRAPING_CONFIG, get_team_code
+from mlb_config import DB_PATH, SCRAPING_CONFIG
 
 # ============================================================================
 # FUNCIONES DE SOPORTE Y FORMATEO
@@ -305,7 +305,7 @@ def ejecutar_pipeline_diario():
 
     print(f"\n{'=' * 70}")
     print(f"📅 Ejecutando scraping automático para: {fecha_bref}")
-    print(f"   Versión 2 (Estructura HTML Actualizada)")
+    print("   Versión 2 (Estructura HTML Actualizada)")
     print(f"{'=' * 70}")
 
     html = obtener_html(url_schedule)
@@ -339,7 +339,7 @@ def ejecutar_pipeline_diario():
                 continue
 
             # Extraer lanzadores del preview
-            print(f"   🔍 Extrayendo lanzadores de preview...")
+            print("   🔍 Extrayendo lanzadores de preview...")
             lanzadores = extraer_lanzadores_del_preview(preview_link)
 
             away_pitcher = lanzadores.get(away_team)
