@@ -1,7 +1,7 @@
 """
-Scraper Diario de Partidos MLB - REFACTORIZADO
+Scraper Diario de Partidos MLB - VERSIÓN 2 (ACTUALIZADA)
 Ejecuta a las 10 AM y 1 PM para capturar lineups del día
-Versión optimizada para GitHub Actions
+Adaptado para la nueva estructura de Baseball-Reference (2026)
 """
 
 import os
@@ -101,15 +101,106 @@ def obtener_fechas_ejecucion():
 
 
 # ============================================================================
-# EXTRACCIÓN DE DATOS
+# EXTRACCIÓN DE EQUIPOS Y LANZADORES (NUEVA ESTRUCTURA)
 # ============================================================================
 
 
-def scrape_player_stats(team_path, year):
-    """Extrae estadísticas de pitcheo de un equipo"""
-    match = re.search(r"/teams/([^/]+)/", team_path)
-    team_code = match.group(1) if match else team_path
+def extraer_equipos_del_dia(soup):
+    """
+    Extrae SOLO los equipos que se enfrentan hoy desde el span id='today'.
+    Utiliza el h3 que contiene <span id='today'> y procesa p.game hasta el siguiente h3.
+    """
+    equipos_lista = []
 
+    # Encontrar el h3 que contiene el span id="today"
+    today_header = None
+    for h3 in soup.find_all("h3"):
+        if h3.find("span", {"id": "today"}):
+            today_header = h3
+            break
+
+    if not today_header:
+        print("  ⚠️ No se encontró h3 con span id='today'")
+        return equipos_lista
+
+    # Recorrer los hermanos siguientes a este h3
+    for sibling in today_header.find_next_siblings():
+        if sibling.name == "h3":
+            # Fecha siguiente, terminamos
+            break
+
+        if sibling.name == "p" and "game" in sibling.get("class", []):
+            try:
+                team_links = sibling.find_all("a", href=re.compile(r"/teams/\w+/\d+\.shtml"))
+                if len(team_links) >= 2:
+                    away_href = team_links[0].get("href", "")
+                    home_href = team_links[1].get("href", "")
+
+                    away_match = re.search(r"/teams/(\w+)/", away_href)
+                    home_match = re.search(r"/teams/(\w+)/", home_href)
+
+                    if away_match and home_match:
+                        away_team = away_match.group(1)
+                        home_team = home_match.group(1)
+
+                        em_tag = sibling.find("em")
+                        preview_link = None
+                        if em_tag:
+                            preview_a = em_tag.find("a")
+                            if preview_a:
+                                preview_link = preview_a.get("href", "")
+
+                        equipos_lista.append((away_team, home_team, preview_link))
+                        print(f"  ✅ Encontrado: {away_team} @ {home_team}")
+            except Exception as e:
+                print(f"  ⚠️ Error extrayendo equipos: {e}")
+
+    return equipos_lista
+
+
+def extraer_lanzadores_del_preview(preview_url):
+    """
+    Extrae los nombres de los lanzadores iniciales de la página del preview
+    Busca divs con class="section_heading assoc_sp_{TEAM_CODE}"
+    Retorna diccionario: {team_code: pitcher_name}
+    """
+    html = obtener_html(f"https://www.baseball-reference.com{preview_url}")
+
+    if not html:
+        print(f"     ⚠️ No se pudo obtener HTML del preview: {preview_url}")
+        return {}
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Buscar todos los divs con class que contenga "assoc_sp_"
+    lanzadores = {}
+
+    for div in soup.find_all("div", class_=re.compile(r"assoc_sp_")):
+        try:
+            # Extraer el código del equipo desde la clase (ej: assoc_sp_PIT -> PIT)
+            class_str = " ".join(div.get("class", []))
+            team_match = re.search(r"assoc_sp_(\w+)", class_str)
+
+            if team_match:
+                team_code = team_match.group(1)
+
+                # Buscar el h2 con el enlace del lanzador
+                h2_tag = div.find("h2")
+                if h2_tag:
+                    pitcher_link = h2_tag.find("a")
+                    if pitcher_link:
+                        pitcher_name = pitcher_link.get_text(strip=True)
+                        lanzadores[team_code] = pitcher_name
+                        print(f"     🎯 Lanzador {team_code}: {pitcher_name}")
+
+        except Exception as e:
+            print(f"     ⚠️ Error extrayendo lanzador: {e}")
+
+    return lanzadores
+
+
+def scrape_player_stats(team_code, year):
+    """Extrae estadísticas de pitcheo de un equipo"""
     url = f"https://www.baseball-reference.com/teams/{team_code}/{year}.shtml"
     html = obtener_html(url)
 
@@ -204,7 +295,7 @@ def extraer_lineups_completos(box_url):
 
 def ejecutar_pipeline_diario():
     """
-    Pipeline principal para scraping diario
+    Pipeline principal para scraping diario (VERSIÓN 2)
     Retorna True si encontró datos, False si no
     """
     fecha_bref, fecha_db, year_val = obtener_fechas_ejecucion()
@@ -214,6 +305,7 @@ def ejecutar_pipeline_diario():
 
     print(f"\n{'=' * 70}")
     print(f"📅 Ejecutando scraping automático para: {fecha_bref}")
+    print(f"   Versión 2 (Estructura HTML Actualizada)")
     print(f"{'=' * 70}")
 
     html = obtener_html(url_schedule)
@@ -223,140 +315,94 @@ def ejecutar_pipeline_diario():
         return False
 
     soup = BeautifulSoup(html, "html.parser")
-    header = soup.find("h3", string=fecha_bref)
 
-    if not header:
-        print(f"⚠️ No se encontraron partidos listados para hoy ({fecha_bref}).")
+    # Extraer equipos usando la nueva estructura (span id="today")
+    print("\n🔍 Buscando partidos de hoy en span id='today'...")
+    equipos_hoy = extraer_equipos_del_dia(soup)
+
+    if not equipos_hoy:
+        print(
+            "\n⚠️ No se encontraron partidos listados para hoy usando la nueva estructura."
+        )
         print("   (Los lineups podrían no estar publicados aún)")
         return False
 
     data_partidos = []
-    data_lineups = []
-    cursor = header.find_next_sibling()
     partidos_procesados = 0
 
-    while cursor and cursor.name == "p" and "game" in cursor.get("class", []):
+    for away_team, home_team, preview_link in equipos_hoy:
         try:
-            links = cursor.find_all("a")
-            if len(links) >= 3:
-                # Extraer información básica
-                away_team_full = links[0].text.strip()
-                away_path = links[0]["href"]
-                home_team_full = links[1].text.strip()
-                home_path = links[1]["href"]
-                box_link = cursor.find("em").find("a")["href"]
+            print(f"\n⚾ Procesando: {away_team} @ {home_team}")
 
-                # Convertir nombres completos a códigos
-                away_team = get_team_code(away_team_full) or away_team_full
-                home_team = get_team_code(home_team_full) or home_team_full
+            if not preview_link:
+                print("   ⚠️ No se encontró link de preview para este partido")
+                continue
 
-                print(f"\n⚾ Procesando: {away_team} @ {home_team}")
+            # Extraer lanzadores del preview
+            print(f"   🔍 Extrayendo lanzadores de preview...")
+            lanzadores = extraer_lanzadores_del_preview(preview_link)
 
-                # Extraer lineups
-                b_away, b_home, p_away, p_home = extraer_lineups_completos(box_link)
+            away_pitcher = lanzadores.get(away_team)
+            home_pitcher = lanzadores.get(home_team)
 
-                if not p_away or not p_home:
-                    print("   ⚠️ Lineups no disponibles aún para este partido")
-                    cursor = cursor.find_next_sibling()
-                    continue
-
-                # Extraer stats de lanzadores
-                print(f"   🔍 Buscando stats de {p_away}...")
-                s_away = encontrar_lanzador(
-                    scrape_player_stats(away_path, year_val), p_away
+            if not away_pitcher or not home_pitcher:
+                print(
+                    f"   ⚠️ No se encontraron lanzadores: {away_pitcher} vs {home_pitcher}"
                 )
+                continue
 
-                time.sleep(SCRAPING_CONFIG["min_delay"])
+            print(f"   ✅ Lanzadores encontrados: {away_pitcher} vs {home_pitcher}")
 
-                print(f"   🔍 Buscando stats de {p_home}...")
-                s_home = encontrar_lanzador(
-                    scrape_player_stats(home_path, year_val), p_home
-                )
+            # Extraer stats de los lanzadores
+            print(f"   🔍 Buscando stats de {away_pitcher}...")
+            s_away = encontrar_lanzador(
+                scrape_player_stats(away_team, year_val), away_pitcher
+            )
+            time.sleep(SCRAPING_CONFIG["min_delay"])
 
-                # Crear game_id unificado
-                game_id = f"{fecha_db}_{home_team}_{away_team}"
+            print(f"   🔍 Buscando stats de {home_pitcher}...")
+            s_home = encontrar_lanzador(
+                scrape_player_stats(home_team, year_val), home_pitcher
+            )
+            time.sleep(SCRAPING_CONFIG["min_delay"])
 
-                # Guardar datos del partido
-                data_partidos.append(
-                    {
-                        "game_id": game_id,
-                        "box_score_url": box_link,  # Guardamos también la URL por si acaso
-                        "fecha": fecha_db,
-                        "year": year_val,
-                        "away_team": away_team,
-                        "home_team": home_team,
-                        "away_pitcher": p_away,
-                        "home_pitcher": p_home,
-                        "away_starter_ERA": s_away["ERA"] if s_away else 0.0,
-                        "away_starter_WHIP": s_away["WHIP"] if s_away else 0.0,
-                        "away_starter_H9": s_away["H9"] if s_away else 0.0,
-                        "away_starter_SO9": s_away["SO9"] if s_away else 0.0,
-                        "away_starter_W": s_away["W"] if s_away else 0,
-                        "away_starter_L": s_away["L"] if s_away else 0,
-                        "home_starter_ERA": s_home["ERA"] if s_home else 0.0,
-                        "home_starter_WHIP": s_home["WHIP"] if s_home else 0.0,
-                        "home_starter_H9": s_home["H9"] if s_home else 0.0,
-                        "home_starter_SO9": s_home["SO9"] if s_home else 0.0,
-                        "home_starter_W": s_home["W"] if s_home else 0,
-                        "home_starter_L": s_home["L"] if s_home else 0,
-                    }
-                )
+            # Crear game_id unificado
+            game_id = f"{fecha_db}_{home_team}_{away_team}"
 
-                # Guardar lineups
-                for i, bat in enumerate(b_away):
-                    data_lineups.append(
-                        {
-                            "fecha": fecha_db,
-                            "game_id": game_id,
-                            "team": away_team,
-                            "order": str(i + 1),
-                            "player": bat,
-                        }
-                    )
+            # Guardar datos del partido
+            data_partidos.append(
+                {
+                    "game_id": game_id,
+                    "box_score_url": preview_link,
+                    "fecha": fecha_db,
+                    "year": year_val,
+                    "away_team": away_team,
+                    "home_team": home_team,
+                    "away_pitcher": away_pitcher,
+                    "home_pitcher": home_pitcher,
+                    "away_starter_ERA": s_away["ERA"] if s_away else 0.0,
+                    "away_starter_WHIP": s_away["WHIP"] if s_away else 0.0,
+                    "away_starter_H9": s_away["H9"] if s_away else 0.0,
+                    "away_starter_SO9": s_away["SO9"] if s_away else 0.0,
+                    "away_starter_W": s_away["W"] if s_away else 0,
+                    "away_starter_L": s_away["L"] if s_away else 0,
+                    "home_starter_ERA": s_home["ERA"] if s_home else 0.0,
+                    "home_starter_WHIP": s_home["WHIP"] if s_home else 0.0,
+                    "home_starter_H9": s_home["H9"] if s_home else 0.0,
+                    "home_starter_SO9": s_home["SO9"] if s_home else 0.0,
+                    "home_starter_W": s_home["W"] if s_home else 0,
+                    "home_starter_L": s_home["L"] if s_home else 0,
+                }
+            )
 
-                data_lineups.append(
-                    {
-                        "fecha": fecha_db,
-                        "game_id": game_id,
-                        "team": away_team,
-                        "order": "P",
-                        "player": p_away,
-                    }
-                )
-
-                for i, bat in enumerate(b_home):
-                    data_lineups.append(
-                        {
-                            "fecha": fecha_db,
-                            "game_id": game_id,
-                            "team": home_team,
-                            "order": str(i + 1),
-                            "player": bat,
-                        }
-                    )
-
-                data_lineups.append(
-                    {
-                        "fecha": fecha_db,
-                        "game_id": game_id,
-                        "team": home_team,
-                        "order": "P",
-                        "player": p_home,
-                    }
-                )
-
-                partidos_procesados += 1
-                print("   ✅ Partido procesado exitosamente")
-
-                time.sleep(SCRAPING_CONFIG["min_delay"])
+            partidos_procesados += 1
+            print("   ✅ Partido procesado exitosamente")
 
         except Exception as e:
-            print(f"  ⚠️ Error en partido: {e}")
+            print(f"  ⚠️ Error en partido {away_team} @ {home_team}: {e}")
             import traceback
 
             traceback.print_exc()
-
-        cursor = cursor.find_next_sibling()
 
     # Guardar en base de datos
     if data_partidos:
@@ -364,17 +410,27 @@ def ejecutar_pipeline_diario():
         print(f"💾 Guardando {len(data_partidos)} partidos en la base de datos...")
 
         with sqlite3.connect(DB_PATH) as conn:
-            # Crear tablas si no existen
-            conn.execute("""CREATE TABLE IF NOT EXISTS historico_partidos
-                           (game_id TEXT PRIMARY KEY, box_score_url TEXT, fecha TEXT, year INTEGER,
-                            away_team TEXT, home_team TEXT, away_pitcher TEXT, home_pitcher TEXT,
-                            away_starter_ERA REAL, away_starter_WHIP REAL, away_starter_H9 REAL,
-                            away_starter_SO9 REAL, away_starter_W INTEGER, away_starter_L INTEGER,
-                            home_starter_ERA REAL, home_starter_WHIP REAL, home_starter_H9 REAL,
-                            home_starter_SO9 REAL, home_starter_W INTEGER, home_starter_L INTEGER)""")
+            # Verificar esquema existente y migrar si es necesario
+            table_info = conn.execute("PRAGMA table_info(historico_partidos)").fetchall()
+            if not table_info or len(table_info) < 20:
+                print("  ℹ️ Creando o recreando tabla historico_partidos con esquema completo")
+                conn.execute("DROP TABLE IF EXISTS historico_partidos")
+                conn.execute(
+                    """CREATE TABLE historico_partidos
+                               (game_id TEXT PRIMARY KEY, box_score_url TEXT, fecha TEXT, year INTEGER,
+                                away_team TEXT, home_team TEXT, away_pitcher TEXT, home_pitcher TEXT,
+                                away_starter_ERA REAL, away_starter_WHIP REAL, away_starter_H9 REAL,
+                                away_starter_SO9 REAL, away_starter_W INTEGER, away_starter_L INTEGER,
+                                home_starter_ERA REAL, home_starter_WHIP REAL, home_starter_H9 REAL,
+                                home_starter_SO9 REAL, home_starter_W INTEGER, home_starter_L INTEGER)"""
+                )
+            else:
+                print("  ℹ️ Usando tabla historico_partidos existente")
 
-            conn.execute("""CREATE TABLE IF NOT EXISTS lineup_ini
-                           (fecha TEXT, game_id TEXT, team TEXT, [order] TEXT, player TEXT)""")
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS lineup_ini
+                           (fecha TEXT, game_id TEXT, team TEXT, [order] TEXT, player TEXT)"""
+            )
 
             # Guardar partidos (con INSERT OR REPLACE para evitar duplicados)
             df_partidos = pd.DataFrame(data_partidos)
@@ -385,17 +441,10 @@ def ejecutar_pipeline_diario():
                     tuple(row),
                 )
 
-            # Guardar lineups
-            if data_lineups:
-                pd.DataFrame(data_lineups).to_sql(
-                    "lineup_ini", conn, if_exists="append", index=False
-                )
-
             conn.commit()
 
         print("✅ Proceso finalizado exitosamente")
         print(f"   - Partidos guardados: {len(data_partidos)}")
-        print(f"   - Lineups guardados: {len(data_lineups)} jugadores")
         print(f"{'=' * 70}\n")
 
         return True
@@ -411,7 +460,9 @@ def ejecutar_pipeline_diario():
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Scraper diario de partidos MLB")
+    parser = argparse.ArgumentParser(
+        description="Scraper diario de partidos MLB (Versión 2)"
+    )
     parser.add_argument(
         "--retry", action="store_true", help="Modo reintentar si no hay datos"
     )
@@ -421,208 +472,3 @@ if __name__ == "__main__":
 
     # Retornar código de salida para GitHub Actions
     sys.exit(0 if resultado else 1)
-
-
-# import cloudscraper
-# import sqlite3
-# import pandas as pd
-# from bs4 import BeautifulSoup, Comment
-# import time
-# import re
-# import unicodedata
-# from io import StringIO
-# from datetime import datetime
-
-# # ============================================================================
-# # FUNCIONES DE SOPORTE Y FORMATEO
-# # ============================================================================
-# def normalizar_texto(texto):
-#     if not texto: return ""
-#     texto = str(texto).lower()
-#     texto = "".join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
-#     texto = re.sub(r'[^a-z0-9]', '', texto)
-#     return texto
-
-# def safe_float(val):
-#     try:
-#         if pd.isna(val) or val == '-': return 0.0
-#         return float(val)
-#     except: return 0.0
-
-# def limpiar_dataframe(df):
-#     if df is None or len(df) == 0: return df
-#     name_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
-#     df = df[~df[name_col].astype(str).str.contains(r'Team Totals|Rank in|^\s*$', case=False, na=False, regex=True)]
-#     return df.reset_index(drop=True)
-
-# def obtener_html(url):
-#     scraper = cloudscraper.create_scraper()
-#     try:
-#         response = scraper.get(url, timeout=15)
-#         if response.status_code == 200:
-#             response.encoding = 'utf-8'
-#             return response.text
-#     except: return None
-#     return None
-
-# def obtener_fechas_ejecucion():
-#     ahora = datetime.now()
-#     fecha_bref = ahora.strftime("%A, %B %-d, %Y").replace(" 0", " ")
-#     fecha_db = ahora.strftime("%Y-%m-%d")
-#     return fecha_bref, fecha_db, ahora.year
-
-# # ============================================================================
-# # EXTRACCIÓN DE DATOS
-# # ============================================================================
-# def scrape_player_stats(team_path, year):
-#     match = re.search(r'/teams/([^/]+)/', team_path)
-#     team_code = match.group(1) if match else team_path
-#     url = f"https://www.baseball-reference.com/teams/{team_code}/{year}.shtml"
-#     html = obtener_html(url)
-#     if not html: return None
-
-#     soup = BeautifulSoup(html, 'html.parser')
-#     def buscar_tabla(table_id):
-#         tab = soup.find('table', {'id': table_id})
-#         if not tab:
-#             comments = soup.find_all(string=lambda text: isinstance(text, Comment))
-#             for c in comments:
-#                 if f'id="{table_id}"' in c:
-#                     return BeautifulSoup(str(c), 'html.parser').find('table')
-#         return tab
-
-#     pitching_table = buscar_tabla('players_standard_pitching')
-#     if pitching_table:
-#         try:
-#             return pd.read_html(StringIO(str(pitching_table)))[0]
-#         except: pass
-#     return None
-
-# def encontrar_lanzador(pitching_df, nombre_lanzador):
-#     if pitching_df is None or not nombre_lanzador: return None
-#     pitching_df = limpiar_dataframe(pitching_df)
-#     busqueda = normalizar_texto(nombre_lanzador)
-#     name_col = 'Name' if 'Name' in pitching_df.columns else pitching_df.columns[1]
-
-#     for _, fila in pitching_df.iterrows():
-#         nombre_tabla_limpio = normalizar_texto(str(fila[name_col]))
-#         if busqueda in nombre_tabla_limpio or nombre_tabla_limpio in busqueda:
-#             return {
-#                 'ERA': safe_float(fila.get('ERA', 0)),
-#                 'WHIP': safe_float(fila.get('WHIP', 0)),
-#                 'H9': safe_float(fila.get('H9', 0)),
-#                 'SO9': safe_float(fila.get('SO9', 0)),
-#                 'W': safe_float(fila.get('W', 0)),
-#                 'L': safe_float(fila.get('L', 0))
-#             }
-#     return None
-
-# def extraer_lineups_completos(box_url):
-#     html = obtener_html(f"https://www.baseball-reference.com{box_url}")
-#     if not html: return [], [], None, None
-#     soup = BeautifulSoup(html, 'html.parser')
-
-#     def obtener_datos(div_id):
-#         div = soup.find('div', id=div_id)
-#         if not div:
-#             comments = soup.find_all(string=lambda text: isinstance(text, Comment))
-#             for c in comments:
-#                 if f'id="{div_id}"' in c:
-#                     div = BeautifulSoup(str(c), 'html.parser').find('div', id=div_id)
-#                     break
-#         if div:
-#             links = div.find_all('a')
-#             bateadores = [a.get_text(strip=True) for a in links[:-1]]
-#             lanzador = links[-1].get_text(strip=True) if links else None
-#             return bateadores, lanzador
-#         return [], None
-
-#     b_away, p_away = obtener_datos('lineups_1')
-#     b_home, p_home = obtener_datos('lineups_2')
-#     return b_away, b_home, p_away, p_home
-
-
-# # ============================================================================
-# # EJECUCIÓN DIARIA
-# # ============================================================================
-# def ejecutar_pipeline_diario():
-#     fecha_bref, fecha_db, year_val = obtener_fechas_ejecucion()
-#     url_schedule = f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
-
-#     print(f"📅 Ejecutando scraping automático para: {fecha_bref}")
-#     html = obtener_html(url_schedule)
-#     if not html: return
-
-#     soup = BeautifulSoup(html, 'html.parser')
-#     header = soup.find('h3', string=fecha_bref)
-
-#     if not header:
-#         print(f"⚠️ No se encontraron partidos listados para hoy ({fecha_bref}).")
-#         return
-
-#     data_partidos = []
-#     data_lineups = []
-#     cursor = header.find_next_sibling()
-
-#     while cursor and cursor.name == 'p' and 'game' in cursor.get('class', []):
-#         try:
-#             links = cursor.find_all('a')
-#             if len(links) >= 3:
-#                 away_team, away_path = links[0].text.strip(), links[0]['href']
-#                 home_team, home_path = links[1].text.strip(), links[1]['href']
-#                 box_link = cursor.find('em').find('a')['href']
-
-#                 print(f" ⚾ Procesando: {away_team} @ {home_team}")
-
-#                 b_away, b_home, p_away, p_home = extraer_lineups_completos(box_link)
-#                 s_away = encontrar_lanzador(scrape_player_stats(away_path, year_val), p_away)
-#                 s_home = encontrar_lanzador(scrape_player_stats(home_path, year_val), p_home)
-
-#                 # MODIFICACIÓN: Se incluye game_id en historico_partidos
-#                 data_partidos.append({
-#                     'game_id': box_link, # ID UNIFICADO
-#                     'fecha': fecha_db,
-#                     'year': year_val,
-#                     'away_team': away_team,
-#                     'home_team': home_team,
-#                     'away_pitcher': p_away,
-#                     'home_pitcher': p_home,
-#                     'away_starter_ERA': s_away['ERA'] if s_away else 0.0,
-#                     'away_starter_WHIP': s_away['WHIP'] if s_away else 0.0,
-#                     'away_starter_H9': s_away['H9'] if s_away else 0.0,
-#                     'away_starter_SO9': s_away['SO9'] if s_away else 0.0,
-#                     'away_starter_W': s_away['W'] if s_away else 0,
-#                     'away_starter_L': s_away['L'] if s_away else 0,
-#                     'home_starter_ERA': s_home['ERA'] if s_home else 0.0,
-#                     'home_starter_WHIP': s_home['WHIP'] if s_home else 0.0,
-#                     'home_starter_H9': s_home['H9'] if s_home else 0.0,
-#                     'home_starter_SO9': s_home['SO9'] if s_home else 0.0,
-#                     'home_starter_W': s_home['W'] if s_home else 0,
-#                     'home_starter_L': s_home['L'] if s_home else 0
-#                 })
-
-#                 for i, bat in enumerate(b_away):
-#                     data_lineups.append({'fecha': fecha_db, 'game_id': box_link, 'team': away_team, 'order': str(i+1), 'player': bat})
-#                 data_lineups.append({'fecha': fecha_db, 'game_id': box_link, 'team': away_team, 'order': 'P', 'player': p_away})
-
-#                 for i, bat in enumerate(b_home):
-#                     data_lineups.append({'fecha': fecha_db, 'game_id': box_link, 'team': home_team, 'order': str(i+1), 'player': bat})
-#                 data_lineups.append({'fecha': fecha_db, 'game_id': box_link, 'team': home_team, 'order': 'P', 'player': p_home})
-
-#                 time.sleep(2)
-#         except Exception as e:
-#             print(f"  ⚠️ Error en partido: {e}")
-#         cursor = cursor.find_next_sibling()
-
-#     if data_partidos:
-#         with sqlite3.connect('../data/mlb_reentrenamiento.db') as conn:
-#             # Guardamos datos
-#             pd.DataFrame(data_partidos).to_sql('historico_partidos', conn, if_exists='append', index=False)
-#             if data_lineups:
-#                 pd.DataFrame(data_lineups).to_sql('lineup_ini', conn, if_exists='append', index=False)
-#         print(f"\n✅ Proceso finalizado. game_id sincronizado en ambas tablas.")
-#     else:
-#         print("No hubo datos nuevos para procesar.")
-
-# if __name__ == "__main__":
-#     ejecutar_pipeline_diario()
