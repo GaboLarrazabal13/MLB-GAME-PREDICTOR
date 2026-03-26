@@ -12,8 +12,6 @@ on:
 
 env:
   PYTHON_VERSION: '3.12'
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -22,38 +20,48 @@ jobs:
   build-and-push:
     name: Build & Push Docker
     runs-on: ubuntu-latest
-    needs: [test]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     
     permissions:
       contents: read
-      packages: write
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Resolve Docker image name
+        id: image
+        run: |
+          if [ -n "${{ vars.DOCKERHUB_IMAGE_NAME }}" ]; then
+            echo "image_name=${{ vars.DOCKERHUB_IMAGE_NAME }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+            echo "image_name=${{ secrets.DOCKERHUB_USERNAME }}/mlb-game-predictor" >> "$GITHUB_OUTPUT"
+          else
+            echo "Missing Docker Hub configuration. Define vars.DOCKERHUB_IMAGE_NAME or secrets.DOCKERHUB_USERNAME."
+            exit 1
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ steps.image.outputs.image_name }}
           tags: |
-            type=branch
-            type=sha,prefixref,event==
             type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=ref,event=branch
 
       - name: Build and push Docker image
+        id: build_push
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -66,7 +74,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Print image digest
-        run: echo ${{ steps.meta.outputs.digest }}
+        run: echo ${{ steps.build_push.outputs.digest }}
 
   # ---------------------------------------------------------------------------
   # Deploy to Render (API)
@@ -75,7 +83,7 @@ jobs:
     name: Deploy to Render (API)
     runs-on: ubuntu-latest
     needs: [build-and-push]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Trigger Render Deploy (API)
@@ -102,7 +110,7 @@ jobs:
     name: Notify Deployment
     runs-on: ubuntu-latest
     needs: [deploy-render-api]
-    if: always() && github.event_name == 'push'
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     
     steps:
       - name: Create deployment status
