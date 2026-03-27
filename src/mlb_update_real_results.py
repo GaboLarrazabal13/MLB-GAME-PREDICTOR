@@ -61,6 +61,46 @@ def obtener_fechas_ayer():
     return fecha_bref, fecha_db, ayer.year
 
 
+def extraer_pitchers_desde_boxscore(box_score_url, home_team_gano):
+    """Extrae lanzadores home/away desde el footer de linescore (WP/LP)."""
+    if not box_score_url:
+        return None, None
+
+    html = obtener_html(f"https://www.baseball-reference.com{box_score_url}")
+    if not html:
+        return None, None
+
+    soup = BeautifulSoup(html, "html.parser")
+    linescore = soup.select_one("table.linescore")
+    if not linescore:
+        return None, None
+
+    tfoot = linescore.find("tfoot")
+    if not tfoot:
+        return None, None
+
+    footer_text = tfoot.get_text(" ", strip=True).replace("\xa0", " ")
+
+    def extraer_nombre(tag):
+        match = re.search(rf"{tag}:\s*([^•(]+?)\s*\(", footer_text)
+        if match:
+            return match.group(1).strip()
+        match = re.search(rf"{tag}:\s*([^•]+)", footer_text)
+        if match:
+            return match.group(1).strip()
+        return None
+
+    wp = extraer_nombre("WP")
+    lp = extraer_nombre("LP")
+
+    if not wp or not lp:
+        return None, None
+
+    if home_team_gano:
+        return wp, lp
+    return lp, wp
+
+
 # ============================================================================
 # PROCESO PRINCIPAL
 # ============================================================================
@@ -101,6 +141,13 @@ def actualizar_resultados_reales():
         try:
             links = cursor.find_all("a")
             if len(links) >= 3:
+                box_score_url = None
+                for link in links:
+                    href = link.get("href", "")
+                    if href.startswith("/boxes/"):
+                        box_score_url = href
+                        break
+
                 away_team_full = links[0].text.strip()
                 home_team_full = links[1].text.strip()
 
@@ -123,6 +170,7 @@ def actualizar_resultados_reales():
                     data_resultados.append(
                         {
                             "game_id": game_id,
+                            "box_score_url": box_score_url,
                             "fecha": fecha_db,
                             "year": year_val,
                             "home_team": home_team,
@@ -163,13 +211,15 @@ def actualizar_resultados_reales():
             FROM lineup_ini
             WHERE fecha='{fecha_db}' AND [order]='P'
         """
-        df_p = pd.read_sql(query_pitchers, conn)
+        try:
+            df_p = pd.read_sql(query_pitchers, conn)
+        except Exception:
+            df_p = pd.DataFrame(columns=["game_id", "team", "pitcher"])
 
         if df_p.empty:
             print(
-                "⚠️ No se encontraron lineups previos. Guardando sin datos de lanzadores."
+                "⚠️ No se encontraron lineups previos. Intentando extraer WP/LP desde boxscore."
             )
-            # Podemos guardar de todas formas pero marcando que faltan pitchers
             df_res["home_pitcher"] = None
             df_res["away_pitcher"] = None
         else:
@@ -196,6 +246,23 @@ def actualizar_resultados_reales():
             )
 
             df_res = df_final
+
+        # Fallback: completar lanzadores faltantes desde boxscore (WP/LP)
+        faltantes = df_res[
+            df_res["home_pitcher"].isna() | df_res["away_pitcher"].isna()
+        ].copy()
+        if not faltantes.empty:
+            print(
+                f"ℹ️ Intentando completar lanzadores desde boxscore para {len(faltantes)} partidos..."
+            )
+            for idx, row in faltantes.iterrows():
+                home_pitcher, away_pitcher = extraer_pitchers_desde_boxscore(
+                    row.get("box_score_url"), row.get("ganador") == 1
+                )
+                if home_pitcher and pd.isna(df_res.at[idx, "home_pitcher"]):
+                    df_res.at[idx, "home_pitcher"] = home_pitcher
+                if away_pitcher and pd.isna(df_res.at[idx, "away_pitcher"]):
+                    df_res.at[idx, "away_pitcher"] = away_pitcher
 
         # Crear tabla si no existe
         conn.execute("""CREATE TABLE IF NOT EXISTS historico_real
