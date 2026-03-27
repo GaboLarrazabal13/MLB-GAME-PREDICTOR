@@ -2,13 +2,11 @@ name: MLB Predictor Automation
 
 on:
   schedule:
-    # Scraping diario: 10 AM y 1 PM EST (15:00 y 18:00 UTC)
-    - cron: '0 15 * * *'  # 10 AM EST
-    - cron: '0 18 * * *'  # 1 PM EST
-    # Actualización de resultados: 5 AM EST del día siguiente (10:00 UTC)
-    - cron: '0 10 * * *'  # 5 AM EST
-    # Reentrenamiento: Diario a las 6 AM EST (11:00 UTC)
-    - cron: '0 11 * * *'  # 6 AM EST
+    # Ejecución diaria principal (16:30 hora España ≈ 15:30 UTC en invierno)
+    # Nota: si quieres mantener 16:30 fija todo el año, en verano (CEST) usa 14:30 UTC.
+    - cron: '30 15 * * *'
+    # Reentrenamiento una hora después
+    - cron: '30 16 * * *'
   
   workflow_dispatch:  # Permite ejecución manual
     inputs:
@@ -123,7 +121,7 @@ jobs:
   scrape_daily_games:
     runs-on: ubuntu-latest
     if: |
-      (github.event.schedule == '0 15 * * *' || github.event.schedule == '0 18 * * *') ||
+      github.event.schedule == '30 15 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scrape')
     
     steps:
@@ -188,7 +186,7 @@ jobs:
   update_real_results:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '0 10 * * *' ||
+      github.event.schedule == '30 15 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'update_results')
     
     steps:
@@ -244,7 +242,7 @@ jobs:
   incremental_training:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '0 11 * * *' ||
+      github.event.schedule == '30 16 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'train')
     
     steps:
