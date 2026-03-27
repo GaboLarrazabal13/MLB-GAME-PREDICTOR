@@ -35,11 +35,56 @@ from mlb_config import (
     MODELO_BACKUP,
     MODELO_PATH,
     SCRAPING_CONFIG,
+    SCRAPING_FEATURES,
+    SUPER_FEATURES,
+    TEMPORAL_FEATURES,
     get_team_code,
 )
 from mlb_feature_engineering import calcular_super_features
 
 warnings.filterwarnings("ignore")
+
+
+def alinear_features_entrenamiento(X_new, model_actual=None):
+    """Asegura un esquema estable de features para reentrenamiento incremental."""
+    features_esperadas = TEMPORAL_FEATURES + SCRAPING_FEATURES + SUPER_FEATURES
+
+    columnas_faltantes = [col for col in features_esperadas if col not in X_new.columns]
+    if columnas_faltantes:
+        print(
+            f"ℹ️ Añadiendo columnas faltantes con 0 para mantener esquema estable: {columnas_faltantes}"
+        )
+        for columna in columnas_faltantes:
+            X_new[columna] = 0
+
+    if model_actual is None:
+        return X_new
+
+    feature_names_modelo = model_actual.get_booster().feature_names or []
+    if not feature_names_modelo:
+        return X_new
+
+    columnas_faltantes_modelo = [
+        col for col in feature_names_modelo if col not in X_new.columns
+    ]
+    if columnas_faltantes_modelo:
+        print(
+            "ℹ️ Añadiendo columnas faltantes requeridas por el modelo previo: "
+            f"{columnas_faltantes_modelo}"
+        )
+        for columna in columnas_faltantes_modelo:
+            X_new[columna] = 0
+
+    columnas_extra_modelo = [
+        col for col in X_new.columns if col not in feature_names_modelo
+    ]
+    if columnas_extra_modelo:
+        print(
+            "ℹ️ Excluyendo columnas que no existen en el modelo previo para el "
+            f"reentrenamiento incremental: {columnas_extra_modelo}"
+        )
+
+    return X_new.reindex(columns=feature_names_modelo, fill_value=0)
 
 # ============================================================================
 # FUNCIONES DE SCRAPING CON REINTENTOS
@@ -694,20 +739,7 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
         )
         X_new = X_new.drop(columns=columnas_no_numericas)
 
-    # 4. Escalado
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_new.fillna(0))
-    X_final = pd.DataFrame(X_scaled, columns=X_new.columns)
-
-    # 5. División de datos
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_final,
-        y_new,
-        test_size=MODEL_CONFIG["test_size"],
-        random_state=MODEL_CONFIG["random_state"],
-    )
-
-    # 6. Evaluar modelo actual si existe
+    # 4. Cargar modelo actual y alinear esquema de features
     accuracy_actual_en_nuevos = 0
     model_actual = None
 
@@ -715,13 +747,34 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
         try:
             model_actual = XGBClassifier()
             model_actual.load_model(MODELO_PATH)
+        except Exception as e:
+            print(f"⚠️ Error cargando modelo previo: {e}")
+
+    X_new = alinear_features_entrenamiento(X_new, model_actual=model_actual)
+
+    # 5. Escalado
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_new.fillna(0))
+    X_final = pd.DataFrame(X_scaled, columns=X_new.columns)
+
+    # 6. División de datos
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_final,
+        y_new,
+        test_size=MODEL_CONFIG["test_size"],
+        random_state=MODEL_CONFIG["random_state"],
+    )
+
+    # 7. Evaluar modelo actual si existe
+    if model_actual is not None:
+        try:
             y_pred_old = model_actual.predict(X_test)
             accuracy_actual_en_nuevos = accuracy_score(y_test, y_pred_old)
             print(f"📊 Accuracy del modelo previo: {accuracy_actual_en_nuevos:.2%}")
         except Exception as e:
             print(f"⚠️ Error evaluando modelo previo: {e}")
 
-    # 7. Optimización de hiperparámetros
+    # 8. Optimización de hiperparámetros
     print("🔎 Buscando la mejor combinación de hiperparámetros...")
 
     xgb_base = XGBClassifier(
@@ -742,12 +795,12 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
     model_nuevo = grid.best_estimator_
     print(f"🏆 Mejores parámetros encontrados: {grid.best_params_}")
 
-    # 8. Validación final
+    # 9. Validación final
     y_pred_new = model_nuevo.predict(X_test)
     accuracy_nuevo = accuracy_score(y_test, y_pred_new)
     print(f"📈 Accuracy nueva versión (Optimizado): {accuracy_nuevo:.2%}")
 
-    # 9. Guardar si hay mejora
+    # 10. Guardar si hay mejora
     if accuracy_nuevo >= accuracy_actual_en_nuevos:
         print("✅ MEJORA DETECTADA. Actualizando modelo oficial.")
 
