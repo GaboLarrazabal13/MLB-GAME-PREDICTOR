@@ -686,6 +686,14 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
             ]:
                 X_new.at[i, key] = val
 
+    # El reentrenamiento solo puede consumir columnas numéricas.
+    columnas_no_numericas = X_new.select_dtypes(exclude=[np.number]).columns.tolist()
+    if columnas_no_numericas:
+        print(
+            f"ℹ️ Excluyendo columnas no numéricas del entrenamiento: {columnas_no_numericas}"
+        )
+        X_new = X_new.drop(columns=columnas_no_numericas)
+
     # 4. Escalado
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X_new.fillna(0))
