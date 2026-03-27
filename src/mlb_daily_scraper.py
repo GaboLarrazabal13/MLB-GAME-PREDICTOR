@@ -304,6 +304,7 @@ def ejecutar_pipeline_diario():
     Retorna True si encontró datos, False si no
     """
     fecha_bref, fecha_db, year_val = obtener_fechas_ejecucion()
+    run_source = os.getenv("RUN_SOURCE", "local").strip().lower()
     url_schedule = (
         f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
     )
@@ -440,6 +441,15 @@ def ejecutar_pipeline_diario():
                 """CREATE TABLE IF NOT EXISTS lineup_ini
                            (fecha TEXT, game_id TEXT, team TEXT, [order] TEXT, player TEXT)"""
             )
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS sync_control (
+                           dataset TEXT,
+                           source TEXT,
+                           fecha TEXT,
+                           updated_at TEXT,
+                           PRIMARY KEY(dataset, source)
+                       )"""
+            )
 
             # Reemplazar snapshot completo de la fecha para evitar arrastre
             # de juegos viejos cuando cambia la cartelera del día.
@@ -456,6 +466,15 @@ def ejecutar_pipeline_diario():
                                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     tuple(row),
                 )
+
+            conn.execute(
+                """INSERT INTO sync_control (dataset, source, fecha, updated_at)
+                           VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                           ON CONFLICT(dataset, source)
+                           DO UPDATE SET fecha = excluded.fecha,
+                                         updated_at = CURRENT_TIMESTAMP""",
+                ("games_today", run_source, fecha_db),
+            )
 
             conn.commit()
 

@@ -47,7 +47,13 @@ def obtener_nivel_confianza(prob_pct):
 
 
 def predecir_juego(
-    home_team, away_team, home_pitcher, away_pitcher, year=2026, modo_auto=False
+    home_team,
+    away_team,
+    home_pitcher,
+    away_pitcher,
+    year=2026,
+    modo_auto=False,
+    fecha_partido=None,
 ):
     """
     Predice el resultado de un juego de MLB
@@ -90,7 +96,7 @@ def predecir_juego(
         "home_pitcher_clean": p_home_clean,
         "away_pitcher_clean": p_away_clean,
         "year": year,
-        "fecha": pd.Timestamp.now().strftime("%Y-%m-%d"),
+        "fecha": fecha_partido or pd.Timestamp.now().strftime("%Y-%m-%d"),
     }
 
     try:
@@ -291,6 +297,8 @@ def ejecutar_flujo_diario():
         print("❌ Error: Base de datos no encontrada.")
         return
 
+    run_source = os.getenv("RUN_SOURCE", "local").strip().lower()
+
     with sqlite3.connect(DB_PATH) as conn:
         try:
             fecha_objetivo = conn.execute(
@@ -311,6 +319,15 @@ def ejecutar_flujo_diario():
             conn.execute(
                 "DELETE FROM predicciones_historico WHERE fecha = ?",
                 (fecha_objetivo,),
+            )
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS sync_control (
+                           dataset TEXT,
+                           source TEXT,
+                           fecha TEXT,
+                           updated_at TEXT,
+                           PRIMARY KEY(dataset, source)
+                       )"""
             )
             conn.commit()
         except Exception:
@@ -336,6 +353,7 @@ def ejecutar_flujo_diario():
             row["away_pitcher"],
             year=row.get("year", 2026),
             modo_auto=True,
+            fecha_partido=row.get("fecha", fecha_objetivo),
         )
 
         if resultado:
@@ -345,6 +363,17 @@ def ejecutar_flujo_diario():
             )
         else:
             print("❌ Error en predicción\n")
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            """INSERT INTO sync_control (dataset, source, fecha, updated_at)
+                       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                       ON CONFLICT(dataset, source)
+                       DO UPDATE SET fecha = excluded.fecha,
+                                     updated_at = CURRENT_TIMESTAMP""",
+            ("predictions_today", run_source, fecha_objetivo),
+        )
+        conn.commit()
 
     print(
         f"\n✅ Proceso completado: {len(resultados)}/{len(df_hoy)} predicciones exitosas"

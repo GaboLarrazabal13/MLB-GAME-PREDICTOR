@@ -93,14 +93,14 @@ jobs:
         id: scrape_all
         run: |
           cd src
-          python mlb_daily_scraper.py
+          RUN_SOURCE=workflow python mlb_daily_scraper.py
         continue-on-error: true
 
       - name: Generar predicciones si hay datos nuevos
         if: steps.scrape_all.outcome == 'success'
         run: |
           cd src
-          python mlb_predict_engine.py
+          RUN_SOURCE=workflow python mlb_predict_engine.py
 
       - name: Commit y push de cambios automáticos
         run: |
@@ -156,14 +156,14 @@ jobs:
         id: scrape
         run: |
           cd src
-          python mlb_daily_scraper.py
+          RUN_SOURCE=workflow python mlb_daily_scraper.py
         continue-on-error: true
       
       - name: Generar predicciones si hay datos nuevos
         if: steps.scrape.outcome == 'success'
         run: |
           cd src
-          python mlb_predict_engine.py
+          RUN_SOURCE=workflow python mlb_predict_engine.py
       
       - name: Commit y push de datos actualizados
         if: steps.scrape.outcome == 'success'
@@ -353,7 +353,7 @@ jobs:
       - name: Generar predicciones
         run: |
           cd src
-          python mlb_predict_engine.py
+          RUN_SOURCE=workflow python mlb_predict_engine.py
       
       - name: Commit predicciones
         run: |

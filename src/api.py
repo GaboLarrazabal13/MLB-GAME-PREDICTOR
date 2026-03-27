@@ -480,8 +480,24 @@ async def obtener_partidos_hoy():
     """Obtiene los partidos programados para hoy"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS sync_control (
+                           dataset TEXT,
+                           source TEXT,
+                           fecha TEXT,
+                           updated_at TEXT,
+                           PRIMARY KEY(dataset, source)
+                       )"""
+            )
             fecha_objetivo = conn.execute(
-                "SELECT MAX(fecha) FROM historico_partidos"
+                """
+                SELECT COALESCE(
+                    (SELECT fecha FROM sync_control
+                     WHERE dataset = 'games_today' AND source = 'workflow'
+                     ORDER BY updated_at DESC LIMIT 1),
+                    (SELECT MAX(fecha) FROM historico_partidos)
+                )
+                """
             ).fetchone()[0]
 
             if not fecha_objetivo:
@@ -521,11 +537,23 @@ async def obtener_predicciones_hoy():
     """Obtiene las predicciones generadas para hoy"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS sync_control (
+                           dataset TEXT,
+                           source TEXT,
+                           fecha TEXT,
+                           updated_at TEXT,
+                           PRIMARY KEY(dataset, source)
+                       )"""
+            )
             fecha_objetivo = conn.execute(
                 """
                 SELECT COALESCE(
-                    (SELECT MAX(fecha) FROM historico_partidos),
-                    (SELECT MAX(fecha) FROM predicciones_historico)
+                    (SELECT fecha FROM sync_control
+                     WHERE dataset = 'predictions_today' AND source = 'workflow'
+                     ORDER BY updated_at DESC LIMIT 1),
+                    (SELECT MAX(fecha) FROM predicciones_historico),
+                    (SELECT MAX(fecha) FROM historico_partidos)
                 )
                 """
             ).fetchone()[0]
