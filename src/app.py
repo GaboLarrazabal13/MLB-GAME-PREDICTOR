@@ -1108,6 +1108,22 @@ elif pagina == "Partidos de Hoy":
                 if partido["game_id"] in pred_dict:
                     partido.update(pred_dict[partido["game_id"]])
 
+        # Validar que solo se muestren partidos de la fecha de hoy.
+        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+        fechas_api = sorted({p.get("fecha") for p in partidos if p.get("fecha")})
+
+        if fechas_api:
+            if len(fechas_api) == 1:
+                st.info(
+                    f"Fecha cargada por la API: {fechas_api[0]} | Fecha actual: {fecha_hoy}"
+                )
+            else:
+                st.info(
+                    f"Fechas cargadas por la API: {', '.join(fechas_api)} | Fecha actual: {fecha_hoy}"
+                )
+
+        partidos = [p for p in partidos if p.get("fecha") == fecha_hoy]
+
         if not partidos:
             st.markdown(
                 """
@@ -1132,7 +1148,9 @@ elif pagina == "Partidos de Hoy":
                 else:
                     st.warning(mensaje)
         else:
-            st.success(f"Se encontraron {len(partidos)} partidos para hoy")
+            st.success(
+                f"Se encontraron {len(partidos)} partidos para hoy ({fecha_hoy})"
+            )
 
             for partido in partidos:
                 with st.container():
