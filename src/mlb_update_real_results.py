@@ -68,8 +68,9 @@ def _formatear_fecha_bref_desde_db(fecha_db):
 
 
 def obtener_fechas_objetivo(max_fechas=3):
-    """Obtiene fechas pendientes recientes; si no hay, usa ayer como fallback."""
+    """Obtiene fechas objetivo recientes, siempre incluyendo ayer."""
     hoy_db = datetime.now().strftime("%Y-%m-%d")
+    ayer_db = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
     try:
         with sqlite3.connect(DB_PATH) as conn:
@@ -88,12 +89,23 @@ def obtener_fechas_objetivo(max_fechas=3):
     except Exception:
         pendientes = []
 
-    if not pendientes:
-        fecha_bref, fecha_db, year_val = obtener_fechas_ayer()
-        return [(fecha_bref, fecha_db, year_val)]
+    # Prioridad: siempre ayer, luego pendientes, luego respaldo de fechas recientes.
+    candidatas = [ayer_db]
+    candidatas.extend([fecha_db for (fecha_db,) in pendientes])
+    candidatas.extend(
+        [
+            (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d"),
+            (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d"),
+        ]
+    )
+
+    fechas_unicas = []
+    for fecha_db in candidatas:
+        if fecha_db <= hoy_db and fecha_db not in fechas_unicas:
+            fechas_unicas.append(fecha_db)
 
     fechas = []
-    for (fecha_db,) in pendientes:
+    for fecha_db in fechas_unicas[:max_fechas]:
         fechas.append(
             (
                 _formatear_fecha_bref_desde_db(fecha_db),
