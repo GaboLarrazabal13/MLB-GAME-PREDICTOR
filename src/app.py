@@ -565,11 +565,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    with st.expander("Configuración"):
-        nueva_url = st.text_input("URL de la API", value=API_URL)
-        if nueva_url != API_URL:
-            st.info("Recarga la página para aplicar cambios")
-
 # ============================================================================
 # PÁGINA: PREDICCIÓN MANUAL - COMPLETAMENTE CORREGIDA
 # ============================================================================
