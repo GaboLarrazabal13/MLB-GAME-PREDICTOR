@@ -791,7 +791,18 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
         verbose=1,
     )
 
-    grid.fit(X_train, y_train, xgb_model=xgb_model_param)
+    try:
+        grid.fit(X_train, y_train, xgb_model=xgb_model_param)
+    except Exception as e:
+        if xgb_model_param is not None and "feature_names mismatch" in str(e):
+            print(
+                "⚠️ Warm-start incremental falló por incompatibilidad de "
+                "features con el modelo previo. Reintentando entrenamiento "
+                "sin xgb_model para mantener el pipeline estable..."
+            )
+            grid.fit(X_train, y_train)
+        else:
+            raise
 
     model_nuevo = grid.best_estimator_
     print(f"🏆 Mejores parámetros encontrados: {grid.best_params_}")
