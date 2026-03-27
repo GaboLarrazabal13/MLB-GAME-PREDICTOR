@@ -550,15 +550,18 @@ async def obtener_ultimos_resultados(
         if df.empty:
             return []
 
+        def _safe_int(value, default=0):
+            return int(value) if pd.notna(value) else default
+
         return [
             ResultadoReal(
                 game_id=row["game_id"],
                 fecha=row["fecha"],
                 home_team=row["home_team"],
                 away_team=row["away_team"],
-                score_home=int(row["score_home"]),
-                score_away=int(row["score_away"]),
-                ganador=int(row["ganador"]),
+                score_home=_safe_int(row["score_home"]),
+                score_away=_safe_int(row["score_away"]),
+                ganador=_safe_int(row["ganador"]),
             )
             for _, row in df.iterrows()
         ]
@@ -581,8 +584,7 @@ async def comparar_predicciones_resultados(fecha: str):
                 status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD"
             ) from None
 
-        with sqlite3.connect(DB_PATH) as conn:
-            query = f"""
+        query = """
                 SELECT
                     r.game_id,
                     r.fecha,
@@ -608,10 +610,33 @@ async def comparar_predicciones_resultados(fecha: str):
                     ON r.fecha = p.fecha
                     AND r.home_team = p.home_team
                     AND r.away_team = p.away_team
-                WHERE r.fecha = '{fecha}'
+                WHERE r.fecha = ?
                 ORDER BY r.home_team
             """
-            df = pd.read_sql(query, conn)
+
+        with sqlite3.connect(DB_PATH) as conn:
+            df = pd.read_sql(query, conn, params=[fecha])
+
+        # Si no hay resultados para una fecha pasada, intentar backfill automático.
+        if df.empty:
+            fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
+            if fecha_dt.date() < datetime.now().date():
+                try:
+                    from mlb_update_real_results import (
+                        _formatear_fecha_bref_desde_db,
+                        actualizar_resultados_reales_en_fecha,
+                    )
+
+                    actualizado = actualizar_resultados_reales_en_fecha(
+                        _formatear_fecha_bref_desde_db(fecha), fecha, fecha_dt.year
+                    )
+
+                    if actualizado:
+                        with sqlite3.connect(DB_PATH) as conn:
+                            df = pd.read_sql(query, conn, params=[fecha])
+                except Exception:
+                    # Si el backfill falla, mantenemos respuesta vacía sin romper el endpoint.
+                    pass
 
         if df.empty:
             return {
