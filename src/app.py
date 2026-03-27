@@ -353,6 +353,51 @@ st.markdown(
         box-shadow: 0 6px 20px rgba(0,0,0,0.12);
     }
 
+    [data-testid="stSidebar"] .sidebar-section-title {
+        font-size: 0.92rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin: 0.5rem 0 0.75rem 0;
+    }
+
+    [data-testid="stSidebar"] div[role="radiogroup"] {
+        gap: 0.6rem;
+    }
+
+    [data-testid="stSidebar"] div[role="radiogroup"] label {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 14px;
+        padding: 0.55rem 0.75rem;
+        margin: 0.35rem 0;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    [data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+        transform: translateY(-1px);
+        border-color: rgba(59, 130, 246, 0.45);
+        box-shadow: 0 10px 24px rgba(30, 64, 175, 0.12);
+    }
+
+    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border-color: rgba(37, 99, 235, 0.7);
+        box-shadow: 0 12px 26px rgba(37, 99, 235, 0.18);
+    }
+
+    [data-testid="stSidebar"] div[role="radiogroup"] label p {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p {
+        color: #1d4ed8;
+    }
+
     .confidence-muy-alta { color: #10b981; font-weight: 900; font-size: 2.5rem; }
     .confidence-alta { color: #3b82f6; font-weight: 900; font-size: 2.5rem; }
     .confidence-moderada { color: #f59e0b; font-weight: 900; font-size: 2.5rem; }
@@ -413,6 +458,56 @@ def ejecutar_scraper_manual():
         return False, "❌ Timeout: El proceso tardó demasiado"
     except Exception as e:
         return False, f"❌ Error: {str(e)}"
+
+
+def render_system_status_panel(api_ok, api_data):
+    """Muestra el estado operativo dentro de la sección informativa."""
+    entorno = (
+        "Producción" if (os.getenv("API_URL") or st.secrets.get("API_URL")) else "Local"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown(
+            f"""
+        <div class="stats-card">
+            <h4>API Backend</h4>
+            <p style="font-size: 1.05rem; color: {"#10b981" if api_ok else "#ef4444"}; font-weight: 800;">{"Conectada" if api_ok else "No disponible"}</p>
+            <p style="color: #64748b; margin: 0;">Salud general del servicio</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    with col2:
+        modelo_ok = bool(api_data and api_data.get("modelo_disponible"))
+        st.markdown(
+            f"""
+        <div class="stats-card">
+            <h4>Modelo</h4>
+            <p style="font-size: 1.05rem; color: {"#10b981" if modelo_ok else "#ef4444"}; font-weight: 800;">{"Cargado" if modelo_ok else "No disponible"}</p>
+            <p style="color: #64748b; margin: 0;">Artefacto predictivo principal</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    with col3:
+        db_ok = bool(api_data and api_data.get("base_datos_disponible"))
+        st.markdown(
+            f"""
+        <div class="stats-card">
+            <h4>Entorno</h4>
+            <p style="font-size: 1.05rem; color: {"#10b981" if db_ok else "#f59e0b"}; font-weight: 800;">{entorno}</p>
+            <p style="color: #64748b; margin: 0;">Base de datos {"disponible" if db_ok else "requiere revisión"}</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+
+api_ok, api_data = verificar_api_salud()
 
 
 def normalizar_probabilidad(prob):
@@ -537,28 +632,17 @@ with st.sidebar:
 
     st.markdown("---")
 
-    st.subheader("🔧 Estado del Sistema")
-    api_ok, api_data = verificar_api_salud()
-
-    if api_ok:
-        st.success("✅ API Conectada")
-        st.success("✅ Modelo Cargado")
-        st.info("Sistema Operativo")
-    else:
-        st.error("❌ API No Disponible")
-        st.warning("Inicia la API con:")
-        st.code("uvicorn api:app --reload", language="bash")
-
-    st.markdown("---")
-
-    st.subheader("Navegación")
+    st.markdown(
+        '<div class="sidebar-section-title">Explorar</div>',
+        unsafe_allow_html=True,
+    )
     pagina = st.radio(
         "Selecciona una sección:",
         [
-            "Predicción Manual",
-            "Partidos de Hoy",
-            "Comparación & Historial",
-            "Acerca del Modelo",
+            "⚾ Predicción Manual",
+            "📅 Partidos de Hoy",
+            "📊 Comparación & Historial",
+            "🧠 Acerca del Modelo",
         ],
         label_visibility="collapsed",
     )
@@ -569,7 +653,7 @@ with st.sidebar:
 # PÁGINA: PREDICCIÓN MANUAL - COMPLETAMENTE CORREGIDA
 # ============================================================================
 
-if pagina == "Predicción Manual":
+if pagina == "⚾ Predicción Manual":
     st.markdown(
         '<div class="main-title">Predicción Manual de Partidos</div>',
         unsafe_allow_html=True,
@@ -1069,7 +1153,7 @@ if pagina == "Predicción Manual":
 # PÁGINA: PARTIDOS DE HOY
 # ============================================================================
 
-elif pagina == "Partidos de Hoy":
+elif pagina == "📅 Partidos de Hoy":
     st.markdown(
         '<div class="main-title">Partidos y Predicciones del Día</div>',
         unsafe_allow_html=True,
@@ -1215,7 +1299,7 @@ elif pagina == "Partidos de Hoy":
 # PÁGINA: COMPARACIÓN & HISTORIAL
 # ============================================================================
 
-elif pagina == "Comparación & Historial":
+elif pagina == "📊 Comparación & Historial":
     st.markdown(
         '<div class="main-title"> Comparación de Predicciones vs Resultados</div>',
         unsafe_allow_html=True,
@@ -1329,7 +1413,7 @@ elif pagina == "Comparación & Historial":
 # PÁGINA: ACERCA DEL MODELO
 # ============================================================================
 
-elif pagina == "Acerca del Modelo":
+elif pagina == "🧠 Acerca del Modelo":
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image(
@@ -1344,6 +1428,9 @@ elif pagina == "Acerca del Modelo":
         '<div class="subtitle">Sistema Híbrido de Predicción con Machine Learning</div>',
         unsafe_allow_html=True,
     )
+
+    st.markdown("### Estado del Sistema")
+    render_system_status_panel(api_ok, api_data)
 
     st.markdown(
         """
