@@ -24,10 +24,99 @@ on:
           - train
           - predict
 
+concurrency:
+  group: mlb-predictor-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
+  # ============================================================================
+  # JOB MANUAL: PIPELINE COMPLETO SECUENCIAL
+  # ============================================================================
+  manual_all_pipeline:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'all'
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+
+      - name: Restaurar caché de datos
+        uses: actions/cache@v3
+        with:
+          path: |
+            data/
+            models/
+            cache/
+          key: mlb-data-${{ github.sha }}
+          restore-keys: |
+            mlb-data-
+
+      - name: Actualizar resultados reales
+        run: |
+          cd src
+          python mlb_update_real_results.py
+
+      - name: Verificar juegos pendientes de entrenamiento
+        id: check_training_all
+        run: |
+          cd src
+          pending=$(python -c "import sqlite3; from mlb_config import DB_PATH; conn = sqlite3.connect(DB_PATH); conn.execute('CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)'); cursor = conn.execute('SELECT COUNT(*) FROM historico_real WHERE game_id NOT IN (SELECT game_id FROM control_entrenamiento)'); print(cursor.fetchone()[0]); conn.close()")
+          echo "pending_games=$pending" >> $GITHUB_OUTPUT
+          echo "Juegos pendientes de entrenamiento: $pending"
+          if [ "$pending" -ge 150 ]; then
+            echo "should_train=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_train=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Ejecutar reentrenamiento incremental
+        if: steps.check_training_all.outputs.should_train == 'true'
+        run: |
+          cd src
+          python train_model_hybrid_actions.py
+
+      - name: Ejecutar scraping diario
+        id: scrape_all
+        run: |
+          cd src
+          python mlb_daily_scraper.py
+        continue-on-error: true
+
+      - name: Generar predicciones si hay datos nuevos
+        if: steps.scrape_all.outcome == 'success'
+        run: |
+          cd src
+          python mlb_predict_engine.py
+
+      - name: Commit y push de cambios automáticos
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/ cache/ models/
+          if git diff --cached --quiet; then
+            echo "No hay cambios para commit"
+            exit 0
+          fi
+          git commit -m "🤖 Actualización automática completa: $(date +'%Y-%m-%d %H:%M')"
+          git pull --rebase origin ${{ github.ref_name }}
+          git push origin HEAD:${{ github.ref_name }}
+
   # ============================================================================
   # JOB 1: SCRAPING DIARIO (10 AM y 1 PM)
   # ============================================================================
@@ -35,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       (github.event.schedule == '0 15 * * *' || github.event.schedule == '0 18 * * *') ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'scrape' || github.event.inputs.job == 'all'))
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scrape')
     
     steps:
       - name: Checkout código
@@ -100,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event.schedule == '0 10 * * *' ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'update_results' || github.event.inputs.job == 'all'))
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'update_results')
     
     steps:
       - name: Checkout código
@@ -156,7 +245,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event.schedule == '0 11 * * *' ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'train' || github.event.inputs.job == 'all'))
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'train')
     
     steps:
       - name: Checkout código
@@ -232,9 +321,8 @@ jobs:
   # ============================================================================
   generate_predictions:
     runs-on: ubuntu-latest
-    needs: [scrape_daily_games]
     if: |
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'predict' || github.event.inputs.job == 'all'))
+      github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'predict'
     
     steps:
       - name: Checkout código
