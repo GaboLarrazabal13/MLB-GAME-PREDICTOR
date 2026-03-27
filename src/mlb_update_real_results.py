@@ -61,6 +61,50 @@ def obtener_fechas_ayer():
     return fecha_bref, fecha_db, ayer.year
 
 
+def _formatear_fecha_bref_desde_db(fecha_db):
+    """Convierte fecha YYYY-MM-DD a formato de encabezado de Baseball-Reference."""
+    fecha_dt = datetime.strptime(fecha_db, "%Y-%m-%d")
+    return fecha_dt.strftime("%A, %B %-d, %Y" if os.name != "nt" else "%A, %B %#d, %Y")
+
+
+def obtener_fechas_objetivo(max_fechas=3):
+    """Obtiene fechas pendientes recientes; si no hay, usa ayer como fallback."""
+    hoy_db = datetime.now().strftime("%Y-%m-%d")
+
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            pendientes = conn.execute(
+                """
+                SELECT DISTINCT hp.fecha
+                FROM historico_partidos hp
+                LEFT JOIN historico_real hr ON hp.game_id = hr.game_id
+                WHERE hr.game_id IS NULL
+                  AND hp.fecha <= ?
+                ORDER BY hp.fecha DESC
+                LIMIT ?
+                """,
+                (hoy_db, max_fechas),
+            ).fetchall()
+    except Exception:
+        pendientes = []
+
+    if not pendientes:
+        fecha_bref, fecha_db, year_val = obtener_fechas_ayer()
+        return [(fecha_bref, fecha_db, year_val)]
+
+    fechas = []
+    for (fecha_db,) in pendientes:
+        fechas.append(
+            (
+                _formatear_fecha_bref_desde_db(fecha_db),
+                fecha_db,
+                datetime.strptime(fecha_db, "%Y-%m-%d").year,
+            )
+        )
+
+    return fechas
+
+
 def extraer_pitchers_desde_boxscore(box_score_url, home_team_gano):
     """Extrae lanzadores home/away desde el footer de linescore (WP/LP)."""
     if not box_score_url:
@@ -106,13 +150,11 @@ def extraer_pitchers_desde_boxscore(box_score_url, home_team_gano):
 # ============================================================================
 
 
-def actualizar_resultados_reales():
+def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
     """
-    Actualiza los resultados reales de los partidos de ayer
+    Actualiza los resultados reales para una fecha específica
     Retorna True si procesó datos, False si no
     """
-    fecha_bref, fecha_db, year_val = obtener_fechas_ayer()
-
     print(f"\n{'=' * 70}")
     print(f"🕐 Actualizando resultados reales para: {fecha_bref}")
     print(f"{'=' * 70}")
@@ -325,6 +367,32 @@ def actualizar_resultados_reales():
         print(f"{'=' * 70}\n")
 
         return True
+
+
+def actualizar_resultados_reales():
+    """
+    Actualiza resultados reales para fechas pendientes recientes.
+    Retorna True para mantener estable el workflow incluso si no hay nuevos finales.
+    """
+    fechas_objetivo = obtener_fechas_objetivo(max_fechas=3)
+
+    print("\n📅 Fechas objetivo para actualizar resultados:")
+    for _, fecha_db, _ in fechas_objetivo:
+        print(f"   - {fecha_db}")
+
+    procesados = 0
+    for fecha_bref, fecha_db, year_val in fechas_objetivo:
+        if actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
+            procesados += 1
+
+    if procesados == 0:
+        print(
+            "\nℹ️ No se encontraron nuevos resultados finales para las fechas objetivo."
+        )
+    else:
+        print(f"\n✅ Fechas procesadas con resultados guardados: {procesados}")
+
+    return True
 
 
 def verificar_juegos_pendientes():

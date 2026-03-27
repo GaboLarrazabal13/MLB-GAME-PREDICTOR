@@ -427,16 +427,21 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
 async def obtener_partidos_hoy():
     """Obtiene los partidos programados para hoy"""
     try:
-        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-
         with sqlite3.connect(DB_PATH) as conn:
-            query = f"""
+            fecha_objetivo = conn.execute(
+                "SELECT MAX(fecha) FROM historico_partidos"
+            ).fetchone()[0]
+
+            if not fecha_objetivo:
+                return []
+
+            query = """
                 SELECT game_id, fecha, home_team, away_team, home_pitcher, away_pitcher
                 FROM historico_partidos
-                WHERE fecha = '{fecha_hoy}'
+                WHERE fecha = ?
                 ORDER BY home_team
             """
-            df = pd.read_sql(query, conn)
+            df = pd.read_sql(query, conn, params=[fecha_objetivo])
 
         if df.empty:
             return []
@@ -463,20 +468,30 @@ async def obtener_partidos_hoy():
 async def obtener_predicciones_hoy():
     """Obtiene las predicciones generadas para hoy"""
     try:
-        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-
         with sqlite3.connect(DB_PATH) as conn:
-            query = f"""
+            fecha_objetivo = conn.execute(
+                """
+                SELECT COALESCE(
+                    (SELECT MAX(fecha) FROM historico_partidos),
+                    (SELECT MAX(fecha) FROM predicciones_historico)
+                )
+                """
+            ).fetchone()[0]
+
+            if not fecha_objetivo:
+                return []
+
+            query = """
                 SELECT p.*, hp.game_id
                 FROM predicciones_historico p
                 LEFT JOIN historico_partidos hp
                     ON p.fecha = hp.fecha
                     AND p.home_team = hp.home_team
                     AND p.away_team = hp.away_team
-                WHERE p.fecha = '{fecha_hoy}'
+                WHERE p.fecha = ?
                 ORDER BY p.prob_home DESC
             """
-            df = pd.read_sql(query, conn)
+            df = pd.read_sql(query, conn, params=[fecha_objetivo])
 
         if df.empty:
             return []

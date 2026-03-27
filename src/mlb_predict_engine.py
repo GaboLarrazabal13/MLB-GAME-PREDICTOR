@@ -293,8 +293,17 @@ def ejecutar_flujo_diario():
 
     with sqlite3.connect(DB_PATH) as conn:
         try:
+            fecha_objetivo = conn.execute(
+                "SELECT MAX(fecha) FROM historico_partidos"
+            ).fetchone()[0]
+            if not fecha_objetivo:
+                print("🔭 No hay juegos registrados en historico_partidos.")
+                return
+
             df_hoy = pd.read_sql(
-                "SELECT * FROM historico_partidos WHERE fecha = date('now')", conn
+                "SELECT * FROM historico_partidos WHERE fecha = ?",
+                conn,
+                params=[fecha_objetivo],
             )
         except Exception:
             print("🔭 Tabla 'historico_partidos' no encontrada.")
