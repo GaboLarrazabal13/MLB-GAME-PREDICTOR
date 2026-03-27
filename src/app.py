@@ -34,7 +34,7 @@ st.set_page_config(
 )
 
 # API Configuration
-API_URL = os.getenv("API_URL", "https://mlb-game-predictor-live.onrender.com")
+API_URL = os.getenv("API_URL") or st.secrets.get("API_URL", "http://localhost:8000")
 
 # Logos MLB oficiales
 EQUIPOS_MLB = {

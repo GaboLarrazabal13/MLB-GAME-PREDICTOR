@@ -6,11 +6,15 @@ Endpoints para predicciones manuales, automáticas y análisis de rendimiento
 import os
 import sqlite3
 import sys
+import time
+from collections import defaultdict, deque
 from datetime import datetime, timedelta
+from threading import Lock
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 # Importar módulos del proyecto
@@ -25,17 +29,79 @@ from mlb_predict_engine import predecir_juego
 app = FastAPI(
     title="MLB Predictor API",
     description="API para predicciones de partidos MLB usando Machine Learning",
-    version="3.5.0",
+    version="3.5.2",
 )
 
-# CORS para permitir acceso desde el frontend
+# CORS restringido por variable de entorno (coma separada).
+# Ejemplo: ALLOWED_ORIGINS="https://tu-frontend.com,https://www.tu-frontend.com"
+allowed_origins_env = os.getenv(
+    "ALLOWED_ORIGINS", "http://localhost:8501,http://127.0.0.1:8501"
+)
+ALLOWED_ORIGINS = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting básico por IP+ruta para evitar abuso.
+RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
+RATE_LIMIT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "180"))
+RATE_LIMIT_PREDICT_MAX_REQUESTS = int(
+    os.getenv("RATE_LIMIT_PREDICT_MAX_REQUESTS", "30")
+)
+_rate_limit_store: dict[str, deque[float]] = defaultdict(deque)
+_rate_limit_lock = Lock()
+
+
+def _get_client_ip(request: Request) -> str:
+    x_forwarded_for = request.headers.get("x-forwarded-for", "")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    path = request.url.path
+
+    # Excluir endpoints de metadata/health del límite.
+    if path in {"/", "/health", "/docs", "/redoc", "/openapi.json"}:
+        return await call_next(request)
+
+    client_ip = _get_client_ip(request)
+    max_requests = (
+        RATE_LIMIT_PREDICT_MAX_REQUESTS
+        if path.startswith("/predict")
+        else RATE_LIMIT_MAX_REQUESTS
+    )
+
+    now = time.time()
+    key = f"{client_ip}:{path}"
+
+    with _rate_limit_lock:
+        bucket = _rate_limit_store[key]
+        cutoff = now - RATE_LIMIT_WINDOW_SECONDS
+        while bucket and bucket[0] < cutoff:
+            bucket.popleft()
+
+        if len(bucket) >= max_requests:
+            retry_after = int(max(1, RATE_LIMIT_WINDOW_SECONDS - (now - bucket[0])))
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded. Try again later."},
+                headers={"Retry-After": str(retry_after)},
+            )
+
+        bucket.append(now)
+
+    response = await call_next(request)
+    response.headers["X-RateLimit-Limit"] = str(max_requests)
+    return response
+
 
 # ============================================================================
 # MODELOS DE DATOS (Pydantic)
@@ -117,7 +183,7 @@ class ResultadoReal(BaseModel):
 async def root():
     """Endpoint raíz con información de la API"""
     return {
-        "message": "MLB Predictor API V3.5.1 - Compare LEFT JOIN hotfix",
+        "message": "MLB Predictor API",
         "docs": "/docs",
         "endpoints": {
             "prediccion_manual": "/predict",
@@ -157,58 +223,6 @@ async def listar_equipos():
         {"codigo": code, "nombre": name} for code, name in TEAM_CODE_TO_NAME.items()
     ]
     return sorted(equipos, key=lambda x: x["nombre"])
-
-
-@app.get("/debug/compare/{fecha}")
-async def debug_compare(fecha: str):
-    """Diagnóstico: cuenta filas en historico_real y predicciones_historico para la fecha"""
-    import os
-
-    db_path_debug = DB_PATH
-    db_exists = os.path.exists(db_path_debug)
-    with sqlite3.connect(db_path_debug) as conn:
-        real = conn.execute(
-            "SELECT COUNT(*) FROM historico_real WHERE fecha=?", [fecha]
-        ).fetchone()[0]
-        pred = conn.execute(
-            "SELECT COUNT(*) FROM predicciones_historico WHERE fecha=?", [fecha]
-        ).fetchone()[0]
-        try:
-            full_query = """
-                SELECT
-                    r.game_id, r.fecha, r.home_team, r.away_team,
-                    r.home_pitcher, r.away_pitcher,
-                    r.score_home, r.score_away, r.ganador as ganador_real,
-                    p.prediccion, p.prob_home, p.prob_away, p.confianza,
-                    CASE WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
-                              (r.ganador = 0 AND p.prediccion = r.away_team)
-                         THEN 1 ELSE 0 END as acierto
-                FROM historico_real r
-                LEFT JOIN predicciones_historico p
-                    ON r.fecha = p.fecha
-                    AND r.home_team = p.home_team
-                    AND r.away_team = p.away_team
-                WHERE r.fecha = ?
-                ORDER BY r.home_team
-            """
-            df = pd.read_sql(full_query, conn, params=[fecha])
-            join_rows = len(df)
-            df_empty = df.empty
-            sample = df.head(3).to_dict("records")
-        except Exception as exc:
-            join_rows = -1
-            df_empty = None
-            sample = str(exc)
-    return {
-        "fecha": fecha,
-        "db_path": db_path_debug,
-        "db_exists": db_exists,
-        "historico_real_count": real,
-        "predicciones_historico_count": pred,
-        "join_rows": join_rows,
-        "df_empty": df_empty,
-        "sample": sample,
-    }
 
 
 # ============================================================================

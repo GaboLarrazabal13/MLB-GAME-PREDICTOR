@@ -7,15 +7,18 @@ Sistema de machine learning para predecir resultados de partidos de béisbol de 
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.52+-red.svg)](https://streamlit.io/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8+-orange.svg)](https://scikit-learn.org/)
 [![XGBoost 3.1.2+](https://img.shields.io/badge/XGBoost-3.1.2+-orange?style=flat-square&logo=anaconda&logoColor=white)](https://xgboost.readthedocs.io/)
+![App](https://img.shields.io/badge/MLB%20Predictor-App%20Logo-lightgrey)
+![Deployment](https://img.shields.io/badge/Deployment-Private-lightgrey)
+![API Access](https://img.shields.io/badge/API-Restricted-lightgrey)
+
+![MLB Predictor Logo](src/logo.png)
 
 ---
 
 
-## Fast API:
-[https://mlb-game-predictor-live.onrender.com](https://mlb-game-predictor-live.onrender.com)
+## Acceso de Producción
 
-## Web App:
-https://mlb-game-predictor-live.streamlit.app/
+Los enlaces públicos de API y frontend no se publican en este repositorio por seguridad operativa.
 
 ## 🎯 Características Principales
 
@@ -436,8 +439,7 @@ Para reportar bugs o solicitar features, abre un issue en GitHub.
 ## Contacto y Licencia
 
 **Autor**: Gabriel Larrazabal
-**Email**: gabolarrazabal13@gmail.com
-**GitHub**: [@GaboLarrazabal13](https://github.com/GaboLarrazabal13)
+**Contacto**: vía Issues del repositorio
 
 Este proyecto se distribuye bajo la Licencia MIT.
 
