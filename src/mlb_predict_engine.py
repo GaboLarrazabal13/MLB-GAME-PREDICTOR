@@ -305,6 +305,14 @@ def ejecutar_flujo_diario():
                 conn,
                 params=[fecha_objetivo],
             )
+
+            # Limpiar predicciones previas de la misma fecha para evitar mezcla
+            # de corridas antiguas con la corrida actual.
+            conn.execute(
+                "DELETE FROM predicciones_historico WHERE fecha = ?",
+                (fecha_objetivo,),
+            )
+            conn.commit()
         except Exception:
             print("🔭 Tabla 'historico_partidos' no encontrada.")
             return

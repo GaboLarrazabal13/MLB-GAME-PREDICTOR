@@ -12,6 +12,7 @@ import time
 import unicodedata
 from datetime import datetime
 from io import StringIO
+from zoneinfo import ZoneInfo
 
 import cloudscraper
 import pandas as pd
@@ -87,7 +88,9 @@ def obtener_html(url, max_retries=None):
 
 def obtener_fechas_ejecucion():
     """Obtiene fechas formateadas para scraping"""
-    ahora = datetime.now()
+    # Baseball-Reference publica "today" con horario del este (MLB).
+    # Usar ET evita desfasar fecha al correr en servidores UTC.
+    ahora = datetime.now(ZoneInfo("America/New_York"))
 
     # Formato para Baseball-Reference (ej: "Monday, April 1, 2024")
     fecha_bref = ahora.strftime(
@@ -436,6 +439,13 @@ def ejecutar_pipeline_diario():
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS lineup_ini
                            (fecha TEXT, game_id TEXT, team TEXT, [order] TEXT, player TEXT)"""
+            )
+
+            # Reemplazar snapshot completo de la fecha para evitar arrastre
+            # de juegos viejos cuando cambia la cartelera del día.
+            conn.execute(
+                "DELETE FROM historico_partidos WHERE fecha = ?",
+                (fecha_db,),
             )
 
             # Guardar partidos (con INSERT OR REPLACE para evitar duplicados)
