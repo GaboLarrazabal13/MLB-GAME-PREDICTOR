@@ -617,10 +617,11 @@ async def comparar_predicciones_resultados(fecha: str):
         with sqlite3.connect(DB_PATH) as conn:
             df = pd.read_sql(query, conn, params=[fecha])
 
-        # Si no hay resultados para una fecha pasada, intentar backfill automático.
+        # Si no hay resultados para la fecha consultada, intentar backfill automático.
+        # Usamos <= por desfase horario entre servidor (UTC) y la fecha esperada por usuario.
         if df.empty:
             fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
-            if fecha_dt.date() < datetime.now().date():
+            if fecha_dt.date() <= datetime.now().date():
                 try:
                     from mlb_update_real_results import (
                         _formatear_fecha_bref_desde_db,
