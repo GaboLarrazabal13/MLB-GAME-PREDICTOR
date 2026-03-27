@@ -159,6 +159,42 @@ async def listar_equipos():
     return sorted(equipos, key=lambda x: x["nombre"])
 
 
+@app.get("/debug/compare/{fecha}")
+async def debug_compare(fecha: str):
+    """Diagnóstico: cuenta filas en historico_real y predicciones_historico para la fecha"""
+    with sqlite3.connect(DB_PATH) as conn:
+        real = conn.execute(
+            "SELECT COUNT(*) FROM historico_real WHERE fecha=?", [fecha]
+        ).fetchone()[0]
+        pred = conn.execute(
+            "SELECT COUNT(*) FROM predicciones_historico WHERE fecha=?", [fecha]
+        ).fetchone()[0]
+        try:
+            import pandas as pd
+
+            query = """SELECT r.home_team, r.away_team, p.prediccion, p.confianza
+                       FROM historico_real r
+                       LEFT JOIN predicciones_historico p
+                       ON r.fecha=p.fecha AND r.home_team=p.home_team AND r.away_team=p.away_team
+                       WHERE r.fecha=?"""
+            df = pd.read_sql(query, conn, params=[fecha])
+            join_rows = len(df)
+            df_empty = df.empty
+            sample = df.head(3).to_dict("records")
+        except Exception as exc:
+            join_rows = -1
+            df_empty = None
+            sample = str(exc)
+    return {
+        "fecha": fecha,
+        "historico_real_count": real,
+        "predicciones_historico_count": pred,
+        "join_rows": join_rows,
+        "df_empty": df_empty,
+        "sample": sample,
+    }
+
+
 # ============================================================================
 # ENDPOINTS - PREDICCIONES
 # ============================================================================
