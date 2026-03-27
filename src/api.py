@@ -700,10 +700,23 @@ async def comparar_predicciones_resultados(fecha: str):
 
         # Calcular estadísticas
         total = len(df)
-        aciertos = df["acierto"].sum() if "acierto" in df.columns else 0
+        aciertos = df["acierto"].fillna(0).sum() if "acierto" in df.columns else 0
         accuracy = (aciertos / total * 100) if total > 0 else 0.0
 
-        partidos = df.to_dict("records")
+        # Evitar NaN en la respuesta JSON (FastAPI falla al serializarlos).
+        df_json = df.astype(object).where(pd.notna(df), None)
+
+        por_confianza = {}
+        if "confianza" in df_json.columns and "acierto" in df_json.columns:
+            df_conf = df_json.dropna(subset=["confianza"]).copy()
+            if not df_conf.empty:
+                por_confianza = (
+                    df_conf.groupby("confianza")["acierto"]
+                    .agg(["count", "sum", "mean"])
+                    .to_dict("index")
+                )
+
+        partidos = df_json.to_dict("records")
 
         return {
             "fecha": fecha,
@@ -712,11 +725,7 @@ async def comparar_predicciones_resultados(fecha: str):
                 "total": int(total),
                 "aciertos": int(aciertos),
                 "accuracy": round(accuracy, 2),
-                "por_confianza": df.groupby("confianza")["acierto"]
-                .agg(["count", "sum", "mean"])
-                .to_dict("index")
-                if "confianza" in df.columns
-                else {},
+                "por_confianza": por_confianza,
             },
         }
 
