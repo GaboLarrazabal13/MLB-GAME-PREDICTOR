@@ -306,6 +306,12 @@ def actualizar_resultados_reales():
 
         # Guardar todos (INSERT OR REPLACE para evitar duplicados)
         for _, row in df_export.iterrows():
+            # Evita duplicados en esquemas antiguos sin PK efectiva en game_id.
+            conn.execute(
+                """DELETE FROM historico_real
+                   WHERE fecha = ? AND home_team = ? AND away_team = ?""",
+                (row["fecha"], row["home_team"], row["away_team"]),
+            )
             conn.execute(
                 """INSERT OR REPLACE INTO historico_real VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 tuple(row),
