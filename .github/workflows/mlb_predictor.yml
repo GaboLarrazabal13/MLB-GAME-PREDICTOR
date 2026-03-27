@@ -74,10 +74,63 @@ jobs:
         id: check_training_all
         run: |
           cd src
-          pending=$(python -c "import sqlite3; from mlb_config import DB_PATH; conn = sqlite3.connect(DB_PATH); conn.execute('CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)'); cursor = conn.execute('SELECT COUNT(*) FROM historico_real WHERE game_id NOT IN (SELECT game_id FROM control_entrenamiento)'); print(cursor.fetchone()[0]); conn.close()")
+          pending=$(python - <<'PY'
+          import sqlite3
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from mlb_config import DB_PATH
+
+          season = str(datetime.now(ZoneInfo("America/New_York")).year)
+
+          with sqlite3.connect(DB_PATH) as conn:
+            conn.execute(
+              "CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)"
+            )
+            conn.execute(
+              "CREATE TABLE IF NOT EXISTS metadata_entrenamiento (key TEXT PRIMARY KEY, value TEXT)"
+            )
+
+            baseline = conn.execute(
+              "SELECT value FROM metadata_entrenamiento WHERE key='baseline_initialized'"
+            ).fetchone()
+
+            if baseline is None:
+              conn.execute(
+                """
+                INSERT OR IGNORE INTO control_entrenamiento(game_id)
+                SELECT fecha || '_' || home_team || '_' || away_team
+                FROM historico_real
+                WHERE substr(fecha,1,4)=?
+                """,
+                (season,),
+              )
+              conn.execute(
+                "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('baseline_initialized','1')"
+              )
+              conn.execute(
+                "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('baseline_season',?)",
+                (season,),
+              )
+              conn.commit()
+
+            pending = conn.execute(
+              """
+              SELECT COUNT(*)
+              FROM historico_real
+              WHERE substr(fecha,1,4)=?
+              AND (fecha || '_' || home_team || '_' || away_team) NOT IN (
+                SELECT game_id FROM control_entrenamiento
+              )
+              """,
+              (season,),
+            ).fetchone()[0]
+
+          print(pending)
+          PY
+          )
           echo "pending_games=$pending" >> $GITHUB_OUTPUT
           echo "Juegos pendientes de entrenamiento: $pending"
-          if [ "$pending" -ge 150 ]; then
+          if [ "$pending" -ge 200 ]; then
             echo "should_train=true" >> $GITHUB_OUTPUT
           else
             echo "should_train=false" >> $GITHUB_OUTPUT
@@ -391,21 +444,67 @@ jobs:
         id: check_training
         run: |
           cd src
-          python -c "
+          python - <<'PY'
+          import os
           import sqlite3
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
+
+          season = str(datetime.now(ZoneInfo("America/New_York")).year)
+
           with sqlite3.connect(DB_PATH) as conn:
-              conn.execute('CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)')
-              cursor = conn.execute('SELECT COUNT(*) FROM historico_real WHERE game_id NOT IN (SELECT game_id FROM control_entrenamiento)')
-              pending = cursor.fetchone()[0]
-              print(f'PENDING_GAMES={pending}')
-              print(f'Juegos pendientes de entrenamiento: {pending}')
-              # Solo entrenar si hay 150+ juegos nuevos
-              if pending >= 150:
-                  print('SHOULD_TRAIN=true')
-              else:
-                  print('SHOULD_TRAIN=false')
-          " | tee -a $GITHUB_OUTPUT
+            conn.execute(
+              "CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)"
+            )
+            conn.execute(
+              "CREATE TABLE IF NOT EXISTS metadata_entrenamiento (key TEXT PRIMARY KEY, value TEXT)"
+            )
+
+            baseline = conn.execute(
+              "SELECT value FROM metadata_entrenamiento WHERE key='baseline_initialized'"
+            ).fetchone()
+
+            if baseline is None:
+              conn.execute(
+                """
+                INSERT OR IGNORE INTO control_entrenamiento(game_id)
+                SELECT fecha || '_' || home_team || '_' || away_team
+                FROM historico_real
+                WHERE substr(fecha,1,4)=?
+                """,
+                (season,),
+              )
+              conn.execute(
+                "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('baseline_initialized','1')"
+              )
+              conn.execute(
+                "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('baseline_season',?)",
+                (season,),
+              )
+              conn.commit()
+
+            pending = conn.execute(
+              """
+              SELECT COUNT(*)
+              FROM historico_real
+              WHERE substr(fecha,1,4)=?
+              AND (fecha || '_' || home_team || '_' || away_team) NOT IN (
+                SELECT game_id FROM control_entrenamiento
+              )
+              """,
+              (season,),
+            ).fetchone()[0]
+
+          should_train = pending >= 200
+          print(f"PENDING_GAMES={pending}")
+          print(f"Juegos pendientes de entrenamiento: {pending}")
+          print(f"SHOULD_TRAIN={'true' if should_train else 'false'}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            f.write(f"PENDING_GAMES={pending}\n")
+            f.write(f"SHOULD_TRAIN={'true' if should_train else 'false'}\n")
+          PY
       
       - name: Ejecutar reentrenamiento incremental
         if: steps.check_training.outputs.SHOULD_TRAIN == 'true'

@@ -17,6 +17,8 @@ import sqlite3
 import time
 import unicodedata
 import warnings
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import cloudscraper
 import numpy as np
@@ -452,7 +454,22 @@ def obtener_juegos_no_entrenados():
             "CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)"
         )
 
-        df_real = pd.read_sql("SELECT * FROM historico_real", conn)
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
+                   key TEXT PRIMARY KEY,
+                   value TEXT
+               )"""
+        )
+
+        temporada_objetivo = int(
+            os.getenv("TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year)
+        )
+
+        df_real = pd.read_sql(
+            "SELECT * FROM historico_real WHERE substr(fecha, 1, 4) = ?",
+            conn,
+            params=[str(temporada_objetivo)],
+        )
 
         if df_real.empty:
             return df_real
@@ -466,6 +483,39 @@ def obtener_juegos_no_entrenados():
             .str.cat(df_real["home_team"].astype(str), sep="_")
             .str.cat(df_real["away_team"].astype(str), sep="_")
         )
+
+        # Baseline one-shot: en la primera ejecución tras desplegar esta lógica,
+        # marcamos el histórico existente de la temporada como ya entrenado.
+        baseline_flag = conn.execute(
+            "SELECT value FROM metadata_entrenamiento WHERE key = 'baseline_initialized'"
+        ).fetchone()
+
+        if baseline_flag is None:
+            df_real[["game_id"]].drop_duplicates().to_sql(
+                "temp_baseline_entrenados", conn, if_exists="replace", index=False
+            )
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO control_entrenamiento (game_id)
+                SELECT game_id FROM temp_baseline_entrenados
+                """
+            )
+            conn.execute("DROP TABLE temp_baseline_entrenados")
+            conn.execute(
+                "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
+                ("baseline_initialized", "1"),
+            )
+            conn.execute(
+                "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
+                ("baseline_season", str(temporada_objetivo)),
+            )
+            conn.commit()
+
+            print(
+                "ℹ️ Baseline de entrenamiento inicializado con "
+                f"{len(df_real)} juegos de la temporada {temporada_objetivo}."
+            )
+            return df_real.iloc[0:0].copy()
 
         ids_entrenados = pd.read_sql("SELECT game_id FROM control_entrenamiento", conn)[
             "game_id"
