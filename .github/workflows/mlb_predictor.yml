@@ -102,6 +102,63 @@ jobs:
           cd src
           RUN_SOURCE=workflow python mlb_predict_engine.py
 
+      - name: Validar fecha de cartelera (ET)
+        id: validate_dates_all
+        if: steps.scrape_all.outcome == 'success'
+        run: |
+          cd src
+          python - <<'PY'
+          import os
+          import sqlite3
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from mlb_config import DB_PATH
+
+          today_et = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+          with sqlite3.connect(DB_PATH) as conn:
+              max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
+              max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
+
+          is_ok = (max_games == today_et and max_preds == today_et)
+          print(f"today_et={today_et}")
+          print(f"max_games={max_games}")
+          print(f"max_preds={max_preds}")
+          print(f"is_ok={is_ok}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"today_et={today_et}\n")
+              f.write(f"max_games={max_games}\n")
+              f.write(f"max_preds={max_preds}\n")
+              f.write(f"is_ok={'true' if is_ok else 'false'}\n")
+          PY
+
+      - name: Reintentar scraping y predicción por desfase de fecha
+        if: steps.scrape_all.outcome == 'success' && steps.validate_dates_all.outputs.is_ok != 'true'
+        run: |
+          cd src
+          RUN_SOURCE=workflow python mlb_daily_scraper.py
+          RUN_SOURCE=workflow python mlb_predict_engine.py
+
+      - name: Revalidar fecha de cartelera (ET)
+        if: steps.scrape_all.outcome == 'success' && steps.validate_dates_all.outputs.is_ok != 'true'
+        run: |
+          cd src
+          python - <<'PY'
+          import sqlite3
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from mlb_config import DB_PATH
+
+          today_et = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+          with sqlite3.connect(DB_PATH) as conn:
+              max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
+              max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
+
+          print(f"Post-retry => today_et={today_et}, max_games={max_games}, max_preds={max_preds}")
+          if not (max_games == today_et and max_preds == today_et):
+              raise SystemExit("❌ Desfase de fecha persiste tras reintento de scraper/predict")
+          PY
+
       - name: Commit y push de cambios automáticos
         run: |
           git config --local user.email "action@github.com"
@@ -164,6 +221,63 @@ jobs:
         run: |
           cd src
           RUN_SOURCE=workflow python mlb_predict_engine.py
+
+      - name: Validar fecha de cartelera (ET)
+        id: validate_dates_scrape
+        if: steps.scrape.outcome == 'success'
+        run: |
+          cd src
+          python - <<'PY'
+          import os
+          import sqlite3
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from mlb_config import DB_PATH
+
+          today_et = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+          with sqlite3.connect(DB_PATH) as conn:
+              max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
+              max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
+
+          is_ok = (max_games == today_et and max_preds == today_et)
+          print(f"today_et={today_et}")
+          print(f"max_games={max_games}")
+          print(f"max_preds={max_preds}")
+          print(f"is_ok={is_ok}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"today_et={today_et}\n")
+              f.write(f"max_games={max_games}\n")
+              f.write(f"max_preds={max_preds}\n")
+              f.write(f"is_ok={'true' if is_ok else 'false'}\n")
+          PY
+
+      - name: Reintentar scraping y predicción por desfase de fecha
+        if: steps.scrape.outcome == 'success' && steps.validate_dates_scrape.outputs.is_ok != 'true'
+        run: |
+          cd src
+          RUN_SOURCE=workflow python mlb_daily_scraper.py
+          RUN_SOURCE=workflow python mlb_predict_engine.py
+
+      - name: Revalidar fecha de cartelera (ET)
+        if: steps.scrape.outcome == 'success' && steps.validate_dates_scrape.outputs.is_ok != 'true'
+        run: |
+          cd src
+          python - <<'PY'
+          import sqlite3
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from mlb_config import DB_PATH
+
+          today_et = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+          with sqlite3.connect(DB_PATH) as conn:
+              max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
+              max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
+
+          print(f"Post-retry => today_et={today_et}, max_games={max_games}, max_preds={max_preds}")
+          if not (max_games == today_et and max_preds == today_et):
+              raise SystemExit("❌ Desfase de fecha persiste tras reintento de scraper/predict")
+          PY
       
       - name: Commit y push de datos actualizados
         if: steps.scrape.outcome == 'success'
