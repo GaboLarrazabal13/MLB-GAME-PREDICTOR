@@ -117,7 +117,7 @@ class ResultadoReal(BaseModel):
 async def root():
     """Endpoint raíz con información de la API"""
     return {
-        "message": "MLB Predictor API V3.5",
+        "message": "MLB Predictor API V3.5.1 - Compare LEFT JOIN hotfix",
         "docs": "/docs",
         "endpoints": {
             "prediccion_manual": "/predict",
