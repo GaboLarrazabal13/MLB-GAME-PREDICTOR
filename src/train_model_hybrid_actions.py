@@ -86,6 +86,7 @@ def alinear_features_entrenamiento(X_new, model_actual=None):
 
     return X_new.reindex(columns=feature_names_modelo, fill_value=0)
 
+
 # ============================================================================
 # FUNCIONES DE SCRAPING CON REINTENTOS
 # ============================================================================
