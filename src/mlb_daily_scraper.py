@@ -305,6 +305,8 @@ def ejecutar_pipeline_diario():
     """
     fecha_bref, fecha_db, year_val = obtener_fechas_ejecucion()
     run_source = os.getenv("RUN_SOURCE", "local").strip().lower()
+    max_intentos = int(os.getenv("SCRAPER_MAX_ATTEMPTS", "3"))
+    espera_reintento = int(os.getenv("SCRAPER_RETRY_WAIT_SECONDS", "90"))
     url_schedule = (
         f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
     )
@@ -314,104 +316,142 @@ def ejecutar_pipeline_diario():
     print("   Versión 2 (Estructura HTML Actualizada)")
     print(f"{'=' * 70}")
 
-    html = obtener_html(url_schedule)
+    for intento in range(1, max_intentos + 1):
+        print(f"\n🔁 Intento de scraping {intento}/{max_intentos}")
 
-    if not html:
-        print("❌ No se pudo conectar a Baseball-Reference")
-        return False
-
-    soup = BeautifulSoup(html, "html.parser")
-
-    # Extraer equipos usando la nueva estructura (span id="today")
-    print("\n🔍 Buscando partidos de hoy en span id='today'...")
-    equipos_hoy = extraer_equipos_del_dia(soup)
-
-    if not equipos_hoy:
-        print(
-            "\n⚠️ No se encontraron partidos listados para hoy usando la nueva estructura."
-        )
-        print("   (Los lineups podrían no estar publicados aún)")
-        return False
-
-    data_partidos = []
-    partidos_procesados = 0
-
-    for away_team, home_team, preview_link in equipos_hoy:
-        try:
-            print(f"\n⚾ Procesando: {away_team} @ {home_team}")
-
-            if not preview_link:
-                print("   ⚠️ No se encontró link de preview para este partido")
+        html = obtener_html(url_schedule)
+        if not html:
+            print("❌ No se pudo conectar a Baseball-Reference")
+            if intento < max_intentos:
+                print(f"⏳ Esperando {espera_reintento}s antes de reintentar...")
+                time.sleep(espera_reintento)
                 continue
+            print("⚠️ Máximo de intentos alcanzado. Continuando workflow sin guardar.")
+            return True
 
-            # Extraer lanzadores del preview
-            print("   🔍 Extrayendo lanzadores de preview...")
-            lanzadores = extraer_lanzadores_del_preview(preview_link)
+        soup = BeautifulSoup(html, "html.parser")
 
-            away_pitcher = lanzadores.get(away_team)
-            home_pitcher = lanzadores.get(home_team)
+        # Extraer equipos usando la nueva estructura (span id="today")
+        print("\n🔍 Buscando partidos de hoy en span id='today'...")
+        equipos_hoy = extraer_equipos_del_dia(soup)
 
-            if not away_pitcher or not home_pitcher:
-                print(
-                    f"   ⚠️ No se encontraron lanzadores: {away_pitcher} vs {home_pitcher}"
+        if not equipos_hoy:
+            print(
+                "\n⚠️ No se encontraron partidos listados para hoy usando la nueva estructura."
+            )
+            print("   (Los lineups podrían no estar publicados aún)")
+            if intento < max_intentos:
+                print(f"⏳ Esperando {espera_reintento}s antes de reintentar...")
+                time.sleep(espera_reintento)
+                continue
+            print("⚠️ Máximo de intentos alcanzado. Continuando workflow sin guardar.")
+            return True
+
+        data_partidos = []
+        errores_partidos = []
+
+        for away_team, home_team, preview_link in equipos_hoy:
+            try:
+                print(f"\n⚾ Procesando: {away_team} @ {home_team}")
+
+                if not preview_link:
+                    print("   ⚠️ No se encontró link de preview para este partido")
+                    errores_partidos.append(f"{away_team}@{home_team}:sin_preview")
+                    continue
+
+                # Extraer lanzadores del preview
+                print("   🔍 Extrayendo lanzadores de preview...")
+                lanzadores = extraer_lanzadores_del_preview(preview_link)
+
+                away_pitcher = lanzadores.get(away_team)
+                home_pitcher = lanzadores.get(home_team)
+
+                if not away_pitcher or not home_pitcher:
+                    print(
+                        f"   ⚠️ No se encontraron lanzadores: {away_pitcher} vs {home_pitcher}"
+                    )
+                    errores_partidos.append(
+                        f"{away_team}@{home_team}:lanzadores_incompletos"
+                    )
+                    continue
+
+                print(f"   ✅ Lanzadores encontrados: {away_pitcher} vs {home_pitcher}")
+
+                # Extraer stats de los lanzadores
+                print(f"   🔍 Buscando stats de {away_pitcher}...")
+                s_away = encontrar_lanzador(
+                    scrape_player_stats(away_team, year_val), away_pitcher
                 )
+                time.sleep(SCRAPING_CONFIG["min_delay"])
+
+                print(f"   🔍 Buscando stats de {home_pitcher}...")
+                s_home = encontrar_lanzador(
+                    scrape_player_stats(home_team, year_val), home_pitcher
+                )
+                time.sleep(SCRAPING_CONFIG["min_delay"])
+
+                # Crear game_id unificado
+                game_id = f"{fecha_db}_{home_team}_{away_team}"
+
+                # Guardar datos del partido
+                data_partidos.append(
+                    {
+                        "game_id": game_id,
+                        "box_score_url": preview_link,
+                        "fecha": fecha_db,
+                        "year": year_val,
+                        "away_team": away_team,
+                        "home_team": home_team,
+                        "away_pitcher": away_pitcher,
+                        "home_pitcher": home_pitcher,
+                        "away_starter_ERA": s_away["ERA"] if s_away else 0.0,
+                        "away_starter_WHIP": s_away["WHIP"] if s_away else 0.0,
+                        "away_starter_H9": s_away["H9"] if s_away else 0.0,
+                        "away_starter_SO9": s_away["SO9"] if s_away else 0.0,
+                        "away_starter_W": s_away["W"] if s_away else 0,
+                        "away_starter_L": s_away["L"] if s_away else 0,
+                        "home_starter_ERA": s_home["ERA"] if s_home else 0.0,
+                        "home_starter_WHIP": s_home["WHIP"] if s_home else 0.0,
+                        "home_starter_H9": s_home["H9"] if s_home else 0.0,
+                        "home_starter_SO9": s_home["SO9"] if s_home else 0.0,
+                        "home_starter_W": s_home["W"] if s_home else 0,
+                        "home_starter_L": s_home["L"] if s_home else 0,
+                    }
+                )
+
+                print("   ✅ Partido procesado exitosamente")
+
+            except Exception as e:
+                print(f"  ⚠️ Error en partido {away_team} @ {home_team}: {e}")
+                errores_partidos.append(f"{away_team}@{home_team}:exception")
+
+        total_detectados = len(equipos_hoy)
+        total_ok = len(data_partidos)
+        completo = total_ok == total_detectados and total_detectados > 0
+
+        print(
+            f"\n📊 Resumen intento {intento}: {total_ok}/{total_detectados} partidos completos"
+        )
+
+        if not completo:
+            if errores_partidos:
+                print("   Detalle de errores:")
+                for err in errores_partidos:
+                    print(f"   - {err}")
+
+            if intento < max_intentos:
+                print(
+                    f"⏳ Datos incompletos. Esperando {espera_reintento}s para reintentar..."
+                )
+                time.sleep(espera_reintento)
                 continue
 
-            print(f"   ✅ Lanzadores encontrados: {away_pitcher} vs {home_pitcher}")
-
-            # Extraer stats de los lanzadores
-            print(f"   🔍 Buscando stats de {away_pitcher}...")
-            s_away = encontrar_lanzador(
-                scrape_player_stats(away_team, year_val), away_pitcher
+            print(
+                "⚠️ Tercer intento sin datos completos. No se guarda información y se continúa workflow."
             )
-            time.sleep(SCRAPING_CONFIG["min_delay"])
+            return True
 
-            print(f"   🔍 Buscando stats de {home_pitcher}...")
-            s_home = encontrar_lanzador(
-                scrape_player_stats(home_team, year_val), home_pitcher
-            )
-            time.sleep(SCRAPING_CONFIG["min_delay"])
-
-            # Crear game_id unificado
-            game_id = f"{fecha_db}_{home_team}_{away_team}"
-
-            # Guardar datos del partido
-            data_partidos.append(
-                {
-                    "game_id": game_id,
-                    "box_score_url": preview_link,
-                    "fecha": fecha_db,
-                    "year": year_val,
-                    "away_team": away_team,
-                    "home_team": home_team,
-                    "away_pitcher": away_pitcher,
-                    "home_pitcher": home_pitcher,
-                    "away_starter_ERA": s_away["ERA"] if s_away else 0.0,
-                    "away_starter_WHIP": s_away["WHIP"] if s_away else 0.0,
-                    "away_starter_H9": s_away["H9"] if s_away else 0.0,
-                    "away_starter_SO9": s_away["SO9"] if s_away else 0.0,
-                    "away_starter_W": s_away["W"] if s_away else 0,
-                    "away_starter_L": s_away["L"] if s_away else 0,
-                    "home_starter_ERA": s_home["ERA"] if s_home else 0.0,
-                    "home_starter_WHIP": s_home["WHIP"] if s_home else 0.0,
-                    "home_starter_H9": s_home["H9"] if s_home else 0.0,
-                    "home_starter_SO9": s_home["SO9"] if s_home else 0.0,
-                    "home_starter_W": s_home["W"] if s_home else 0,
-                    "home_starter_L": s_home["L"] if s_home else 0,
-                }
-            )
-
-            partidos_procesados += 1
-            print("   ✅ Partido procesado exitosamente")
-
-        except Exception as e:
-            print(f"  ⚠️ Error en partido {away_team} @ {home_team}: {e}")
-            import traceback
-
-            traceback.print_exc()
-
-    # Guardar en base de datos
-    if data_partidos:
+        # Guardar en base de datos solo si la corrida está completa.
         print(f"\n{'=' * 70}")
         print(f"💾 Guardando {len(data_partidos)} partidos en la base de datos...")
 
@@ -451,31 +491,7 @@ def ejecutar_pipeline_diario():
                        )"""
             )
 
-            # Reemplazar snapshot completo de la fecha para evitar arrastre
-            # de juegos viejos cuando cambia la cartelera del día.
             df_partidos = pd.DataFrame(data_partidos)
-
-            # Si Baseball-Reference devuelve una cartelera parcial (ej. juegos ya en curso),
-            # preservamos partidos existentes del mismo día para no reducir la lista publicada.
-            df_existentes = pd.read_sql(
-                "SELECT * FROM historico_partidos WHERE fecha = ?",
-                conn,
-                params=[fecha_db],
-            )
-
-            if not df_existentes.empty:
-                df_restantes = df_existentes[
-                    ~df_existentes["game_id"].isin(df_partidos["game_id"])
-                ].copy()
-                if not df_restantes.empty:
-                    print(
-                        f"  ℹ️ Preservando {len(df_restantes)} partidos existentes del día por scraping parcial"
-                    )
-                    df_partidos = pd.concat(
-                        [df_partidos, df_restantes],
-                        ignore_index=True,
-                        sort=False,
-                    )
 
             conn.execute(
                 "DELETE FROM historico_partidos WHERE fecha = ?",
@@ -504,11 +520,10 @@ def ejecutar_pipeline_diario():
         print("✅ Proceso finalizado exitosamente")
         print(f"   - Partidos guardados: {len(data_partidos)}")
         print(f"{'=' * 70}\n")
-
         return True
-    else:
-        print("\n⚠️ No hubo datos nuevos para procesar.")
-        return False
+
+    print("⚠️ No se pudo completar scraping diario tras los reintentos.")
+    return True
 
 
 # ============================================================================
