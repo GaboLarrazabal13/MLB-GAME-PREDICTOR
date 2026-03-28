@@ -86,6 +86,8 @@ TEAM_NAME_TO_CODE.update(
         "white sox": "CHW",
         "red sox": "BOS",
         "blue jays": "TOR",
+        "ath": "OAK",  # Oakland Athletics abreviado
+        "athletics": "OAK",
     }
 )
 
