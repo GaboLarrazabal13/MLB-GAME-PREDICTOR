@@ -612,6 +612,276 @@ def crear_gauge_confianza(confianza):
     return fig
 
 
+@st.cache_data(ttl=1800)
+def obtener_prediccion_detallada_partido(
+    home_team, away_team, home_pitcher, away_pitcher, year
+):
+    """Obtiene la predicción detallada para un partido usando la API."""
+    try:
+        response = requests.post(
+            f"{API_URL}/predict/detailed",
+            json={
+                "home_team": home_team,
+                "away_team": away_team,
+                "home_pitcher": home_pitcher,
+                "away_pitcher": away_pitcher,
+                "year": year,
+            },
+            timeout=120,
+        )
+
+        if response.status_code == 200:
+            return True, response.json()
+
+        try:
+            error = response.json()
+            return False, error.get("detail", "Error desconocido")
+        except Exception:
+            return False, f"Error HTTP {response.status_code}"
+    except requests.exceptions.Timeout:
+        return False, "Timeout: la API tardó más de 120 segundos"
+    except Exception as e:
+        return False, str(e)
+
+
+def renderizar_analisis_detallado_partido(
+    resultado_detallado, home_team, away_team, home_pitcher, away_pitcher
+):
+    """Renderiza en UI el mismo análisis detallado usado en Predicción Manual."""
+    ganador = resultado_detallado.get("ganador", home_team)
+    prob_home = normalizar_probabilidad(resultado_detallado.get("prob_home", 0.5))
+    prob_away = normalizar_probabilidad(resultado_detallado.get("prob_away", 0.5))
+
+    conf_val = max(prob_home, prob_away)
+    if conf_val > 0.70:
+        conf_label = "MUY ALTA"
+        conf_class = "confidence-muy-alta"
+    elif conf_val > 0.60:
+        conf_label = "ALTA"
+        conf_class = "confidence-alta"
+    elif conf_val > 0.55:
+        conf_label = "MODERADA"
+        conf_class = "confidence-moderada"
+    else:
+        conf_label = "BAJA"
+        conf_class = "confidence-baja"
+
+    # Métricas principales
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        st.markdown(f"**{home_team}**")
+        st.metric(
+            "Probabilidad",
+            f"{prob_home * 100:.1f}%",
+            delta=f"{(prob_home - 0.5) * 100:+.1f}% vs 50%",
+        )
+    with col_b:
+        st.markdown(f"**{away_team}**")
+        st.metric(
+            "Probabilidad",
+            f"{prob_away * 100:.1f}%",
+            delta=f"{(prob_away - 0.5) * 100:+.1f}% vs 50%",
+        )
+    with col_c:
+        st.metric("Confianza", f"{conf_val * 100:.1f}%")
+        st.markdown(
+            f'<p class="{conf_class}" style="text-align: center;">{conf_label}</p>',
+            unsafe_allow_html=True,
+        )
+
+    # Gráficos
+    col_g1, col_g2 = st.columns(2)
+    with col_g1:
+        st.plotly_chart(
+            crear_grafico_probabilidades(prob_home, prob_away, home_team, away_team),
+            use_container_width=True,
+            key=f"prob_chart_{home_team}_{away_team}_{ganador}",
+        )
+    with col_g2:
+        st.plotly_chart(
+            crear_gauge_confianza(conf_val),
+            use_container_width=True,
+            key=f"gauge_chart_{home_team}_{away_team}_{ganador}",
+        )
+
+    # Super Features
+    st.markdown("### Super Features: Análisis Dinámico de Matchups")
+    features = resultado_detallado.get("features_usadas", {})
+
+    if not features or not any("super_" in k for k in features):
+        st.info("ℹ️ Las Super Features no están disponibles en esta respuesta de la API")
+    else:
+        col1, col2, col3 = st.columns(3)
+
+        neut = features.get("super_neutralizacion_whip_ops", 0)
+        ventaja_n = home_team if neut < 0 else away_team
+        pitcher_n = home_pitcher if neut < 0 else away_pitcher
+        rival_n = away_team if neut < 0 else home_team
+
+        with col1:
+            st.markdown(
+                f"""
+            <div class="super-feature">
+                <h4>Neutralización WHIP vs OPS</h4>
+                <div class="super-feature-advantage">Ventaja: {ventaja_n}</div>
+                <p style="font-size: 1.1rem; line-height: 1.6; margin-top: 1rem;">
+                    <strong>{pitcher_n}</strong> tiene un WHIP que neutraliza efectivamente
+                    el OPS del lineup de <strong>{rival_n}</strong>, limitando su producción ofensiva.
+                </p>
+                <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
+                    Impacto: <strong>{abs(neut):.4f}</strong>
+                </div>
+            </div>
+            """,
+                unsafe_allow_html=True,
+            )
+
+        res = features.get("super_resistencia_era_ops", 0)
+        ventaja_r = home_team if res < 0 else away_team
+        pitcher_r = home_pitcher if res < 0 else away_pitcher
+
+        with col2:
+            st.markdown(
+                f"""
+            <div class="super-feature">
+                <h4>Resistencia ERA vs Poder</h4>
+                <div class="super-feature-advantage">Ventaja: {ventaja_r}</div>
+                <p style="font-size: 1.1rem; line-height: 1.6; margin-top: 1rem;">
+                    <strong>{pitcher_r}</strong> demuestra mayor resistencia ante bateadores
+                    de poder, manteniendo su ERA bajo presión ofensiva.
+                </p>
+                <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
+                    Impacto: <strong>{abs(res):.4f}</strong>
+                </div>
+            </div>
+            """,
+                unsafe_allow_html=True,
+            )
+
+        muro = features.get("super_muro_bullpen", 0)
+        ventaja_m = home_team if muro < 0 else away_team
+
+        with col3:
+            st.markdown(
+                f"""
+            <div class="super-feature">
+                <h4>Muro del Bullpen</h4>
+                <div class="super-feature-advantage">Ventaja: {ventaja_m}</div>
+                <p style="font-size: 1.1rem; line-height: 1.6; margin-top: 1rem;">
+                    El bullpen de <strong>{ventaja_m}</strong> es más efectivo
+                    contra los mejores bateadores rivales en innings críticos.
+                </p>
+                <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
+                    Impacto: <strong>{abs(muro):.4f}</strong>
+                </div>
+            </div>
+            """,
+                unsafe_allow_html=True,
+            )
+
+    # Estadísticas detalladas
+    stats_det = resultado_detallado.get("stats_detalladas", {})
+    if stats_det and (
+        stats_det.get("home_pitcher")
+        or stats_det.get("away_pitcher")
+        or stats_det.get("home_batters")
+        or stats_det.get("away_batters")
+    ):
+        st.markdown("## Estadísticas Detalladas")
+        st.markdown("### Lanzadores Iniciales")
+
+        pcol1, pcol2 = st.columns(2)
+
+        with pcol1:
+            home_pitcher_stats = stats_det.get("home_pitcher")
+            if home_pitcher_stats and isinstance(home_pitcher_stats, dict):
+                nombre_real = home_pitcher_stats.get("nombre", home_pitcher)
+                st.markdown(
+                    get_team_logo_html(home_team, 40) + f" {home_team} - {nombre_real}",
+                    unsafe_allow_html=True,
+                )
+                s1, s2, s3 = st.columns(3)
+                with s1:
+                    st.metric("ERA", f"{home_pitcher_stats.get('ERA', 0):.2f}")
+                with s2:
+                    st.metric("WHIP", f"{home_pitcher_stats.get('WHIP', 0):.3f}")
+                with s3:
+                    st.metric("SO9", f"{home_pitcher_stats.get('SO9', 0):.2f}")
+            else:
+                st.warning(f"⚠️ No se encontraron estadísticas para {home_pitcher}")
+
+        with pcol2:
+            away_pitcher_stats = stats_det.get("away_pitcher")
+            if away_pitcher_stats and isinstance(away_pitcher_stats, dict):
+                nombre_real = away_pitcher_stats.get("nombre", away_pitcher)
+                st.markdown(
+                    get_team_logo_html(away_team, 40) + f" {away_team} - {nombre_real}",
+                    unsafe_allow_html=True,
+                )
+                s1, s2, s3 = st.columns(3)
+                with s1:
+                    st.metric("ERA", f"{away_pitcher_stats.get('ERA', 0):.2f}")
+                with s2:
+                    st.metric("WHIP", f"{away_pitcher_stats.get('WHIP', 0):.3f}")
+                with s3:
+                    st.metric("SO9", f"{away_pitcher_stats.get('SO9', 0):.2f}")
+            else:
+                st.warning(f"⚠️ No se encontraron estadísticas para {away_pitcher}")
+
+        st.markdown("---")
+        st.markdown("### Top 3 Bateadores")
+
+        bcol1, bcol2 = st.columns(2)
+
+        with bcol1:
+            home_batters = stats_det.get("home_batters", [])
+            if home_batters and isinstance(home_batters, list):
+                st.markdown(
+                    get_team_logo_html(home_team, 40) + f"- {home_team}",
+                    unsafe_allow_html=True,
+                )
+                for i, batter in enumerate(home_batters[:3], 1):
+                    if batter and isinstance(batter, dict):
+                        nombre_batter = batter.get("nombre", "N/A")
+                        if nombre_batter and nombre_batter != "N/A":
+                            with st.expander(f"#{i} - {nombre_batter}", expanded=(i == 1)):
+                                k1, k2, k3, k4 = st.columns(4)
+                                with k1:
+                                    st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
+                                with k2:
+                                    st.metric("BA", f"{batter.get('BA', 0):.3f}")
+                                with k3:
+                                    st.metric("HR", int(batter.get("HR", 0)))
+                                with k4:
+                                    st.metric("RBI", int(batter.get("RBI", 0)))
+            else:
+                st.info(f"ℹ️ No hay datos de bateadores disponibles para {home_team}")
+
+        with bcol2:
+            away_batters = stats_det.get("away_batters", [])
+            if away_batters and isinstance(away_batters, list):
+                st.markdown(
+                    get_team_logo_html(away_team, 40) + f"- {away_team}",
+                    unsafe_allow_html=True,
+                )
+                for i, batter in enumerate(away_batters[:3], 1):
+                    if batter and isinstance(batter, dict):
+                        nombre_batter = batter.get("nombre", "N/A")
+                        if nombre_batter and nombre_batter != "N/A":
+                            with st.expander(f"#{i} - {nombre_batter}", expanded=(i == 1)):
+                                k1, k2, k3, k4 = st.columns(4)
+                                with k1:
+                                    st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
+                                with k2:
+                                    st.metric("BA", f"{batter.get('BA', 0):.3f}")
+                                with k3:
+                                    st.metric("HR", int(batter.get("HR", 0)))
+                                with k4:
+                                    st.metric("RBI", int(batter.get("RBI", 0)))
+            else:
+                st.info(f"ℹ️ No hay datos de bateadores disponibles para {away_team}")
+
+
 # ============================================================================
 # SIDEBAR
 # ============================================================================
@@ -1231,6 +1501,9 @@ elif pagina == "📅 Partidos de Hoy":
                 f"Se encontraron {len(partidos)} partidos para hoy ({fecha_hoy})"
             )
 
+            if "detalles_partidos_hoy" not in st.session_state:
+                st.session_state.detalles_partidos_hoy = {}
+
             for partido in partidos:
                 with st.container():
                     home_logo = get_team_logo_html(partido["home_team"], 50)
@@ -1248,31 +1521,18 @@ elif pagina == "📅 Partidos de Hoy":
                             <div style="color: #64748b; margin: 0.5rem 0;">
                                 {partido.get("away_pitcher", "TBD")} vs {partido.get("home_pitcher", "TBD")}
                             </div>
+                        </div>
                         """,
                             unsafe_allow_html=True,
                         )
 
                         if "prediccion" in partido:
-                            pred_team = get_team_display_name(partido["prediccion"])
                             prob = (
                                 partido.get("prob_home", 0)
                                 if partido["prediccion"] == partido["home_team"]
                                 else partido.get("prob_away", 0)
                             )
-                            # FIX: Normalizar probabilidad
                             prob_normalizada = normalizar_probabilidad(prob)
-
-                            st.markdown(
-                                f"""
-                            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 0.75rem; border-radius: 0.5rem; margin: 0.5rem 0; font-weight: 600;">
-                                Predicho: <strong>{pred_team}</strong> ({prob_normalizada * 100:.1f}%)
-                            </div>
-                            </div>
-                            """,
-                                unsafe_allow_html=True,
-                            )
-                        else:
-                            st.markdown("</div>", unsafe_allow_html=True)
 
                     with col2:
                         if "prediccion" in partido:
@@ -1290,6 +1550,69 @@ elif pagina == "📅 Partidos de Hoy":
                             )
                         else:
                             st.warning("⏳ Pendiente")
+
+                    if "prediccion" in partido:
+                        pred_team = get_team_display_name(partido["prediccion"])
+                        prob = (
+                            partido.get("prob_home", 0)
+                            if partido["prediccion"] == partido["home_team"]
+                            else partido.get("prob_away", 0)
+                        )
+                        prob_normalizada = normalizar_probabilidad(prob)
+
+                        game_id = partido.get(
+                            "game_id",
+                            f"{partido.get('fecha','')}_{partido['away_team']}_{partido['home_team']}",
+                        )
+
+                        with st.expander(
+                            f"Predicho: {pred_team} ({prob_normalizada * 100:.1f}%) - Ver análisis detallado",
+                            expanded=False,
+                        ):
+                            home_pitcher = partido.get("home_pitcher", "")
+                            away_pitcher = partido.get("away_pitcher", "")
+                            year_detalle = int(str(partido.get("fecha", fecha_hoy))[:4])
+
+                            if not home_pitcher or not away_pitcher:
+                                st.warning(
+                                    "No hay lanzadores definidos para este partido. No se puede generar el análisis detallado."
+                                )
+                            else:
+                                if game_id not in st.session_state.detalles_partidos_hoy:
+                                    if st.button(
+                                        "Cargar análisis detallado",
+                                        key=f"load_detail_{game_id}",
+                                        use_container_width=True,
+                                    ):
+                                        with st.spinner(
+                                            f"Generando análisis detallado para {partido['away_team']} @ {partido['home_team']}..."
+                                        ):
+                                            ok_detalle, payload = (
+                                                obtener_prediccion_detallada_partido(
+                                                    partido["home_team"],
+                                                    partido["away_team"],
+                                                    home_pitcher,
+                                                    away_pitcher,
+                                                    year_detalle,
+                                                )
+                                            )
+                                        if ok_detalle:
+                                            st.session_state.detalles_partidos_hoy[
+                                                game_id
+                                            ] = payload
+                                            st.rerun()
+                                        else:
+                                            st.error(
+                                                f"No se pudo cargar el análisis detallado: {payload}"
+                                            )
+                                else:
+                                    renderizar_analisis_detallado_partido(
+                                        st.session_state.detalles_partidos_hoy[game_id],
+                                        partido["home_team"],
+                                        partido["away_team"],
+                                        home_pitcher,
+                                        away_pitcher,
+                                    )
 
                     st.markdown("---")
     except Exception as e:
