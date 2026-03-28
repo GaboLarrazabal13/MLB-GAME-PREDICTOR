@@ -8,6 +8,10 @@ name: CI
 on:
   push:
     branches: [main, develop]
+    paths-ignore:
+      - 'data/**'
+      - 'cache/**'
+      - 'models/**'
   pull_request:
     branches: [main]
 
@@ -21,6 +25,15 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    if: >
+      github.event_name != 'push' ||
+      (
+        !startsWith(github.event.head_commit.message, '🤖 Actualización automática completa:') &&
+        !startsWith(github.event.head_commit.message, '📊 Actualización automática: Scraping') &&
+        !startsWith(github.event.head_commit.message, '✅ Resultados reales actualizados:') &&
+        !startsWith(github.event.head_commit.message, '🤖 Modelo reentrenado:') &&
+        !startsWith(github.event.head_commit.message, '🎯 Predicciones generadas:')
+      )
     
     steps:
       - name: Checkout code
@@ -51,6 +64,15 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    if: >
+      github.event_name != 'push' ||
+      (
+        !startsWith(github.event.head_commit.message, '🤖 Actualización automática completa:') &&
+        !startsWith(github.event.head_commit.message, '📊 Actualización automática: Scraping') &&
+        !startsWith(github.event.head_commit.message, '✅ Resultados reales actualizados:') &&
+        !startsWith(github.event.head_commit.message, '🤖 Modelo reentrenado:') &&
+        !startsWith(github.event.head_commit.message, '🎯 Predicciones generadas:')
+      )
     env:
       PYTHONPATH: ${{ github.workspace }}
     
@@ -136,6 +158,15 @@ jobs:
   build-docker:
     name: Build Docker
     runs-on: ubuntu-latest
+    if: >
+      github.event_name != 'push' ||
+      (
+        !startsWith(github.event.head_commit.message, '🤖 Actualización automática completa:') &&
+        !startsWith(github.event.head_commit.message, '📊 Actualización automática: Scraping') &&
+        !startsWith(github.event.head_commit.message, '✅ Resultados reales actualizados:') &&
+        !startsWith(github.event.head_commit.message, '🤖 Modelo reentrenado:') &&
+        !startsWith(github.event.head_commit.message, '🎯 Predicciones generadas:')
+      )
     needs: [lint, test]
     
     steps:
@@ -162,6 +193,15 @@ jobs:
   security:
     name: Security
     runs-on: ubuntu-latest
+    if: >
+      github.event_name != 'push' ||
+      (
+        !startsWith(github.event.head_commit.message, '🤖 Actualización automática completa:') &&
+        !startsWith(github.event.head_commit.message, '📊 Actualización automática: Scraping') &&
+        !startsWith(github.event.head_commit.message, '✅ Resultados reales actualizados:') &&
+        !startsWith(github.event.head_commit.message, '🤖 Modelo reentrenado:') &&
+        !startsWith(github.event.head_commit.message, '🎯 Predicciones generadas:')
+      )
     
     steps:
       - name: Checkout code
