@@ -343,8 +343,12 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         session_cache = {}
 
         # Función auxiliar para obtener stats de lanzador con fallback de años
-        def obtener_pitcher_con_fallback(pitcher_name, team_code, request_year):
-            """Intenta obtener stats del pitcher cayendo hacia años anteriores si es necesario"""
+        def obtener_pitcher_con_fallback(pitcher_name, pitcher_link, team_code, request_year):
+            """
+            Intenta obtener stats del pitcher:
+            1. Por link directo (si está disponible)
+            2. Fallback por nombre en años: 2026, 2025, 2024
+            """
             fallback_info = {
                 "year_usado": None,
                 "ip_detectados": 0,
@@ -352,7 +356,22 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
                 "stats": None,
             }
 
-            # Intentar en orden: año solicitado, 2025, 2024
+            # INTENTO 1: Usar link directo si está disponible
+            if pitcher_link and pitcher_link.strip():
+                try:
+                    from train_model_hybrid_actions import obtener_stats_pitcher_por_link
+                    stats = obtener_stats_pitcher_por_link(pitcher_link, session_cache)
+                    if stats:
+                        ip = stats.get("IP", 0)
+                        fallback_info["stats"] = stats
+                        fallback_info["year_usado"] = request_year  # Deducimos que es del año correcto
+                        fallback_info["ip_detectados"] = ip
+                        print(f"       ✓ Stats obtenidas por link directo: {pitcher_link}")
+                        return fallback_info
+                except Exception as e:
+                    print(f"       ⚠️ Error usando link directo: {e}, caen a búsqueda por nombre")
+
+            # INTENTO 2: Fallback por nombre en años: 2026, 2025, 2024
             for year in [request_year, 2025, 2024]:
                 try:
                     bat, pit = scrape_player_stats(team_code, year, session_cache)
@@ -385,10 +404,10 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
 
         # Obtener stats para ambos lanzadores con fallback
         home_fallback = obtener_pitcher_con_fallback(
-            request.home_pitcher, home_code, request.year
+            request.home_pitcher, None, home_code, request.year
         )
         away_fallback = obtener_pitcher_con_fallback(
-            request.away_pitcher, away_code, request.year
+            request.away_pitcher, None, away_code, request.year
         )
 
         home_pitcher_stats = home_fallback["stats"]

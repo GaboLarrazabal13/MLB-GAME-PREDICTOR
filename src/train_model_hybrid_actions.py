@@ -187,6 +187,72 @@ def scrape_player_stats(team_code, year, session_cache=None):
         return None, None
 
 
+def obtener_stats_pitcher_por_link(pitcher_link, session_cache=None):
+    """
+    Obtiene stats de un pitcher directamente por su link individual.
+    Ej: '/players/s/skenepa01.shtml' -> dict con ERA, WHIP, W, L, IP, etc.
+    """
+    if not pitcher_link:
+        return None
+    
+    if session_cache is not None:
+        if pitcher_link in session_cache:
+            return session_cache[pitcher_link]
+    
+    try:
+        url = f"https://www.baseball-reference.com{pitcher_link}"
+        html = obtener_html(url)
+        
+        if not html:
+            print(f"       ⚠️ No se pudo obtener HTML del pitcher: {pitcher_link}")
+            return None
+        
+        soup = BeautifulSoup(html, "html.parser")
+        
+        # Buscar tabla de estadísticas de pitcheo seasonal
+        pitching_table = soup.find("table", {"id": "pitching"})
+        
+        if not pitching_table:
+            print(f"       ⚠️ No se encontró tabla de pitcheo para: {pitcher_link}")
+            return None
+        
+        # Leer la tabla y tomar la fila más reciente (usualmente la 2026)
+        df = pd.read_html(str(pitching_table))[0]
+        
+        if df.empty:
+            return None
+        
+        # Limpiar dataframe
+        df = limpiar_dataframe(df)
+        
+        # Tomar la primera fila válida (estadísticas más recientes)
+        if len(df) > 0:
+            row = df.iloc[0]
+            
+            stats = {
+                "nombre_real": row[0] if pd.notna(row.iloc[0]) else "",
+                "ERA": safe_float(row.get("ERA", 0)),
+                "WHIP": safe_float(row.get("WHIP", 0)),
+                "H9": safe_float(row.get("H/9", 0)),
+                "SO9": safe_float(row.get("SO9", 0)),
+                "W": safe_int(row.get("W", 0)),
+                "L": safe_int(row.get("L", 0)),
+                "IP": safe_float(row.get("IP", 0)),
+                "G": safe_int(row.get("G", 0)),
+                "GS": safe_int(row.get("GS", 0)),
+            }
+            
+            if session_cache is not None:
+                session_cache[pitcher_link] = stats
+            
+            return stats
+        
+    except Exception as e:
+        print(f"       ⚠️ Error obteniendo stats del pitcher {pitcher_link}: {e}")
+    
+    return None
+
+
 # ============================================================================
 # IDENTIFICAR TOP 3 RELEVISTAS
 # ============================================================================

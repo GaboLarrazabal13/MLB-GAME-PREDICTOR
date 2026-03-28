@@ -165,9 +165,9 @@ def extraer_equipos_del_dia(soup):
 
 def extraer_lanzadores_del_preview(preview_url):
     """
-    Extrae los nombres de los lanzadores iniciales de la página del preview
+    Extrae los nombres Y LINKS de los lanzadores iniciales de la página del preview
     Busca divs con class="section_heading assoc_sp_{TEAM_CODE}"
-    Retorna diccionario: {team_code: pitcher_name}
+    Retorna diccionario: {team_code: {"nombre": pitcher_name, "link": pitcher_href}}
     """
     html = obtener_html(f"https://www.baseball-reference.com{preview_url}")
 
@@ -195,8 +195,12 @@ def extraer_lanzadores_del_preview(preview_url):
                     pitcher_link = h2_tag.find("a")
                     if pitcher_link:
                         pitcher_name = pitcher_link.get_text(strip=True)
-                        lanzadores[team_code] = pitcher_name
-                        print(f"     🎯 Lanzador {team_code}: {pitcher_name}")
+                        pitcher_href = pitcher_link.get("href", "")
+                        lanzadores[team_code] = {
+                            "nombre": pitcher_name,
+                            "link": pitcher_href
+                        }
+                        print(f"     🎯 Lanzador {team_code}: {pitcher_name} | Link: {pitcher_href}")
 
         except Exception as e:
             print(f"     ⚠️ Error extrayendo lanzador: {e}")
@@ -363,8 +367,10 @@ def ejecutar_pipeline_diario():
                 print("   🔍 Extrayendo lanzadores de preview...")
                 lanzadores = extraer_lanzadores_del_preview(preview_link)
 
-                away_pitcher = lanzadores.get(away_team)
-                home_pitcher = lanzadores.get(home_team)
+                away_pitcher = lanzadores.get(away_team, {}).get("nombre") if isinstance(lanzadores.get(away_team), dict) else lanzadores.get(away_team)
+                away_pitcher_link = lanzadores.get(away_team, {}).get("link", "") if isinstance(lanzadores.get(away_team), dict) else ""
+                home_pitcher = lanzadores.get(home_team, {}).get("nombre") if isinstance(lanzadores.get(home_team), dict) else lanzadores.get(home_team)
+                home_pitcher_link = lanzadores.get(home_team, {}).get("link", "") if isinstance(lanzadores.get(home_team), dict) else ""
 
                 if not away_pitcher or not home_pitcher:
                     print(
@@ -404,6 +410,8 @@ def ejecutar_pipeline_diario():
                         "home_team": home_team,
                         "away_pitcher": away_pitcher,
                         "home_pitcher": home_pitcher,
+                        "away_pitcher_link": away_pitcher_link,
+                        "home_pitcher_link": home_pitcher_link,
                         "away_starter_ERA": s_away["ERA"] if s_away else 0.0,
                         "away_starter_WHIP": s_away["WHIP"] if s_away else 0.0,
                         "away_starter_H9": s_away["H9"] if s_away else 0.0,
@@ -469,6 +477,7 @@ def ejecutar_pipeline_diario():
                     """CREATE TABLE historico_partidos
                                (game_id TEXT PRIMARY KEY, box_score_url TEXT, fecha TEXT, year INTEGER,
                                 away_team TEXT, home_team TEXT, away_pitcher TEXT, home_pitcher TEXT,
+                                away_pitcher_link TEXT, home_pitcher_link TEXT,
                                 away_starter_ERA REAL, away_starter_WHIP REAL, away_starter_H9 REAL,
                                 away_starter_SO9 REAL, away_starter_W INTEGER, away_starter_L INTEGER,
                                 home_starter_ERA REAL, home_starter_WHIP REAL, home_starter_H9 REAL,
@@ -502,7 +511,7 @@ def ejecutar_pipeline_diario():
             for _, row in df_partidos.iterrows():
                 conn.execute(
                     """INSERT OR REPLACE INTO historico_partidos VALUES
-                               (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                               (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     tuple(row),
                 )
 
