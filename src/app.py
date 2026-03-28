@@ -689,7 +689,39 @@ def renderizar_analisis_detallado_partido(
             unsafe_allow_html=True,
         )
 
-    # Gráficos
+    # Mostrar información sobre fallback de años si aplica
+    year_solicitado = resultado_detallado.get("year_solicitado", resultado_detallado.get("year_usado_home", 2026))
+    razon_home = resultado_detallado.get("razon_fallback_home")
+    razon_away = resultado_detallado.get("razon_fallback_away")
+    
+    if razon_home or razon_away:
+        st.divider()
+        st.markdown("### 📊 Información sobre los datos utilizados")
+        
+        # Mostrar info del lanzador local si tiene fallback
+        if razon_home:
+            year_home = resultado_detallado.get("year_usado_home")
+            ip_home = resultado_detallado.get("ip_home", 0)
+            st.info(
+                f"📌 **{home_team}**: Estadísticas de {home_pitcher} tomadas de la temporada **{year_home}** "
+                f"({razon_home.split(':')[1].strip() if ':' in razon_home else razon_home})"
+            )
+        
+        # Mostrar info del lanzador visitante si tiene fallback
+        if razon_away:
+            year_away = resultado_detallado.get("year_usado_away")
+            ip_away = resultado_detallado.get("ip_away", 0)
+            st.info(
+                f"📌 **{away_team}**: Estadísticas de {away_pitcher} tomadas de la temporada **{year_away}** "
+                f"({razon_away.split(':')[1].strip() if ':' in razon_away else razon_away})"
+            )
+        
+        st.markdown(
+            "💡 *Esta información se muestra para ser transparente sobre los datos disponibles. "
+            "Conforme avance la temporada y se acumulen más entradas, se usarán automáticamente las estadísticas de 2026.*"
+        )
+        st.divider()
+
     col_g1, col_g2 = st.columns(2)
     with col_g1:
         st.plotly_chart(

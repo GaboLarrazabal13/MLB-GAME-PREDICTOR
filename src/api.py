@@ -342,19 +342,68 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         # Scraping para estadísticas detalladas
         session_cache = {}
 
-        bat_home, pit_home = scrape_player_stats(home_code, request.year, session_cache)
-        bat_away, pit_away = scrape_player_stats(away_code, request.year, session_cache)
+        # Función auxiliar para obtener stats de lanzador con fallback de años
+        def obtener_pitcher_con_fallback(pitcher_name, team_code, request_year):
+            """Intenta obtener stats del pitcher cayendo hacia años anteriores si es necesario"""
+            fallback_info = {
+                "year_usado": None,
+                "ip_detectados": 0,
+                "razon_fallback": None,
+                "stats": None,
+            }
 
-        # Extraer estadísticas de lanzadores (con nombres reales)
-        home_pitcher_stats = encontrar_lanzador(pit_home, request.home_pitcher)
-        away_pitcher_stats = encontrar_lanzador(pit_away, request.away_pitcher)
+            # Intentar en orden: año solicitado, 2025, 2024
+            for year in [request_year, 2025, 2024]:
+                try:
+                    bat, pit = scrape_player_stats(team_code, year, session_cache)
+                    if pit is None:
+                        continue
+
+                    stats = encontrar_lanzador(pit, pitcher_name)
+                    if stats:
+                        ip = stats.get("IP", 0)
+                        fallback_info["stats"] = stats
+                        fallback_info["year_usado"] = year
+                        fallback_info["ip_detectados"] = ip
+
+                        # Determinar razón de fallback
+                        if year != request_year:
+                            if ip <= 15:
+                                fallback_info["razon_fallback"] = (
+                                    f"Año {request_year}: {ip} IP insuficientes"
+                                )
+                            else:
+                                fallback_info["razon_fallback"] = (
+                                    f"Pitcher no encontrado en {request_year}"
+                                )
+
+                        return fallback_info
+                except Exception:
+                    continue
+
+            return fallback_info
+
+        # Obtener stats para ambos lanzadores con fallback
+        home_fallback = obtener_pitcher_con_fallback(
+            request.home_pitcher, home_code, request.year
+        )
+        away_fallback = obtener_pitcher_con_fallback(
+            request.away_pitcher, away_code, request.year
+        )
+
+        home_pitcher_stats = home_fallback["stats"]
+        away_pitcher_stats = away_fallback["stats"]
 
         # Validar que se encontraron los lanzadores
         if not home_pitcher_stats or not away_pitcher_stats:
             raise HTTPException(
                 status_code=404,
-                detail="No se encontraron uno o ambos lanzadores. Verifica los nombres.",
+                detail="No se encontraron uno o ambos lanzadores en ningún año disponible.",
             )
+
+        # Re-scrape para el año final que se usará (para bateadores y bullpen)
+        bat_home, pit_home = scrape_player_stats(home_code, home_fallback["year_usado"], session_cache)
+        bat_away, pit_away = scrape_player_stats(away_code, away_fallback["year_usado"], session_cache)
 
         # Extraer Top 3 bateadores
         home_batters_stats = encontrar_mejor_bateador(bat_home)
@@ -450,7 +499,13 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             "prob_home": prob_home_decimal,
             "prob_away": prob_away_decimal,
             "confianza": confianza_decimal,  # CORREGIDO: valor entre 0-1
-            "year_usado": request.year,
+            "year_solicitado": request.year,
+            "year_usado_home": home_fallback["year_usado"],
+            "year_usado_away": away_fallback["year_usado"],
+            "razon_fallback_home": home_fallback["razon_fallback"],
+            "razon_fallback_away": away_fallback["razon_fallback"],
+            "ip_home": home_fallback["ip_detectados"],
+            "ip_away": away_fallback["ip_detectados"],
             "features_usadas": features_dict,
             "stats_detalladas": {
                 "home_pitcher": {
