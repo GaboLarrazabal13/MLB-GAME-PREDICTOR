@@ -453,13 +453,36 @@ def ejecutar_pipeline_diario():
 
             # Reemplazar snapshot completo de la fecha para evitar arrastre
             # de juegos viejos cuando cambia la cartelera del día.
+            df_partidos = pd.DataFrame(data_partidos)
+
+            # Si Baseball-Reference devuelve una cartelera parcial (ej. juegos ya en curso),
+            # preservamos partidos existentes del mismo día para no reducir la lista publicada.
+            df_existentes = pd.read_sql(
+                "SELECT * FROM historico_partidos WHERE fecha = ?",
+                conn,
+                params=[fecha_db],
+            )
+
+            if not df_existentes.empty:
+                df_restantes = df_existentes[
+                    ~df_existentes["game_id"].isin(df_partidos["game_id"])
+                ].copy()
+                if not df_restantes.empty:
+                    print(
+                        f"  ℹ️ Preservando {len(df_restantes)} partidos existentes del día por scraping parcial"
+                    )
+                    df_partidos = pd.concat(
+                        [df_partidos, df_restantes],
+                        ignore_index=True,
+                        sort=False,
+                    )
+
             conn.execute(
                 "DELETE FROM historico_partidos WHERE fecha = ?",
                 (fecha_db,),
             )
 
             # Guardar partidos (con INSERT OR REPLACE para evitar duplicados)
-            df_partidos = pd.DataFrame(data_partidos)
             for _, row in df_partidos.iterrows():
                 conn.execute(
                     """INSERT OR REPLACE INTO historico_partidos VALUES
