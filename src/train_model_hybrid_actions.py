@@ -462,7 +462,9 @@ def obtener_juegos_no_entrenados():
         )
 
         temporada_objetivo = int(
-            os.getenv("TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year)
+            os.getenv(
+                "TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year
+            )
         )
 
         df_real = pd.read_sql(
