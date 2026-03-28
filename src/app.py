@@ -1616,18 +1616,15 @@ elif pagina == "📅 Partidos de Hoy":
                                         key=f"load_detail_{game_id}",
                                         use_container_width=True,
                                     ):
-                                        with st.spinner(
-                                            f"Generando análisis detallado para {partido['away_team']} @ {partido['home_team']}..."
-                                        ):
-                                            ok_detalle, payload = (
-                                                obtener_prediccion_detallada_partido(
-                                                    partido["home_team"],
-                                                    partido["away_team"],
-                                                    home_pitcher,
-                                                    away_pitcher,
-                                                    year_detalle,
-                                                )
+                                        ok_detalle, payload = (
+                                            obtener_prediccion_detallada_partido(
+                                                partido["home_team"],
+                                                partido["away_team"],
+                                                home_pitcher,
+                                                away_pitcher,
+                                                year_detalle,
                                             )
+                                        )
                                         if ok_detalle:
                                             st.session_state.detalles_partidos_hoy[
                                                 game_id

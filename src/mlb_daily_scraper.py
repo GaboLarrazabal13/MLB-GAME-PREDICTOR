@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup, Comment
 
 # Importar configuración centralizada
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mlb_config import DB_PATH, SCRAPING_CONFIG
+from mlb_config import DB_PATH, SCRAPING_CONFIG, get_team_code
 
 # ============================================================================
 # FUNCIONES DE SOPORTE Y FORMATEO
@@ -297,6 +297,58 @@ def extraer_lineups_completos(box_url):
     return b_away, b_home, p_away, p_home
 
 
+def obtener_delay_adaptativo(default_seconds=0):
+    """Lee el delay adaptativo persistido para la siguiente ejecución."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS scraper_control (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            row = conn.execute(
+                "SELECT value FROM scraper_control WHERE key = ?",
+                ("adaptive_between_games_seconds",),
+            ).fetchone()
+            if not row:
+                return default_seconds
+            return int(row[0])
+    except Exception:
+        return default_seconds
+
+
+def guardar_delay_adaptativo(seconds):
+    """Guarda el delay adaptativo para la siguiente ejecución."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS scraper_control (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO scraper_control (key, value, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                ("adaptive_between_games_seconds", str(int(seconds))),
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"  ⚠️ No se pudo persistir delay adaptativo: {e}")
+
+
 # ============================================================================
 # EJECUCIÓN DIARIA
 # ============================================================================
@@ -311,6 +363,16 @@ def ejecutar_pipeline_diario():
     run_source = os.getenv("RUN_SOURCE", "local").strip().lower()
     max_intentos = int(os.getenv("SCRAPER_MAX_ATTEMPTS", "3"))
     espera_reintento = int(os.getenv("SCRAPER_RETRY_WAIT_SECONDS", "90"))
+    espera_entre_partidos_base = int(
+        os.getenv("SCRAPER_BETWEEN_GAMES_SECONDS", "0")
+    )
+    delay_adaptativo_fallo = int(
+        os.getenv("SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS", "10")
+    )
+    espera_entre_partidos_adaptativa = obtener_delay_adaptativo(default_seconds=0)
+    espera_entre_partidos = max(
+        espera_entre_partidos_base, espera_entre_partidos_adaptativa
+    )
     url_schedule = (
         f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
     )
@@ -318,6 +380,12 @@ def ejecutar_pipeline_diario():
     print(f"\n{'=' * 70}")
     print(f"📅 Ejecutando scraping automático para: {fecha_bref}")
     print("   Versión 2 (Estructura HTML Actualizada)")
+    if espera_entre_partidos > 0:
+        print(
+            "   Modo throttling activo: "
+            f"{espera_entre_partidos}s entre partidos "
+            f"(base={espera_entre_partidos_base}, adaptativo={espera_entre_partidos_adaptativa})"
+        )
     print(f"{'=' * 70}")
 
     for intento in range(1, max_intentos + 1):
@@ -330,6 +398,7 @@ def ejecutar_pipeline_diario():
                 print(f"⏳ Esperando {espera_reintento}s antes de reintentar...")
                 time.sleep(espera_reintento)
                 continue
+            guardar_delay_adaptativo(delay_adaptativo_fallo)
             print("⚠️ Máximo de intentos alcanzado. Continuando workflow sin guardar.")
             return True
 
@@ -348,13 +417,15 @@ def ejecutar_pipeline_diario():
                 print(f"⏳ Esperando {espera_reintento}s antes de reintentar...")
                 time.sleep(espera_reintento)
                 continue
+            guardar_delay_adaptativo(delay_adaptativo_fallo)
             print("⚠️ Máximo de intentos alcanzado. Continuando workflow sin guardar.")
             return True
 
         data_partidos = []
         errores_partidos = []
 
-        for away_team, home_team, preview_link in equipos_hoy:
+        total_juegos = len(equipos_hoy)
+        for i, (away_team, home_team, preview_link) in enumerate(equipos_hoy, start=1):
             try:
                 print(f"\n⚾ Procesando: {away_team} @ {home_team}")
 
@@ -383,16 +454,19 @@ def ejecutar_pipeline_diario():
 
                 print(f"   ✅ Lanzadores encontrados: {away_pitcher} vs {home_pitcher}")
 
+                away_stats_code = get_team_code(away_team) or away_team
+                home_stats_code = get_team_code(home_team) or home_team
+
                 # Extraer stats de los lanzadores
                 print(f"   🔍 Buscando stats de {away_pitcher}...")
                 s_away = encontrar_lanzador(
-                    scrape_player_stats(away_team, year_val), away_pitcher
+                    scrape_player_stats(away_stats_code, year_val), away_pitcher
                 )
                 time.sleep(SCRAPING_CONFIG["min_delay"])
 
                 print(f"   🔍 Buscando stats de {home_pitcher}...")
                 s_home = encontrar_lanzador(
-                    scrape_player_stats(home_team, year_val), home_pitcher
+                    scrape_player_stats(home_stats_code, year_val), home_pitcher
                 )
                 time.sleep(SCRAPING_CONFIG["min_delay"])
 
@@ -432,6 +506,12 @@ def ejecutar_pipeline_diario():
             except Exception as e:
                 print(f"  ⚠️ Error en partido {away_team} @ {home_team}: {e}")
                 errores_partidos.append(f"{away_team}@{home_team}:exception")
+            finally:
+                if espera_entre_partidos > 0 and i < total_juegos:
+                    print(
+                        f"   ⏳ Esperando {espera_entre_partidos}s antes del siguiente partido..."
+                    )
+                    time.sleep(espera_entre_partidos)
 
         total_detectados = len(equipos_hoy)
         total_ok = len(data_partidos)
@@ -457,6 +537,7 @@ def ejecutar_pipeline_diario():
             print(
                 "⚠️ Tercer intento sin datos completos. No se guarda información y se continúa workflow."
             )
+            guardar_delay_adaptativo(delay_adaptativo_fallo)
             return True
 
         # Guardar en base de datos solo si la corrida está completa.
@@ -528,6 +609,9 @@ def ejecutar_pipeline_diario():
 
         print("✅ Proceso finalizado exitosamente")
         print(f"   - Partidos guardados: {len(data_partidos)}")
+        if espera_entre_partidos_adaptativa > 0:
+            guardar_delay_adaptativo(0)
+            print("   - Delay adaptativo reiniciado a 0s")
         print(f"{'=' * 70}\n")
         return True
 

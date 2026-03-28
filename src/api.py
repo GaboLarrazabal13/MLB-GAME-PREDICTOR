@@ -321,6 +321,7 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             encontrar_lanzador,
             encontrar_mejor_bateador,
             extraer_top_relevistas,
+            obtener_stats_pitcher_por_link,
             scrape_player_stats,
         )
 
@@ -342,6 +343,34 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         # Scraping para estadísticas detalladas
         session_cache = {}
 
+        home_pitcher_link = None
+        away_pitcher_link = None
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                row = conn.execute(
+                    """
+                    SELECT home_pitcher_link, away_pitcher_link
+                    FROM historico_partidos
+                    WHERE home_team = ?
+                      AND away_team = ?
+                      AND home_pitcher = ?
+                      AND away_pitcher = ?
+                    ORDER BY fecha DESC
+                    LIMIT 1
+                    """,
+                    (
+                        request.home_team,
+                        request.away_team,
+                        request.home_pitcher,
+                        request.away_pitcher,
+                    ),
+                ).fetchone()
+            if row:
+                home_pitcher_link, away_pitcher_link = row
+        except Exception:
+            home_pitcher_link = None
+            away_pitcher_link = None
+
         # Función auxiliar para obtener stats de lanzador con fallback de años
         def obtener_pitcher_con_fallback(pitcher_name, pitcher_link, team_code, request_year):
             """
@@ -356,45 +385,38 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
                 "stats": None,
             }
 
-            # INTENTO 1: Usar link directo si está disponible
-            if pitcher_link and pitcher_link.strip():
-                try:
-                    from train_model_hybrid_actions import obtener_stats_pitcher_por_link
-                    stats = obtener_stats_pitcher_por_link(pitcher_link, session_cache)
-                    if stats:
-                        ip = stats.get("IP", 0)
-                        fallback_info["stats"] = stats
-                        fallback_info["year_usado"] = request_year  # Deducimos que es del año correcto
-                        fallback_info["ip_detectados"] = ip
-                        print(f"       ✓ Stats obtenidas por link directo: {pitcher_link}")
-                        return fallback_info
-                except Exception as e:
-                    print(f"       ⚠️ Error usando link directo: {e}, caen a búsqueda por nombre")
+            razon_previa = None
 
-            # INTENTO 2: Fallback por nombre en años: 2026, 2025, 2024
             for year in [request_year, 2025, 2024]:
+                stats = None
                 try:
-                    bat, pit = scrape_player_stats(team_code, year, session_cache)
-                    if pit is None:
-                        continue
+                    if pitcher_link and str(pitcher_link).strip():
+                        stats = obtener_stats_pitcher_por_link(
+                            pitcher_link, year, session_cache
+                        )
 
-                    stats = encontrar_lanzador(pit, pitcher_name)
+                    if not stats:
+                        bat, pit = scrape_player_stats(team_code, year, session_cache)
+                        if pit is None:
+                            continue
+                        stats = encontrar_lanzador(pit, pitcher_name)
+
                     if stats:
                         ip = stats.get("IP", 0)
+
+                        if year == request_year and ip <= 15:
+                            razon_previa = f"Año {request_year}: {ip} IP insuficientes"
+                            continue
+
                         fallback_info["stats"] = stats
                         fallback_info["year_usado"] = year
                         fallback_info["ip_detectados"] = ip
 
-                        # Determinar razón de fallback
                         if year != request_year:
-                            if ip <= 15:
-                                fallback_info["razon_fallback"] = (
-                                    f"Año {request_year}: {ip} IP insuficientes"
-                                )
-                            else:
-                                fallback_info["razon_fallback"] = (
-                                    f"Pitcher no encontrado en {request_year}"
-                                )
+                            fallback_info["razon_fallback"] = (
+                                razon_previa
+                                or f"Pitcher no encontrado en {request_year}"
+                            )
 
                         return fallback_info
                 except Exception:
@@ -404,10 +426,10 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
 
         # Obtener stats para ambos lanzadores con fallback
         home_fallback = obtener_pitcher_con_fallback(
-            request.home_pitcher, None, home_code, request.year
+            request.home_pitcher, home_pitcher_link, home_code, request.year
         )
         away_fallback = obtener_pitcher_con_fallback(
-            request.away_pitcher, None, away_code, request.year
+            request.away_pitcher, away_pitcher_link, away_code, request.year
         )
 
         home_pitcher_stats = home_fallback["stats"]

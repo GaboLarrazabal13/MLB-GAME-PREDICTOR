@@ -23,7 +23,7 @@ from zoneinfo import ZoneInfo
 import cloudscraper
 import numpy as np
 import pandas as pd
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -99,7 +99,24 @@ def obtener_html(url, max_retries=None):
     if max_retries is None:
         max_retries = SCRAPING_CONFIG["max_retries"]
 
-    scraper = cloudscraper.create_scraper()
+    scraper = cloudscraper.create_scraper(
+        browser={
+            "browser": "chrome",
+            "platform": "windows",
+            "desktop": True,
+        }
+    )
+    scraper.headers.update(
+        {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/123.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+            "Referer": "https://www.baseball-reference.com/",
+        }
+    )
 
     for intento in range(max_retries):
         try:
@@ -187,69 +204,112 @@ def scrape_player_stats(team_code, year, session_cache=None):
         return None, None
 
 
-def obtener_stats_pitcher_por_link(pitcher_link, session_cache=None):
+def obtener_stats_pitcher_por_link(pitcher_link, target_year=None, session_cache=None):
     """
     Obtiene stats de un pitcher directamente por su link individual.
-    Ej: '/players/s/skenepa01.shtml' -> dict con ERA, WHIP, W, L, IP, etc.
+    Usa la tabla histórica del jugador para buscar una temporada específica.
     """
     if not pitcher_link:
         return None
-    
+
     if session_cache is not None:
-        if pitcher_link in session_cache:
-            return session_cache[pitcher_link]
-    
+        cache_key = f"pitcher::{pitcher_link}::{target_year}"
+        if cache_key in session_cache:
+            return session_cache[cache_key]
+
     try:
-        url = f"https://www.baseball-reference.com{pitcher_link}"
+        url = pitcher_link
+        if pitcher_link.startswith("/"):
+            url = f"https://www.baseball-reference.com{pitcher_link}"
+
         html = obtener_html(url)
-        
+
         if not html:
             print(f"       ⚠️ No se pudo obtener HTML del pitcher: {pitcher_link}")
             return None
-        
+
         soup = BeautifulSoup(html, "html.parser")
-        
-        # Buscar tabla de estadísticas de pitcheo seasonal
-        pitching_table = soup.find("table", {"id": "pitching"})
-        
-        if not pitching_table:
-            print(f"       ⚠️ No se encontró tabla de pitcheo para: {pitcher_link}")
+
+        def buscar_tabla(table_id):
+            tabla = soup.find("table", {"id": table_id})
+            if tabla:
+                return tabla
+
+            comments = soup.find_all(string=lambda text: isinstance(text, Comment))
+            for comment in comments:
+                if f'id="{table_id}"' in comment:
+                    return BeautifulSoup(str(comment), "html.parser").find(
+                        "table", {"id": table_id}
+                    )
             return None
-        
-        # Leer la tabla y tomar la fila más reciente (usualmente la 2026)
-        df = pd.read_html(str(pitching_table))[0]
-        
-        if df.empty:
+
+        pitching_hist_table = buscar_tabla("players_standard_pitching")
+        pitching_st_table = buscar_tabla("pitching_st")
+
+        if not pitching_hist_table and not pitching_st_table:
+            print(
+                f"       ⚠️ No se encontró tabla de pitcheo utilizable para: {pitcher_link}"
+            )
             return None
-        
-        # Limpiar dataframe
-        df = limpiar_dataframe(df)
-        
-        # Tomar la primera fila válida (estadísticas más recientes)
-        if len(df) > 0:
-            row = df.iloc[0]
-            
-            stats = {
-                "nombre_real": row[0] if pd.notna(row.iloc[0]) else "",
-                "ERA": safe_float(row.get("ERA", 0)),
-                "WHIP": safe_float(row.get("WHIP", 0)),
-                "H9": safe_float(row.get("H/9", 0)),
-                "SO9": safe_float(row.get("SO9", 0)),
-                "W": safe_int(row.get("W", 0)),
-                "L": safe_int(row.get("L", 0)),
-                "IP": safe_float(row.get("IP", 0)),
-                "G": safe_int(row.get("G", 0)),
-                "GS": safe_int(row.get("GS", 0)),
-            }
-            
-            if session_cache is not None:
-                session_cache[pitcher_link] = stats
-            
-            return stats
-        
+
+        meta_title = soup.select_one("#meta h1 span")
+        nombre_real = meta_title.get_text(strip=True) if meta_title else ""
+
+        row = None
+
+        if pitching_hist_table is not None:
+            hist_df = pd.read_html(str(pitching_hist_table))[0]
+            hist_df = limpiar_dataframe(hist_df)
+            if not hist_df.empty and "Season" in hist_df.columns:
+                season_series = pd.to_numeric(hist_df["Season"], errors="coerce")
+                hist_df = hist_df[season_series.notna()].copy()
+                if not hist_df.empty:
+                    hist_df["Season_num"] = pd.to_numeric(
+                        hist_df["Season"], errors="coerce"
+                    )
+                    if target_year is not None:
+                        year_match = hist_df[hist_df["Season_num"] == int(target_year)]
+                        if not year_match.empty:
+                            row = year_match.iloc[0]
+                    if row is None and target_year is None:
+                        row = hist_df.iloc[-1]
+
+        if row is None and pitching_st_table is not None:
+            current_df = pd.read_html(str(pitching_st_table))[0]
+            current_df = limpiar_dataframe(current_df)
+            if not current_df.empty:
+                if target_year is not None and "Year" in current_df.columns:
+                    year_series = pd.to_numeric(current_df["Year"], errors="coerce")
+                    year_match = current_df[year_series == int(target_year)]
+                    if not year_match.empty:
+                        row = year_match.iloc[0]
+                if row is None and target_year is None:
+                    row = current_df.iloc[0]
+
+        if row is None:
+            return None
+
+        stats = {
+            "nombre_real": nombre_real,
+            "ERA": safe_float(row.get("ERA", 0)),
+            "WHIP": safe_float(row.get("WHIP", 0)),
+            "H9": safe_float(row.get("H9", row.get("H/9", 0))),
+            "SO9": safe_float(row.get("SO9", 0)),
+            "W": safe_int(row.get("W", 0)),
+            "L": safe_int(row.get("L", 0)),
+            "IP": safe_float(row.get("IP", 0)),
+            "G": safe_int(row.get("G", 0)),
+            "GS": safe_int(row.get("GS", row.get("GS.1", 0))),
+        }
+
+        if session_cache is not None:
+            session_cache[cache_key] = stats
+
+        return stats
+
     except Exception as e:
         print(f"       ⚠️ Error obteniendo stats del pitcher {pitcher_link}: {e}")
-    
+
     return None
 
 
@@ -313,6 +373,16 @@ def safe_float(val):
         return float(val)
     except (ValueError, TypeError):
         return 0.0
+
+
+def safe_int(val):
+    """Convierte a int de forma segura manejando errores y NaNs"""
+    try:
+        if pd.isna(val):
+            return 0
+        return int(float(val))
+    except (ValueError, TypeError):
+        return 0
 
 
 def encontrar_lanzador(pitching_df, nombre_lanzador):
