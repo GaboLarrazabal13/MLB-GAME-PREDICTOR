@@ -621,6 +621,14 @@ async def obtener_partidos_hoy():
             """
             df = pd.read_sql(query, conn, params=[fecha_objetivo])
 
+            # Si sync_control apunta a una fecha sin datos, usar el último snapshot real.
+            if df.empty:
+                fecha_fallback = conn.execute(
+                    "SELECT MAX(fecha) FROM historico_partidos"
+                ).fetchone()[0]
+                if fecha_fallback and fecha_fallback != fecha_objetivo:
+                    df = pd.read_sql(query, conn, params=[fecha_fallback])
+
         if df.empty:
             return []
 

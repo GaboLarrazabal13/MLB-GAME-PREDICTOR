@@ -146,7 +146,7 @@ jobs:
         id: scrape_all
         run: |
           cd src
-          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 python mlb_daily_scraper.py
+          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 python mlb_daily_scraper.py
         continue-on-error: true
 
       - name: Generar predicciones si hay datos nuevos
@@ -189,7 +189,7 @@ jobs:
         if: steps.scrape_all.outcome == 'success' && steps.validate_dates_all.outputs.is_ok != 'true'
         run: |
           cd src
-          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 python mlb_daily_scraper.py
+          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 python mlb_daily_scraper.py
           RUN_SOURCE=workflow python mlb_predict_engine.py
 
       - name: Revalidar fecha de cartelera (ET)
@@ -277,7 +277,7 @@ jobs:
         id: scrape
         run: |
           cd src
-          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 python mlb_daily_scraper.py
+          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 python mlb_daily_scraper.py
         continue-on-error: true
       
       - name: Generar predicciones si hay datos nuevos
@@ -320,7 +320,7 @@ jobs:
         if: steps.scrape.outcome == 'success' && steps.validate_dates_scrape.outputs.is_ok != 'true'
         run: |
           cd src
-          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 python mlb_daily_scraper.py
+          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 python mlb_daily_scraper.py
           RUN_SOURCE=workflow python mlb_predict_engine.py
 
       - name: Revalidar fecha de cartelera (ET)

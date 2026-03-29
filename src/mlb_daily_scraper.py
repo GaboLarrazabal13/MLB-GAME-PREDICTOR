@@ -69,7 +69,24 @@ def obtener_html(url, max_retries=None):
     if max_retries is None:
         max_retries = SCRAPING_CONFIG["max_retries"]
 
-    scraper = cloudscraper.create_scraper()
+    scraper = cloudscraper.create_scraper(
+        browser={
+            "browser": "chrome",
+            "platform": "windows",
+            "desktop": True,
+        }
+    )
+    scraper.headers.update(
+        {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/123.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+            "Referer": "https://www.baseball-reference.com/",
+        }
+    )
 
     for intento in range(max_retries):
         try:
@@ -169,7 +186,20 @@ def extraer_lanzadores_del_preview(preview_url):
     Busca divs con class="section_heading assoc_sp_{TEAM_CODE}"
     Retorna diccionario: {team_code: {"nombre": pitcher_name, "link": pitcher_href}}
     """
-    html = obtener_html(f"https://www.baseball-reference.com{preview_url}")
+    preview_retries = int(os.getenv("SCRAPER_PREVIEW_RETRIES", "3"))
+    preview_retry_wait = int(os.getenv("SCRAPER_PREVIEW_RETRY_WAIT_SECONDS", "8"))
+
+    html = None
+    for intento in range(1, preview_retries + 1):
+        html = obtener_html(f"https://www.baseball-reference.com{preview_url}")
+        if html:
+            break
+        if intento < preview_retries:
+            print(
+                f"     ⚠️ Preview no disponible (intento {intento}/{preview_retries}), "
+                f"reintentando en {preview_retry_wait}s..."
+            )
+            time.sleep(preview_retry_wait)
 
     if not html:
         print(f"     ⚠️ No se pudo obtener HTML del preview: {preview_url}")
