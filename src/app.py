@@ -612,7 +612,7 @@ def crear_gauge_confianza(confianza):
     return fig
 
 
-@st.cache_data(ttl=1800)
+@st.cache_data(ttl=1800, show_spinner=False)
 def obtener_prediccion_detallada_partido(
     home_team, away_team, home_pitcher, away_pitcher, year
 ):
@@ -690,35 +690,55 @@ def renderizar_analisis_detallado_partido(
         )
 
     # Mostrar información sobre fallback de años si aplica
-    year_solicitado = resultado_detallado.get("year_solicitado", resultado_detallado.get("year_usado_home", 2026))
+    year_solicitado = resultado_detallado.get(
+        "year_solicitado", resultado_detallado.get("year_usado_home", 2026)
+    )
+    year_home = resultado_detallado.get("year_usado_home", year_solicitado)
+    year_away = resultado_detallado.get("year_usado_away", year_solicitado)
     razon_home = resultado_detallado.get("razon_fallback_home")
     razon_away = resultado_detallado.get("razon_fallback_away")
-    
-    if razon_home or razon_away:
+
+    hubo_fallback_home = bool(razon_home) or (year_home != year_solicitado)
+    hubo_fallback_away = bool(razon_away) or (year_away != year_solicitado)
+
+    if hubo_fallback_home or hubo_fallback_away:
         st.divider()
         st.markdown("### 📊 Información sobre los datos utilizados")
-        
+
         # Mostrar info del lanzador local si tiene fallback
-        if razon_home:
-            year_home = resultado_detallado.get("year_usado_home")
+        if hubo_fallback_home:
             ip_home = resultado_detallado.get("ip_home", 0)
-            st.info(
-                f"📌 **{home_team}**: Estadísticas de {home_pitcher} tomadas de la temporada **{year_home}** "
-                f"({razon_home.split(':')[1].strip() if ':' in razon_home else razon_home})"
+            detalle_home = (
+                razon_home
+                if razon_home
+                else f"No había muestra suficiente/estable en {year_solicitado}"
             )
-        
+            st.info(
+                f"📌 **{home_team} - {home_pitcher}**: Se usaron estadísticas de la temporada "
+                f"**{year_home}** para mejorar la estabilidad del análisis. "
+                f"Motivo: {detalle_home}."
+                f" IP consideradas: **{ip_home}**."
+            )
+
         # Mostrar info del lanzador visitante si tiene fallback
-        if razon_away:
-            year_away = resultado_detallado.get("year_usado_away")
+        if hubo_fallback_away:
             ip_away = resultado_detallado.get("ip_away", 0)
-            st.info(
-                f"📌 **{away_team}**: Estadísticas de {away_pitcher} tomadas de la temporada **{year_away}** "
-                f"({razon_away.split(':')[1].strip() if ':' in razon_away else razon_away})"
+            detalle_away = (
+                razon_away
+                if razon_away
+                else f"No había muestra suficiente/estable en {year_solicitado}"
             )
-        
+            st.info(
+                f"📌 **{away_team} - {away_pitcher}**: Se usaron estadísticas de la temporada "
+                f"**{year_away}** para mejorar la estabilidad del análisis. "
+                f"Motivo: {detalle_away}."
+                f" IP consideradas: **{ip_away}**."
+            )
+
         st.markdown(
-            "💡 *Esta información se muestra para ser transparente sobre los datos disponibles. "
-            "Conforme avance la temporada y se acumulen más entradas, se usarán automáticamente las estadísticas de 2026.*"
+            "💡 *Este ajuste es normal al inicio de temporada: cuando la muestra de innings "
+            "todavía es baja, el sistema usa una temporada previa para mantener predicciones más robustas. "
+            "A medida que se acumulen más innings en la temporada actual, el fallback desaparecerá automáticamente.*"
         )
         st.divider()
 
@@ -1616,15 +1636,18 @@ elif pagina == "📅 Partidos de Hoy":
                                         key=f"load_detail_{game_id}",
                                         use_container_width=True,
                                     ):
-                                        ok_detalle, payload = (
-                                            obtener_prediccion_detallada_partido(
-                                                partido["home_team"],
-                                                partido["away_team"],
-                                                home_pitcher,
-                                                away_pitcher,
-                                                year_detalle,
+                                        with st.spinner(
+                                            f"Generando análisis detallado para {partido['away_team']} @ {partido['home_team']}..."
+                                        ):
+                                            ok_detalle, payload = (
+                                                obtener_prediccion_detallada_partido(
+                                                    partido["home_team"],
+                                                    partido["away_team"],
+                                                    home_pitcher,
+                                                    away_pitcher,
+                                                    year_detalle,
+                                                )
                                             )
-                                        )
                                         if ok_detalle:
                                             st.session_state.detalles_partidos_hoy[
                                                 game_id
