@@ -213,7 +213,11 @@ def extraer_lanzadores_del_preview(preview_url):
     for div in soup.find_all("div", class_=re.compile(r"assoc_sp_")):
         try:
             # Extraer el código del equipo desde la clase (ej: assoc_sp_PIT -> PIT)
-            class_str = " ".join(div.get("class", []))
+            class_attr = div.get("class")
+            if isinstance(class_attr, list):
+                class_str = " ".join(str(c) for c in class_attr)
+            else:
+                class_str = str(class_attr or "")
             team_match = re.search(r"assoc_sp_(\w+)", class_str)
 
             if team_match:
@@ -393,6 +397,9 @@ def ejecutar_pipeline_diario():
     run_source = os.getenv("RUN_SOURCE", "local").strip().lower()
     max_intentos = int(os.getenv("SCRAPER_MAX_ATTEMPTS", "3"))
     espera_reintento = int(os.getenv("SCRAPER_RETRY_WAIT_SECONDS", "90"))
+    permitir_guardado_parcial = os.getenv(
+        "SCRAPER_SAVE_PARTIAL_ON_FINAL", "1"
+    ).strip().lower() in {"1", "true", "yes", "on"}
     espera_entre_partidos_base = int(
         os.getenv("SCRAPER_BETWEEN_GAMES_SECONDS", "0")
     )
@@ -564,15 +571,27 @@ def ejecutar_pipeline_diario():
                 time.sleep(espera_reintento)
                 continue
 
-            print(
-                "⚠️ Tercer intento sin datos completos. No se guarda información y se continúa workflow."
-            )
-            guardar_delay_adaptativo(delay_adaptativo_fallo)
-            return True
+            if permitir_guardado_parcial and total_ok > 0:
+                print(
+                    "⚠️ Tercer intento sin datos completos. Se guardará snapshot PARCIAL "
+                    f"({total_ok}/{total_detectados}) para no dejar la app sin cartelera."
+                )
+            else:
+                print(
+                    "⚠️ Tercer intento sin datos completos. No se guarda información y se continúa workflow."
+                )
+                guardar_delay_adaptativo(delay_adaptativo_fallo)
+                return True
 
         # Guardar en base de datos solo si la corrida está completa.
         print(f"\n{'=' * 70}")
-        print(f"💾 Guardando {len(data_partidos)} partidos en la base de datos...")
+        if completo:
+            print(f"💾 Guardando {len(data_partidos)} partidos en la base de datos...")
+        else:
+            print(
+                "💾 Guardando snapshot PARCIAL: "
+                f"{len(data_partidos)}/{total_detectados} partidos en la base de datos..."
+            )
 
         with sqlite3.connect(DB_PATH) as conn:
             # Verificar esquema existente y migrar si es necesario
