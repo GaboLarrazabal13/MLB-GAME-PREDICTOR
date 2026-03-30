@@ -167,13 +167,26 @@ def limpiar_dataframe(df):
 
 def scrape_player_stats(team_code, year, session_cache=None):
     """Scrapea bateo y pitcheo de un equipo con caché de sesión"""
+    team_code = str(team_code).upper().strip()
+
     if session_cache is not None:
         cache_key = f"{team_code}_{year}"
         if cache_key in session_cache:
             return session_cache[cache_key]
 
     url = f"https://www.baseball-reference.com/teams/{team_code}/{year}.shtml"
-    html = obtener_html(url)
+    if team_code == "OAK":
+        # Fallback solicitado: si OAK falla 2 veces, intentar ATH.
+        html = obtener_html(url, max_retries=2)
+        if not html:
+            alt_code = "ATH"
+            alt_url = f"https://www.baseball-reference.com/teams/{alt_code}/{year}.shtml"
+            print("       OAK sin respuesta tras 2 intentos, probando ATH...")
+            html = obtener_html(alt_url)
+            if html:
+                team_code = alt_code
+    else:
+        html = obtener_html(url)
 
     if not html:
         return None, None
