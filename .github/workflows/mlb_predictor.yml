@@ -4,9 +4,9 @@ on:
   schedule:
     # Referencia operativa en horario USA (America/New_York)
     # Scraping principal: ~12:30 ET en horario de verano (~11:30 ET en invierno)
-    - cron: '30 16 * * *'
-    # Reentrenamiento una hora después: ~13:30 ET en verano (~12:30 ET en invierno)
     - cron: '30 17 * * *'
+    # Reentrenamiento una hora después: ~13:30 ET en verano (~12:30 ET en invierno)
+    - cron: '30 18 * * *'
   
   workflow_dispatch:  # Permite ejecución manual
     inputs:

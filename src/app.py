@@ -134,7 +134,7 @@ EQUIPOS_MLB = {
         "logo": "https://www.mlbstatic.com/team-logos/147.svg",
         "color": "#003087",
     },
-    "OAK": {
+    "ATH": {
         "nombre": "Oakland Athletics",
         "logo": "https://www.mlbstatic.com/team-logos/133.svg",
         "color": "#003831",
