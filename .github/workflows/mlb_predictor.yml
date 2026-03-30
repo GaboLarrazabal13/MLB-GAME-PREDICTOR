@@ -74,7 +74,8 @@ jobs:
         id: check_training_all
         run: |
           cd src
-          pending=$(python - <<'PY'
+          python - <<'PY'
+          import os
           import sqlite3
           from datetime import datetime
           from zoneinfo import ZoneInfo
@@ -125,16 +126,31 @@ jobs:
               (season,),
             ).fetchone()[0]
 
-          print(pending)
+            threshold_row = conn.execute(
+              "SELECT value FROM metadata_entrenamiento WHERE key='next_training_threshold'"
+            ).fetchone()
+            try:
+              threshold = int(threshold_row[0]) if threshold_row and threshold_row[0] else 200
+            except Exception:
+              threshold = 200
+
+            conn.execute(
+              "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('next_training_threshold',?)",
+              (str(threshold),),
+            )
+            conn.commit()
+
+          should_train = pending >= threshold
+
+          print(f"PENDING_GAMES={pending}")
+          print(f"TRAINING_THRESHOLD={threshold}")
+          print(f"SHOULD_TRAIN={'true' if should_train else 'false'}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            f.write(f"pending_games={pending}\n")
+            f.write(f"training_threshold={threshold}\n")
+            f.write(f"should_train={'true' if should_train else 'false'}\n")
           PY
-          )
-          echo "pending_games=$pending" >> $GITHUB_OUTPUT
-          echo "Juegos pendientes de entrenamiento: $pending"
-          if [ "$pending" -ge 200 ]; then
-            echo "should_train=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_train=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Ejecutar reentrenamiento incremental
         if: steps.check_training_all.outputs.should_train == 'true'
@@ -161,28 +177,29 @@ jobs:
         run: |
           cd src
           python - <<'PY'
-            import os
-            import sqlite3
-            from datetime import datetime, timedelta
+          import os
+          import sqlite3
+          from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
-            now_et = datetime.now(ZoneInfo("America/New_York"))
-            today_et = now_et.strftime("%Y-%m-%d")
-            yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
-            valid_dates = {today_et, yesterday_et}
+          now_et = datetime.now(ZoneInfo("America/New_York"))
+          today_et = now_et.strftime("%Y-%m-%d")
+          yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+          valid_dates = {today_et, yesterday_et}
+
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
               max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
 
-            is_ok = (
+          is_ok = (
               bool(max_games)
               and bool(max_preds)
               and max_games == max_preds
               and max_games in valid_dates
-            )
+          )
           print(f"today_et={today_et}")
-            print(f"yesterday_et={yesterday_et}")
+          print(f"yesterday_et={yesterday_et}")
           print(f"max_games={max_games}")
           print(f"max_preds={max_preds}")
           print(f"is_ok={is_ok}")
@@ -206,30 +223,31 @@ jobs:
         run: |
           cd src
           python - <<'PY'
-            import sqlite3
-            from datetime import datetime, timedelta
+          import sqlite3
+          from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
-            now_et = datetime.now(ZoneInfo("America/New_York"))
-            today_et = now_et.strftime("%Y-%m-%d")
-            yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
-            valid_dates = {today_et, yesterday_et}
+          now_et = datetime.now(ZoneInfo("America/New_York"))
+          today_et = now_et.strftime("%Y-%m-%d")
+          yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+          valid_dates = {today_et, yesterday_et}
+
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
               max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
 
-            print(
+          print(
               "Post-retry => "
               f"today_et={today_et}, yesterday_et={yesterday_et}, "
               f"max_games={max_games}, max_preds={max_preds}"
-            )
-            if not (
+          )
+          if not (
               bool(max_games)
               and bool(max_preds)
               and max_games == max_preds
               and max_games in valid_dates
-            ):
+          ):
               raise SystemExit("❌ Desfase de fecha persiste tras reintento de scraper/predict")
           PY
 
@@ -313,28 +331,29 @@ jobs:
         run: |
           cd src
           python - <<'PY'
-            import os
-            import sqlite3
-            from datetime import datetime, timedelta
+          import os
+          import sqlite3
+          from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
-            now_et = datetime.now(ZoneInfo("America/New_York"))
-            today_et = now_et.strftime("%Y-%m-%d")
-            yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
-            valid_dates = {today_et, yesterday_et}
+          now_et = datetime.now(ZoneInfo("America/New_York"))
+          today_et = now_et.strftime("%Y-%m-%d")
+          yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+          valid_dates = {today_et, yesterday_et}
+
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
               max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
 
-            is_ok = (
+          is_ok = (
               bool(max_games)
               and bool(max_preds)
               and max_games == max_preds
               and max_games in valid_dates
-            )
+          )
           print(f"today_et={today_et}")
-            print(f"yesterday_et={yesterday_et}")
+          print(f"yesterday_et={yesterday_et}")
           print(f"max_games={max_games}")
           print(f"max_preds={max_preds}")
           print(f"is_ok={is_ok}")
@@ -358,30 +377,31 @@ jobs:
         run: |
           cd src
           python - <<'PY'
-            import sqlite3
-            from datetime import datetime, timedelta
+          import sqlite3
+          from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
-            now_et = datetime.now(ZoneInfo("America/New_York"))
-            today_et = now_et.strftime("%Y-%m-%d")
-            yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
-            valid_dates = {today_et, yesterday_et}
+          now_et = datetime.now(ZoneInfo("America/New_York"))
+          today_et = now_et.strftime("%Y-%m-%d")
+          yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+          valid_dates = {today_et, yesterday_et}
+
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
               max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
 
-            print(
+          print(
               "Post-retry => "
               f"today_et={today_et}, yesterday_et={yesterday_et}, "
               f"max_games={max_games}, max_preds={max_preds}"
-            )
-            if not (
+          )
+          if not (
               bool(max_games)
               and bool(max_preds)
               and max_games == max_preds
               and max_games in valid_dates
-            ):
+          ):
               raise SystemExit("❌ Desfase de fecha persiste tras reintento de scraper/predict")
           PY
       
@@ -571,13 +591,29 @@ jobs:
               (season,),
             ).fetchone()[0]
 
-          should_train = pending >= 200
+            threshold_row = conn.execute(
+              "SELECT value FROM metadata_entrenamiento WHERE key='next_training_threshold'"
+            ).fetchone()
+            try:
+              threshold = int(threshold_row[0]) if threshold_row and threshold_row[0] else 200
+            except Exception:
+              threshold = 200
+
+            conn.execute(
+              "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('next_training_threshold',?)",
+              (str(threshold),),
+            )
+            conn.commit()
+
+          should_train = pending >= threshold
           print(f"PENDING_GAMES={pending}")
+          print(f"TRAINING_THRESHOLD={threshold}")
           print(f"Juegos pendientes de entrenamiento: {pending}")
           print(f"SHOULD_TRAIN={'true' if should_train else 'false'}")
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
             f.write(f"PENDING_GAMES={pending}\n")
+            f.write(f"TRAINING_THRESHOLD={threshold}\n")
             f.write(f"SHOULD_TRAIN={'true' if should_train else 'false'}\n")
           PY
       

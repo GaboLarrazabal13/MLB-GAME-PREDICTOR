@@ -677,6 +677,44 @@ def obtener_juegos_no_entrenados():
         return df_nuevos
 
 
+def actualizar_umbral_reentrenamiento(mejora_accuracy, paso=200, minimo=200):
+    """Actualiza el umbral del siguiente entrenamiento (200, 400, 600...) hasta mejorar."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
+                   key TEXT PRIMARY KEY,
+                   value TEXT
+               )"""
+        )
+
+        row = conn.execute(
+            "SELECT value FROM metadata_entrenamiento WHERE key = 'next_training_threshold'"
+        ).fetchone()
+
+        try:
+            actual = int(row[0]) if row and row[0] else minimo
+        except Exception:
+            actual = minimo
+
+        siguiente = minimo if mejora_accuracy else max(minimo, actual) + paso
+        outcome = "improved" if mejora_accuracy else "no_improvement"
+
+        conn.execute(
+            "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
+            ("next_training_threshold", str(siguiente)),
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
+            ("last_training_outcome", outcome),
+        )
+        conn.commit()
+
+    print(
+        "🎯 Umbral de reentrenamiento actualizado: "
+        f"{'reset a 200' if mejora_accuracy else f'escalado a {siguiente}'}"
+    )
+
+
 # ============================================================================
 # EXTRACCIÓN DE FEATURES HÍBRIDA
 # ============================================================================
@@ -1024,12 +1062,14 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
         model_nuevo.get_booster().save_model(MODELO_PATH)
 
         registrar_juegos_entrenados(df_nuevos)
+        actualizar_umbral_reentrenamiento(mejora_accuracy=True)
 
         if os.path.exists(CACHE_PATH):
             shutil.copy(CACHE_PATH, CACHE_PATH + ".bak")
             print("✅ Copia de seguridad del caché creada (.bak)")
     else:
         print("⚠️ No hubo mejora con los nuevos parámetros. Manteniendo versión previa.")
+        actualizar_umbral_reentrenamiento(mejora_accuracy=False)
 
 
 # ============================================================================
