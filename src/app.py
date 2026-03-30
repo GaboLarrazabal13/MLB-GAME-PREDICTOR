@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import plotly.graph_objects as go
 import requests
@@ -442,20 +443,33 @@ def get_team_display_name(team_code):
 
 def ejecutar_scraper_manual():
     """Ejecuta el scraper diario manualmente"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    scraper_path = os.path.join(script_dir, "mlb_daily_scraper.py")
+    env = os.environ.copy()
+    env["RUN_SOURCE"] = "manual_app"
+    env.setdefault("SCRAPER_PREVIEW_RETRIES", "3")
+    env.setdefault("SCRAPER_PREVIEW_RETRY_WAIT_SECONDS", "8")
+    env.setdefault("SCRAPER_SAVE_PARTIAL_ON_FINAL", "1")
+
     try:
         with st.spinner("🔍 Buscando partidos del día..."):
             result = subprocess.run(
-                [sys.executable, "mlb_daily_scraper.py"],
+                [sys.executable, scraper_path],
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=300,
+                cwd=script_dir,
+                env=env,
             )
             if result.returncode == 0:
                 return True, "✅ Scraping completado exitosamente"
             else:
-                return False, "⚠️ No se encontraron partidos para hoy"
+                error_output = (result.stderr or result.stdout or "").strip()
+                if error_output:
+                    return False, f"❌ El scraper falló: {error_output[-300:]}"
+                return False, "⚠️ El scraper no devolvió datos para hoy"
     except subprocess.TimeoutExpired:
-        return False, "❌ Timeout: El proceso tardó demasiado"
+        return False, "❌ Timeout: El proceso tardó más de 5 minutos"
     except Exception as e:
         return False, f"❌ Error: {str(e)}"
 
@@ -1509,9 +1523,16 @@ elif pagina == "📅 Partidos de Hoy":
                 if partido["game_id"] in pred_dict:
                     partido.update(pred_dict[partido["game_id"]])
 
-        # Validar que solo se muestren partidos de la fecha de hoy.
-        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+        # Mostrar y operar siempre con referencia horaria USA (ET).
+        ahora_et = datetime.now(ZoneInfo("America/New_York"))
+        fecha_hoy = ahora_et.strftime("%Y-%m-%d")
+        hora_et = ahora_et.strftime("%H:%M")
         fechas_api = sorted({p.get("fecha") for p in partidos if p.get("fecha")})
+
+        st.caption(
+            f"Referencia horaria MLB (ET): {fecha_hoy} {hora_et}. "
+            "Si accedes desde otra zona horaria, la jornada visible puede parecer de 'ayer'."
+        )
 
         if fechas_api:
             if len(fechas_api) == 1:
@@ -1523,7 +1544,20 @@ elif pagina == "📅 Partidos de Hoy":
                     f"Fechas cargadas por la API: {', '.join(fechas_api)} | Fecha actual: {fecha_hoy}"
                 )
 
-        partidos = [p for p in partidos if p.get("fecha") == fecha_hoy]
+        partidos_hoy = [p for p in partidos if p.get("fecha") == fecha_hoy]
+        fecha_mostrada = fecha_hoy
+
+        if partidos_hoy:
+            partidos = partidos_hoy
+        elif fechas_api:
+            fecha_mostrada = max(fechas_api)
+            partidos = [p for p in partidos if p.get("fecha") == fecha_mostrada]
+            st.warning(
+                f"No hay cartelera para hoy en ET ({fecha_hoy}). "
+                f"Mostrando la última fecha disponible: {fecha_mostrada}."
+            )
+        else:
+            partidos = []
 
         if not partidos:
             st.markdown(
@@ -1549,9 +1583,12 @@ elif pagina == "📅 Partidos de Hoy":
                 else:
                     st.warning(mensaje)
         else:
-            st.success(
-                f"Se encontraron {len(partidos)} partidos para hoy ({fecha_hoy})"
+            etiqueta_fecha = (
+                f"hoy ({fecha_mostrada}, ET)"
+                if fecha_mostrada == fecha_hoy
+                else f"{fecha_mostrada} (ET)"
             )
+            st.success(f"Se encontraron {len(partidos)} partidos para {etiqueta_fecha}")
 
             if "detalles_partidos_hoy" not in st.session_state:
                 st.session_state.detalles_partidos_hoy = {}

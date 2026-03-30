@@ -2,11 +2,11 @@ name: MLB Predictor Automation
 
 on:
   schedule:
-    # Ejecución diaria principal (16:30 hora España ≈ 15:30 UTC en invierno)
-    # Nota: si quieres mantener 16:30 fija todo el año, en verano (CEST) usa 14:30 UTC.
-    - cron: '30 15 * * *'
-    # Reentrenamiento una hora después
+    # Referencia operativa en horario USA (America/New_York)
+    # Scraping principal: ~12:30 ET en horario de verano (~11:30 ET en invierno)
     - cron: '30 16 * * *'
+    # Reentrenamiento una hora después: ~13:30 ET en verano (~12:30 ET en invierno)
+    - cron: '30 17 * * *'
   
   workflow_dispatch:  # Permite ejecución manual
     inputs:
@@ -375,7 +375,7 @@ jobs:
   update_real_results:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '30 15 * * *' ||
+      github.event.schedule == '30 16 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'update_results')
     
     steps:
@@ -442,7 +442,7 @@ jobs:
   incremental_training:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '30 16 * * *' ||
+      github.event.schedule == '30 17 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'train')
     
     steps:

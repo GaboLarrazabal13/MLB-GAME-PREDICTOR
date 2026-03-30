@@ -10,6 +10,7 @@ import sqlite3
 import sys
 import time
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import cloudscraper
 import pandas as pd
@@ -48,7 +49,7 @@ def obtener_html(url, max_retries=None):
 
 def obtener_fechas_ayer():
     """Calcula las fechas de ayer para la ejecución automática a las 5 AM"""
-    ayer = datetime.now() - timedelta(days=1)
+    ayer = datetime.now(ZoneInfo("America/New_York")) - timedelta(days=1)
 
     # Formato para Baseball-Reference
     fecha_bref = ayer.strftime(
@@ -69,8 +70,9 @@ def _formatear_fecha_bref_desde_db(fecha_db):
 
 def obtener_fechas_objetivo(max_fechas=3):
     """Obtiene fechas objetivo recientes, siempre incluyendo ayer."""
-    hoy_db = datetime.now().strftime("%Y-%m-%d")
-    ayer_db = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    now_et = datetime.now(ZoneInfo("America/New_York"))
+    hoy_db = now_et.strftime("%Y-%m-%d")
+    ayer_db = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
 
     try:
         with sqlite3.connect(DB_PATH) as conn:
@@ -94,8 +96,8 @@ def obtener_fechas_objetivo(max_fechas=3):
     candidatas.extend([fecha_db for (fecha_db,) in pendientes])
     candidatas.extend(
         [
-            (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d"),
-            (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d"),
+            (now_et - timedelta(days=2)).strftime("%Y-%m-%d"),
+            (now_et - timedelta(days=3)).strftime("%Y-%m-%d"),
         ]
     )
 

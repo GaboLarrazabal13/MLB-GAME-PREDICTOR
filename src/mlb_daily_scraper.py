@@ -22,8 +22,19 @@ from bs4 import BeautifulSoup, Comment
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mlb_config import DB_PATH, SCRAPING_CONFIG, get_team_code
 
-
 _SCRAPER_SESSION = None
+
+TEAM_CODE_ALIASES = {
+    "ANA": "LAA",
+    "CHN": "CHC",
+    "KCA": "KCR",
+    "LAN": "LAD",
+    "NYN": "NYM",
+    "SDN": "SDP",
+    "SFN": "SFG",
+    "SLN": "STL",
+    "TBD": "TBR",
+}
 
 
 def get_scraper_session(force_new=False):
@@ -91,6 +102,25 @@ def limpiar_dataframe(df):
         .str.contains(r"Team Totals|Rank in|^\s*$", case=False, na=False, regex=True)
     ]
     return df.reset_index(drop=True)
+
+
+def normalizar_team_code(code):
+    """Normaliza códigos históricos/alternos a los usados en la base."""
+    if not code:
+        return code
+    code = str(code).upper().strip()
+    return TEAM_CODE_ALIASES.get(code, code)
+
+
+def extraer_fecha_desde_box_url(box_url, default_fecha):
+    """Intenta obtener YYYY-MM-DD desde links /boxes/TEAM/TEAMYYYYMMDD0.shtml."""
+    if not box_url:
+        return default_fecha
+    match = re.search(r"/boxes/[A-Z]{3}/[A-Z]{3}(\d{4})(\d{2})(\d{2})\d\.shtml", box_url)
+    if not match:
+        return default_fecha
+    year, month, day = match.groups()
+    return f"{year}-{month}-{day}"
 
 
 def obtener_html(url, max_retries=None):
@@ -190,8 +220,8 @@ def extraer_equipos_del_dia(soup):
                     home_match = re.search(r"/teams/(\w+)/", home_href)
 
                     if away_match and home_match:
-                        away_team = away_match.group(1)
-                        home_team = home_match.group(1)
+                        away_team = normalizar_team_code(away_match.group(1))
+                        home_team = normalizar_team_code(home_match.group(1))
 
                         em_tag = sibling.find("em")
                         preview_link = None
@@ -208,7 +238,7 @@ def extraer_equipos_del_dia(soup):
     return equipos_lista
 
 
-def extraer_lanzadores_del_preview(preview_url):
+def extraer_lanzadores_del_preview(preview_url, away_team=None, home_team=None):
     """
     Extrae los nombres Y LINKS de los lanzadores iniciales de la página del preview
     Busca divs con class="section_heading assoc_sp_{TEAM_CODE}"
@@ -235,7 +265,10 @@ def extraer_lanzadores_del_preview(preview_url):
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # Buscar todos los divs con class que contenga "assoc_sp_"
+    away_team = normalizar_team_code(away_team)
+    home_team = normalizar_team_code(home_team)
+
+    # Buscar todos los divs con class que contenga "assoc_sp_" (estructura preview clásica)
     lanzadores = {}
 
     for div in soup.find_all("div", class_=re.compile(r"assoc_sp_")):
@@ -249,7 +282,7 @@ def extraer_lanzadores_del_preview(preview_url):
             team_match = re.search(r"assoc_sp_(\w+)", class_str)
 
             if team_match:
-                team_code = team_match.group(1)
+                team_code = normalizar_team_code(team_match.group(1))
 
                 # Buscar el h2 con el enlace del lanzador
                 h2_tag = div.find("h2")
@@ -267,13 +300,57 @@ def extraer_lanzadores_del_preview(preview_url):
         except Exception as e:
             print(f"     ⚠️ Error extrayendo lanzador: {e}")
 
+    if lanzadores:
+        return lanzadores
+
+    # Fallback: cuando el link ya es /boxes/... usar lineups_1 y lineups_2.
+    def obtener_div_desde_soup_o_comentarios(div_id):
+        div = soup.find("div", id=div_id)
+        if div:
+            return div
+        comments = soup.find_all(string=lambda text: isinstance(text, Comment))
+        for c in comments:
+            if f'id="{div_id}"' in c:
+                return BeautifulSoup(str(c), "html.parser").find("div", id=div_id)
+        return None
+
+    div_away = obtener_div_desde_soup_o_comentarios("lineups_1")
+    div_home = obtener_div_desde_soup_o_comentarios("lineups_2")
+
+    def extraer_pitcher_div(div):
+        if not div:
+            return None, ""
+        links = div.find_all("a")
+        if not links:
+            return None, ""
+        pitcher_a = links[-1]
+        return pitcher_a.get_text(strip=True), pitcher_a.get("href", "")
+
+    away_name, away_link = extraer_pitcher_div(div_away)
+    home_name, home_link = extraer_pitcher_div(div_home)
+
+    if away_team and away_name:
+        lanzadores[away_team] = {"nombre": away_name, "link": away_link}
+        print(f"     🎯 Lanzador {away_team}: {away_name} | Link: {away_link}")
+    if home_team and home_name:
+        lanzadores[home_team] = {"nombre": home_name, "link": home_link}
+        print(f"     🎯 Lanzador {home_team}: {home_name} | Link: {home_link}")
+
     return lanzadores
 
 
 def scrape_player_stats(team_code, year):
     """Extrae estadísticas de pitcheo de un equipo"""
+    team_code = normalizar_team_code(team_code)
     url = f"https://www.baseball-reference.com/teams/{team_code}/{year}.shtml"
     html = obtener_html(url)
+
+    if not html:
+        alt_code = get_team_code(team_code)
+        alt_code = normalizar_team_code(alt_code)
+        if alt_code and alt_code != team_code:
+            alt_url = f"https://www.baseball-reference.com/teams/{alt_code}/{year}.shtml"
+            html = obtener_html(alt_url)
 
     if not html:
         return None
@@ -501,7 +578,9 @@ def ejecutar_pipeline_diario():
 
                 # Extraer lanzadores del preview
                 print("   🔍 Extrayendo lanzadores de preview...")
-                lanzadores = extraer_lanzadores_del_preview(preview_link)
+                lanzadores = extraer_lanzadores_del_preview(
+                    preview_link, away_team=away_team, home_team=home_team
+                )
 
                 away_pitcher = lanzadores.get(away_team, {}).get("nombre") if isinstance(lanzadores.get(away_team), dict) else lanzadores.get(away_team)
                 away_pitcher_link = lanzadores.get(away_team, {}).get("link", "") if isinstance(lanzadores.get(away_team), dict) else ""
@@ -519,32 +598,41 @@ def ejecutar_pipeline_diario():
 
                 print(f"   ✅ Lanzadores encontrados: {away_pitcher} vs {home_pitcher}")
 
-                away_stats_code = get_team_code(away_team) or away_team
-                home_stats_code = get_team_code(home_team) or home_team
+                fecha_partido_db = extraer_fecha_desde_box_url(preview_link, fecha_db)
+                if fecha_partido_db != fecha_db:
+                    print(
+                        "   ℹ️ Ajuste de fecha por boxscore URL: "
+                        f"{fecha_db} -> {fecha_partido_db}"
+                    )
+
+                year_partido = int(fecha_partido_db[:4])
+
+                away_stats_code = away_team or get_team_code(away_team)
+                home_stats_code = home_team or get_team_code(home_team)
 
                 # Extraer stats de los lanzadores
                 print(f"   🔍 Buscando stats de {away_pitcher}...")
                 s_away = encontrar_lanzador(
-                    scrape_player_stats(away_stats_code, year_val), away_pitcher
+                    scrape_player_stats(away_stats_code, year_partido), away_pitcher
                 )
                 time.sleep(SCRAPING_CONFIG["min_delay"])
 
                 print(f"   🔍 Buscando stats de {home_pitcher}...")
                 s_home = encontrar_lanzador(
-                    scrape_player_stats(home_stats_code, year_val), home_pitcher
+                    scrape_player_stats(home_stats_code, year_partido), home_pitcher
                 )
                 time.sleep(SCRAPING_CONFIG["min_delay"])
 
                 # Crear game_id unificado
-                game_id = f"{fecha_db}_{home_team}_{away_team}"
+                game_id = f"{fecha_partido_db}_{home_team}_{away_team}"
 
                 # Guardar datos del partido
                 data_partidos.append(
                     {
                         "game_id": game_id,
                         "box_score_url": preview_link,
-                        "fecha": fecha_db,
-                        "year": year_val,
+                        "fecha": fecha_partido_db,
+                        "year": year_partido,
                         "away_team": away_team,
                         "home_team": home_team,
                         "away_pitcher": away_pitcher,
@@ -626,7 +714,7 @@ def ejecutar_pipeline_diario():
             table_info = conn.execute(
                 "PRAGMA table_info(historico_partidos)"
             ).fetchall()
-            if not table_info or len(table_info) < 20:
+            if not table_info or len(table_info) < 22:
                 print(
                     "  ℹ️ Creando o recreando tabla historico_partidos con esquema completo"
                 )
@@ -659,11 +747,12 @@ def ejecutar_pipeline_diario():
             )
 
             df_partidos = pd.DataFrame(data_partidos)
-
-            conn.execute(
-                "DELETE FROM historico_partidos WHERE fecha = ?",
-                (fecha_db,),
-            )
+            fechas_guardadas = sorted(set(df_partidos["fecha"].tolist()))
+            for fecha_guardada in fechas_guardadas:
+                conn.execute(
+                    "DELETE FROM historico_partidos WHERE fecha = ?",
+                    (fecha_guardada,),
+                )
 
             # Guardar partidos (con INSERT OR REPLACE para evitar duplicados)
             for _, row in df_partidos.iterrows():
@@ -679,7 +768,7 @@ def ejecutar_pipeline_diario():
                            ON CONFLICT(dataset, source)
                            DO UPDATE SET fecha = excluded.fecha,
                                          updated_at = CURRENT_TIMESTAMP""",
-                ("games_today", run_source, fecha_db),
+                ("games_today", run_source, max(fechas_guardadas)),
             )
 
             conn.commit()
