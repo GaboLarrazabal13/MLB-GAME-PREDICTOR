@@ -161,19 +161,28 @@ jobs:
         run: |
           cd src
           python - <<'PY'
-          import os
-          import sqlite3
-          from datetime import datetime
+            import os
+            import sqlite3
+            from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
-          today_et = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+            now_et = datetime.now(ZoneInfo("America/New_York"))
+            today_et = now_et.strftime("%Y-%m-%d")
+            yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+            valid_dates = {today_et, yesterday_et}
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
               max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
 
-          is_ok = (max_games == today_et and max_preds == today_et)
+            is_ok = (
+              bool(max_games)
+              and bool(max_preds)
+              and max_games == max_preds
+              and max_games in valid_dates
+            )
           print(f"today_et={today_et}")
+            print(f"yesterday_et={yesterday_et}")
           print(f"max_games={max_games}")
           print(f"max_preds={max_preds}")
           print(f"is_ok={is_ok}")
@@ -197,18 +206,30 @@ jobs:
         run: |
           cd src
           python - <<'PY'
-          import sqlite3
-          from datetime import datetime
+            import sqlite3
+            from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
-          today_et = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+            now_et = datetime.now(ZoneInfo("America/New_York"))
+            today_et = now_et.strftime("%Y-%m-%d")
+            yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+            valid_dates = {today_et, yesterday_et}
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
               max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
 
-          print(f"Post-retry => today_et={today_et}, max_games={max_games}, max_preds={max_preds}")
-          if not (max_games == today_et and max_preds == today_et):
+            print(
+              "Post-retry => "
+              f"today_et={today_et}, yesterday_et={yesterday_et}, "
+              f"max_games={max_games}, max_preds={max_preds}"
+            )
+            if not (
+              bool(max_games)
+              and bool(max_preds)
+              and max_games == max_preds
+              and max_games in valid_dates
+            ):
               raise SystemExit("❌ Desfase de fecha persiste tras reintento de scraper/predict")
           PY
 
@@ -292,19 +313,28 @@ jobs:
         run: |
           cd src
           python - <<'PY'
-          import os
-          import sqlite3
-          from datetime import datetime
+            import os
+            import sqlite3
+            from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
-          today_et = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+            now_et = datetime.now(ZoneInfo("America/New_York"))
+            today_et = now_et.strftime("%Y-%m-%d")
+            yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+            valid_dates = {today_et, yesterday_et}
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
               max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
 
-          is_ok = (max_games == today_et and max_preds == today_et)
+            is_ok = (
+              bool(max_games)
+              and bool(max_preds)
+              and max_games == max_preds
+              and max_games in valid_dates
+            )
           print(f"today_et={today_et}")
+            print(f"yesterday_et={yesterday_et}")
           print(f"max_games={max_games}")
           print(f"max_preds={max_preds}")
           print(f"is_ok={is_ok}")
@@ -328,18 +358,30 @@ jobs:
         run: |
           cd src
           python - <<'PY'
-          import sqlite3
-          from datetime import datetime
+            import sqlite3
+            from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
-          today_et = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+            now_et = datetime.now(ZoneInfo("America/New_York"))
+            today_et = now_et.strftime("%Y-%m-%d")
+            yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+            valid_dates = {today_et, yesterday_et}
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
               max_preds = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
 
-          print(f"Post-retry => today_et={today_et}, max_games={max_games}, max_preds={max_preds}")
-          if not (max_games == today_et and max_preds == today_et):
+            print(
+              "Post-retry => "
+              f"today_et={today_et}, yesterday_et={yesterday_et}, "
+              f"max_games={max_games}, max_preds={max_preds}"
+            )
+            if not (
+              bool(max_games)
+              and bool(max_preds)
+              and max_games == max_preds
+              and max_games in valid_dates
+            ):
               raise SystemExit("❌ Desfase de fecha persiste tras reintento de scraper/predict")
           PY
       

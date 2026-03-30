@@ -45,7 +45,7 @@ TEAM_CODE_TO_NAME = {
     "MIN": "Minnesota Twins",
     "NYM": "New York Mets",
     "NYY": "New York Yankees",
-    "OAK": "Oakland Athletics",
+    "ATH": "Athletics",
     "PHI": "Philadelphia Phillies",
     "PIT": "Pittsburgh Pirates",
     "SDP": "San Diego Padres",
@@ -86,8 +86,10 @@ TEAM_NAME_TO_CODE.update(
         "white sox": "CHW",
         "red sox": "BOS",
         "blue jays": "TOR",
-        "ath": "OAK",  # Oakland Athletics abreviado
-        "athletics": "OAK",
+        "ath": "ATH",  # Athletics abreviado
+        "athletics": "ATH",
+        "oak": "ATH",  # Compatibilidad con código legacy
+        "oakland athletics": "ATH",
     }
 )
 
