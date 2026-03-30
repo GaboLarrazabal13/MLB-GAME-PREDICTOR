@@ -22,6 +22,35 @@ from bs4 import BeautifulSoup, Comment
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mlb_config import DB_PATH, SCRAPING_CONFIG, get_team_code
 
+
+_SCRAPER_SESSION = None
+
+
+def get_scraper_session(force_new=False):
+    """Crea/reutiliza una sesión cloudscraper para mantener cookies y bajar bloqueos."""
+    global _SCRAPER_SESSION
+    if _SCRAPER_SESSION is None or force_new:
+        _SCRAPER_SESSION = cloudscraper.create_scraper(
+            browser={
+                "browser": "chrome",
+                "platform": "windows",
+                "desktop": True,
+            }
+        )
+        _SCRAPER_SESSION.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/123.0.0.0 Safari/537.36"
+                ),
+                "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+                "Referer": "https://www.baseball-reference.com/",
+                "Connection": "keep-alive",
+            }
+        )
+    return _SCRAPER_SESSION
+
 # ============================================================================
 # FUNCIONES DE SOPORTE Y FORMATEO
 # ============================================================================
@@ -69,32 +98,31 @@ def obtener_html(url, max_retries=None):
     if max_retries is None:
         max_retries = SCRAPING_CONFIG["max_retries"]
 
-    scraper = cloudscraper.create_scraper(
-        browser={
-            "browser": "chrome",
-            "platform": "windows",
-            "desktop": True,
-        }
-    )
-    scraper.headers.update(
-        {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/123.0.0.0 Safari/537.36"
-            ),
-            "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
-            "Referer": "https://www.baseball-reference.com/",
-        }
-    )
-
     for intento in range(max_retries):
         try:
+            scraper = get_scraper_session()
             response = scraper.get(url, timeout=SCRAPING_CONFIG["timeout"])
+
             if response.status_code == 200:
                 response.encoding = "utf-8"
                 return response.text
-            time.sleep(2**intento)
+
+            if response.status_code in (403, 429):
+                wait_time = int((2**intento) * 5)
+                print(
+                    f"       Status {response.status_code} para {url}. "
+                    f"Esperando {wait_time}s y renovando sesión..."
+                )
+                get_scraper_session(force_new=True)
+                time.sleep(wait_time)
+                continue
+
+            wait_time = int(2**intento)
+            print(
+                f"       Status {response.status_code} para {url}. "
+                f"Reintento en {wait_time}s..."
+            )
+            time.sleep(wait_time)
         except Exception as e:
             if intento == max_retries - 1:
                 print(f"       Error final obteniendo {url}: {e}")
