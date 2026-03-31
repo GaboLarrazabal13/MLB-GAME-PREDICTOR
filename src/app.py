@@ -991,11 +991,12 @@ with st.sidebar:
     pagina = st.radio(
         "Selecciona una sección:",
         [
-            "⚾ Predicción Manual",
             "📅 Partidos de Hoy",
             "📊 Comparación & Historial",
+            "⚾ Predicción Manual",
             "🧠 Acerca del Modelo",
         ],
+        index=0,
         label_visibility="collapsed",
     )
 
