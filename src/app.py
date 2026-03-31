@@ -1767,7 +1767,7 @@ elif pagina == "📊 Comparación & Historial":
             f"Última fecha con resultados comparables disponibles: {compare_latest}"
         )
 
-    col1, col2, col3 = st.columns([2, 1, 1])
+    col1, col2, col3 = st.columns([3, 1, 1], vertical_alignment="bottom")
 
     with col1:
         fecha_seleccionada = st.date_input(
@@ -1777,18 +1777,50 @@ elif pagina == "📊 Comparación & Historial":
         )
 
     with col2:
-        if st.button(" Analizar Fecha", type="primary", use_container_width=True):
+        if st.button("📅 Analizar Fecha", type="primary", use_container_width=True):
             st.session_state.fecha_analizar = fecha_seleccionada
+            st.session_state.pop("stats_30d", None)
 
     with col3:
-        if st.button("Ver Estadísticas", use_container_width=True):
+        if st.button("📈 Ver Estadísticas", use_container_width=True):
             try:
                 response = requests.get(f"{API_URL}/stats/accuracy?dias=30")
                 if response.status_code == 200:
-                    stats = response.json()
-                    st.json(stats)
+                    st.session_state.stats_30d = response.json()
+                else:
+                    st.session_state.stats_30d = None
             except Exception as e:
                 st.error(f"Error obteniendo estadísticas: {e}")
+                st.session_state.stats_30d = None
+
+    if st.session_state.get("stats_30d"):
+        _s = st.session_state.stats_30d
+        _periodo = _s.get("periodo", "Últimos 30 días")
+        _total = _s.get("total", 0)
+        _aciertos = _s.get("aciertos", 0)
+        _acc = _s.get("accuracy_general", 0)
+        _por_conf = _s.get("por_confianza", {})
+
+        st.markdown(f"### 📈 Estadísticas — {_periodo}")
+        _c1, _c2, _c3 = st.columns(3)
+        _c1.metric("Total Partidos", _total)
+        _c2.metric("Aciertos", _aciertos)
+        _c3.metric("Accuracy General", f"{_acc:.1f}%")
+
+        if _por_conf:
+            st.markdown("#### Desglose por Nivel de Confianza")
+            _iconos = {"ALTA": "🟡", "MODERADA": "🟢", "BAJA": "🔵", "MUY ALTA": "🔴"}
+            _conf_cols = st.columns(len(_por_conf))
+            for _i, (_nivel, _datos) in enumerate(_por_conf.items()):
+                with _conf_cols[_i]:
+                    _icono = _iconos.get(_nivel, "⚪")
+                    st.metric(
+                        label=f"{_icono} {_nivel}",
+                        value=f"{_datos.get('accuracy', 0):.1f}%",
+                        delta=f"{_datos.get('aciertos', 0)}/{_datos.get('total', 0)} aciertos",
+                        delta_color="off",
+                    )
+        st.divider()
 
     if "fecha_analizar" in st.session_state:
         fecha_str = st.session_state.fecha_analizar.strftime("%Y-%m-%d")
