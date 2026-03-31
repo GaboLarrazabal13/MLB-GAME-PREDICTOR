@@ -19,6 +19,7 @@ from bs4 import BeautifulSoup
 # Importar configuración centralizada
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mlb_config import DB_PATH, SCRAPING_CONFIG, get_team_code
+from mlb_schedule_utils import seleccionar_seccion_schedule
 
 # ============================================================================
 # FUNCIONES DE SOPORTE
@@ -183,17 +184,25 @@ def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
         return False
 
     soup = BeautifulSoup(html, "html.parser")
-    header = soup.find("h3", string=fecha_bref)
+    seccion = seleccionar_seccion_schedule(soup, fecha_db)
 
-    if not header:
+    if not seccion or seccion.get("date") != fecha_db:
         print(f"⚠️ No hay juegos registrados para la fecha {fecha_bref} aún.")
         return False
 
+    print(
+        "📍 Sección de resultados seleccionada: "
+        f"{seccion.get('label', 'sin etiqueta')} -> {seccion.get('date', 'sin fecha')}"
+    )
+
     data_resultados = []
-    cursor = header.find_next_sibling()
     partidos_procesados = 0
 
-    while cursor and cursor.name == "p" and "game" in cursor.get("class", []):
+    for game in seccion["games"]:
+        cursor = game.get("node")
+        if not cursor:
+            continue
+
         try:
             links = cursor.find_all("a")
             if len(links) >= 3:
@@ -247,8 +256,6 @@ def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
             import traceback
 
             traceback.print_exc()
-
-        cursor = cursor.find_next_sibling()
 
     if not data_resultados:
         print("\n⚠️ No se encontraron resultados finales para procesar.")

@@ -174,6 +174,59 @@ class ResultadoReal(BaseModel):
     acierto: bool | None = None
 
 
+def _obtener_fecha_publicada(conn, dataset, table_name):
+    """Obtiene la fecha más nueva entre sync_control y la tabla real."""
+    candidatos = []
+
+    try:
+        filas = conn.execute(
+            "SELECT fecha FROM sync_control WHERE dataset = ?",
+            (dataset,),
+        ).fetchall()
+        candidatos.extend([fecha for (fecha,) in filas if fecha])
+    except Exception:
+        pass
+
+    try:
+        fecha_tabla = conn.execute(f"SELECT MAX(fecha) FROM {table_name}").fetchone()[0]
+        if fecha_tabla:
+            candidatos.append(fecha_tabla)
+    except Exception:
+        pass
+
+    return max(candidatos) if candidatos else None
+
+
+def _obtener_estado_fechas(conn):
+    """Resume las fechas más recientes disponibles por dataset."""
+    compare_latest = None
+
+    try:
+        compare_latest = conn.execute(
+            """
+            SELECT MAX(r.fecha)
+            FROM historico_real r
+            INNER JOIN predicciones_historico p
+                ON r.fecha = p.fecha
+                AND r.home_team = p.home_team
+                AND r.away_team = p.away_team
+            """
+        ).fetchone()[0]
+    except Exception:
+        compare_latest = None
+
+    return {
+        "games_latest": _obtener_fecha_publicada(conn, "games_today", "historico_partidos"),
+        "predictions_latest": _obtener_fecha_publicada(
+            conn, "predictions_today", "predicciones_historico"
+        ),
+        "results_latest": _obtener_fecha_publicada(
+            conn, "results_today", "historico_real"
+        ),
+        "compare_latest": compare_latest,
+    }
+
+
 # ============================================================================
 # ENDPOINTS - INFORMACIÓN GENERAL
 # ============================================================================
@@ -223,6 +276,18 @@ async def listar_equipos():
         {"codigo": code, "nombre": name} for code, name in TEAM_CODE_TO_NAME.items()
     ]
     return sorted(equipos, key=lambda x: x["nombre"])
+
+
+@app.get("/status/dates")
+async def obtener_estado_fechas():
+    """Expone las fechas más recientes disponibles para juegos, predicciones y comparación."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            return _obtener_estado_fechas(conn)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error obteniendo estado de fechas: {str(e)}"
+        ) from e
 
 
 # ============================================================================
@@ -599,16 +664,9 @@ async def obtener_partidos_hoy():
                            PRIMARY KEY(dataset, source)
                        )"""
             )
-            fecha_objetivo = conn.execute(
-                """
-                SELECT COALESCE(
-                    (SELECT fecha FROM sync_control
-                     WHERE dataset = 'games_today' AND source = 'workflow'
-                     ORDER BY updated_at DESC LIMIT 1),
-                    (SELECT MAX(fecha) FROM historico_partidos)
-                )
-                """
-            ).fetchone()[0]
+            fecha_objetivo = _obtener_fecha_publicada(
+                conn, "games_today", "historico_partidos"
+            )
 
             if not fecha_objetivo:
                 return []
@@ -664,17 +722,13 @@ async def obtener_predicciones_hoy():
                            PRIMARY KEY(dataset, source)
                        )"""
             )
-            fecha_objetivo = conn.execute(
-                """
-                SELECT COALESCE(
-                    (SELECT fecha FROM sync_control
-                     WHERE dataset = 'predictions_today' AND source = 'workflow'
-                     ORDER BY updated_at DESC LIMIT 1),
-                    (SELECT MAX(fecha) FROM predicciones_historico),
-                    (SELECT MAX(fecha) FROM historico_partidos)
-                )
-                """
-            ).fetchone()[0]
+            fecha_objetivo = _obtener_fecha_publicada(
+                conn, "predictions_today", "predicciones_historico"
+            )
+            if not fecha_objetivo:
+                fecha_objetivo = conn.execute(
+                    "SELECT MAX(fecha) FROM historico_partidos"
+                ).fetchone()[0]
 
             if not fecha_objetivo:
                 return []

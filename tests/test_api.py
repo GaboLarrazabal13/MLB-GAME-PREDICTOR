@@ -63,6 +63,68 @@ class TestAPIEndpoints:
         # Puede estar vacío o tener datos
         assert isinstance(response.json(), list)
 
+    def test_games_today_uses_latest_sync_source(self, client, test_db_path):
+        """La API debe usar la fecha más reciente aunque venga de una fuente manual."""
+        import sqlite3
+
+        with sqlite3.connect(test_db_path) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS sync_control (
+                    dataset TEXT,
+                    source TEXT,
+                    fecha TEXT,
+                    updated_at TEXT,
+                    PRIMARY KEY(dataset, source)
+                )
+                """
+            )
+            conn.execute(
+                "INSERT INTO historico_partidos VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    "game_old",
+                    "2024-06-01",
+                    "NYY",
+                    "BOS",
+                    "Gerrit Cole",
+                    "Tanner Houck",
+                ),
+            )
+            conn.execute(
+                "INSERT INTO historico_partidos VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    "game_new",
+                    "2024-06-02",
+                    "LAD",
+                    "SFG",
+                    "Clayton Kershaw",
+                    "Logan Webb",
+                ),
+            )
+            conn.execute(
+                "INSERT OR REPLACE INTO sync_control VALUES (?, ?, ?, ?)",
+                ("games_today", "manual_app", "2024-06-02", "2024-06-02 09:00:00"),
+            )
+            conn.commit()
+
+        with patch("src.api.DB_PATH", test_db_path):
+            response = client.get("/games/today")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["fecha"] == "2024-06-02"
+        assert data[0]["game_id"] == "game_new"
+
+    def test_status_dates_endpoint(self, client, test_db_path):
+        """El endpoint de estado debe devolver las fechas más recientes por dataset."""
+        with patch("src.api.DB_PATH", test_db_path):
+            response = client.get("/status/dates")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["predictions_latest"] == "2024-06-02"
+        assert data["results_latest"] == "2024-06-03"
+        assert data["compare_latest"] == "2024-06-02"
+
     def test_stats_endpoint_structure(self, client, test_db_path):
         """Test endpoint de estadísticas"""
         with patch("src.api.DB_PATH", test_db_path):

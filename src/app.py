@@ -442,9 +442,10 @@ def get_team_display_name(team_code):
 
 
 def ejecutar_scraper_manual():
-    """Ejecuta el scraper diario manualmente"""
+    """Ejecuta scraper y predicciones manuales para refrescar la jornada visible."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     scraper_path = os.path.join(script_dir, "mlb_daily_scraper.py")
+    predict_path = os.path.join(script_dir, "mlb_predict_engine.py")
     env = os.environ.copy()
     env["RUN_SOURCE"] = "manual_app"
     env.setdefault("SCRAPER_PREVIEW_RETRIES", "3")
@@ -452,8 +453,8 @@ def ejecutar_scraper_manual():
     env.setdefault("SCRAPER_SAVE_PARTIAL_ON_FINAL", "1")
 
     try:
-        with st.spinner("🔍 Buscando partidos del día..."):
-            result = subprocess.run(
+        with st.spinner("🔍 Actualizando partidos y predicciones del día..."):
+            scrape_result = subprocess.run(
                 [sys.executable, scraper_path],
                 capture_output=True,
                 text=True,
@@ -461,13 +462,28 @@ def ejecutar_scraper_manual():
                 cwd=script_dir,
                 env=env,
             )
-            if result.returncode == 0:
-                return True, "✅ Scraping completado exitosamente"
-            else:
-                error_output = (result.stderr or result.stdout or "").strip()
+
+            if scrape_result.returncode != 0:
+                error_output = (scrape_result.stderr or scrape_result.stdout or "").strip()
                 if error_output:
                     return False, f"❌ El scraper falló: {error_output[-300:]}"
                 return False, "⚠️ El scraper no devolvió datos para hoy"
+
+            predict_result = subprocess.run(
+                [sys.executable, predict_path],
+                capture_output=True,
+                text=True,
+                timeout=300,
+                cwd=script_dir,
+                env=env,
+            )
+            if predict_result.returncode == 0:
+                return True, "✅ Partidos y predicciones actualizados exitosamente"
+
+            error_output = (predict_result.stderr or predict_result.stdout or "").strip()
+            if error_output:
+                return False, f"❌ Las predicciones fallaron: {error_output[-300:]}"
+            return False, "⚠️ Se actualizaron los partidos, pero falló la generación de predicciones"
     except subprocess.TimeoutExpired:
         return False, "❌ Timeout: El proceso tardó más de 5 minutos"
     except Exception as e:
@@ -1725,13 +1741,39 @@ elif pagina == "📊 Comparación & Historial":
         st.error("❌ La API no está disponible")
         st.stop()
 
+    estado_fechas = {}
+    try:
+        response_estado = requests.get(f"{API_URL}/status/dates", timeout=10)
+        if response_estado.status_code == 200:
+            estado_fechas = response_estado.json()
+    except Exception:
+        estado_fechas = {}
+
+    compare_latest = estado_fechas.get("compare_latest")
+    default_compare_date = datetime.now().date() - timedelta(days=1)
+    if compare_latest:
+        try:
+            default_compare_date = datetime.strptime(compare_latest, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    if "fecha_analizar" not in st.session_state:
+        st.session_state.fecha_analizar = default_compare_date
+
     st.markdown("### 📅 Selecciona una Fecha")
+
+    if compare_latest:
+        st.caption(
+            f"Última fecha con resultados comparables disponibles: {compare_latest}"
+        )
 
     col1, col2, col3 = st.columns([2, 1, 1])
 
     with col1:
         fecha_seleccionada = st.date_input(
-            "Fecha", value=datetime.now() - timedelta(days=1), max_value=datetime.now()
+            "Fecha",
+            value=st.session_state.fecha_analizar,
+            max_value=datetime.now().date(),
         )
 
     with col2:

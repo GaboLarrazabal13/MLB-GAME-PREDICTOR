@@ -21,6 +21,7 @@ from bs4 import BeautifulSoup, Comment
 # Importar configuración centralizada
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mlb_config import DB_PATH, SCRAPING_CONFIG, get_team_code
+from mlb_schedule_utils import seleccionar_seccion_schedule
 
 _SCRAPER_SESSION = None
 
@@ -183,57 +184,32 @@ def obtener_fechas_ejecucion():
 # ============================================================================
 
 
-def extraer_equipos_del_dia(soup):
+def extraer_equipos_del_dia(soup, fecha_objetivo_db):
     """
-    Extrae SOLO los equipos que se enfrentan hoy desde el span id='today'.
-    Utiliza el h3 que contiene <span id='today'> y procesa p.game hasta el siguiente h3.
+    Extrae los equipos de la jornada objetivo usando la fecha MLB real.
     """
     equipos_lista = []
 
-    # Encontrar el h3 que contiene el span id="today"
-    today_header = None
-    for h3 in soup.find_all("h3"):
-        if h3.find("span", {"id": "today"}):
-            today_header = h3
-            break
-
-    if not today_header:
-        print("  ⚠️ No se encontró h3 con span id='today'")
+    seccion = seleccionar_seccion_schedule(soup, fecha_objetivo_db)
+    if not seccion:
+        print("  ⚠️ No se encontró ninguna sección válida en el schedule")
         return equipos_lista
 
-    # Recorrer los hermanos siguientes a este h3
-    for sibling in today_header.find_next_siblings():
-        if sibling.name == "h3":
-            # Fecha siguiente, terminamos
-            break
+    print(
+        "  📍 Sección seleccionada: "
+        f"{seccion.get('label', 'sin etiqueta')} -> {seccion.get('date', 'sin fecha')}"
+    )
 
-        if sibling.name == "p" and "game" in sibling.get("class", []):
-            try:
-                team_links = sibling.find_all(
-                    "a", href=re.compile(r"/teams/\w+/\d+\.shtml")
-                )
-                if len(team_links) >= 2:
-                    away_href = team_links[0].get("href", "")
-                    home_href = team_links[1].get("href", "")
+    for game in seccion["games"]:
+        try:
+            away_team = normalizar_team_code(game["away_team"])
+            home_team = normalizar_team_code(game["home_team"])
+            preview_link = game.get("game_link")
 
-                    away_match = re.search(r"/teams/(\w+)/", away_href)
-                    home_match = re.search(r"/teams/(\w+)/", home_href)
-
-                    if away_match and home_match:
-                        away_team = normalizar_team_code(away_match.group(1))
-                        home_team = normalizar_team_code(home_match.group(1))
-
-                        em_tag = sibling.find("em")
-                        preview_link = None
-                        if em_tag:
-                            preview_a = em_tag.find("a")
-                            if preview_a:
-                                preview_link = preview_a.get("href", "")
-
-                        equipos_lista.append((away_team, home_team, preview_link))
-                        print(f"  ✅ Encontrado: {away_team} @ {home_team}")
-            except Exception as e:
-                print(f"  ⚠️ Error extrayendo equipos: {e}")
+            equipos_lista.append((away_team, home_team, preview_link))
+            print(f"  ✅ Encontrado: {away_team} @ {home_team}")
+        except Exception as e:
+            print(f"  ⚠️ Error extrayendo equipos: {e}")
 
     return equipos_lista
 
@@ -547,8 +523,8 @@ def ejecutar_pipeline_diario():
         soup = BeautifulSoup(html, "html.parser")
 
         # Extraer equipos usando la nueva estructura (span id="today")
-        print("\n🔍 Buscando partidos de hoy en span id='today'...")
-        equipos_hoy = extraer_equipos_del_dia(soup)
+        print(f"\n🔍 Buscando partidos para la fecha MLB objetivo: {fecha_db}...")
+        equipos_hoy = extraer_equipos_del_dia(soup, fecha_db)
 
         if not equipos_hoy:
             print(
