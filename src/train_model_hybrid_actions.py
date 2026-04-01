@@ -575,110 +575,43 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
 # ============================================================================
 
 
-def registrar_juegos_entrenados(df_procesado):
-    """Guarda los IDs de los juegos procesados de forma masiva y segura"""
-    if df_procesado.empty:
-        return
+# Milestones fijos de la temporada regular: 2430 juegos / 5 cortes = 486 por bloque
+MILESTONES_TEMPORADA = [486, 972, 1458, 1944, 2430]
 
-    game_ids = df_procesado[["game_id"]].drop_duplicates()
 
+def obtener_todos_los_juegos_temporada():
+    """Devuelve todos los juegos de historico_real para la temporada actual, ordenados por fecha."""
+    temporada_objetivo = int(
+        os.getenv(
+            "TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year
+        )
+    )
     with sqlite3.connect(DB_PATH) as conn:
-        game_ids.to_sql("temp_entrenados", conn, if_exists="replace", index=False)
-
-        conn.execute("""
-            INSERT OR REPLACE INTO control_entrenamiento (game_id)
-            SELECT game_id FROM temp_entrenados
-        """)
-
-        conn.execute("DROP TABLE temp_entrenados")
-        conn.commit()
-
-    print(f"✅ Se registraron {len(game_ids)} juegos en la base de datos de control.")
-
-
-def obtener_juegos_no_entrenados():
-    """Obtiene juegos que aún no han sido procesados"""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)"
-        )
-
-        conn.execute(
-            """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
-                   key TEXT PRIMARY KEY,
-                   value TEXT
-               )"""
-        )
-
-        temporada_objetivo = int(
-            os.getenv(
-                "TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year
-            )
-        )
-
         df_real = pd.read_sql(
-            "SELECT * FROM historico_real WHERE substr(fecha, 1, 4) = ?",
+            "SELECT * FROM historico_real WHERE substr(fecha, 1, 4) = ? ORDER BY fecha",
             conn,
             params=[str(temporada_objetivo)],
         )
 
-        if df_real.empty:
-            return df_real
+    if df_real.empty:
+        return df_real
 
-        df_real["home_team"] = df_real["home_team"].str.strip()
-        df_real["away_team"] = df_real["away_team"].str.strip()
+    df_real["home_team"] = df_real["home_team"].str.strip()
+    df_real["away_team"] = df_real["away_team"].str.strip()
+    return df_real
 
-        df_real["game_id"] = (
-            df_real["fecha"]
-            .astype(str)
-            .str.cat(df_real["home_team"].astype(str), sep="_")
-            .str.cat(df_real["away_team"].astype(str), sep="_")
+
+def verificar_milestone_reentrenamiento():
+    """
+    Comprueba si el total de registros en historico_real alcanzó el próximo milestone
+    de la temporada (486 / 972 / 1458 / 1944 / 2430).
+    Devuelve (should_train: bool, total: int, next_milestone: int | None).
+    """
+    temporada_objetivo = int(
+        os.getenv(
+            "TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year
         )
-
-        # Baseline one-shot: en la primera ejecución tras desplegar esta lógica,
-        # marcamos el histórico existente de la temporada como ya entrenado.
-        baseline_flag = conn.execute(
-            "SELECT value FROM metadata_entrenamiento WHERE key = 'baseline_initialized'"
-        ).fetchone()
-
-        if baseline_flag is None:
-            df_real[["game_id"]].drop_duplicates().to_sql(
-                "temp_baseline_entrenados", conn, if_exists="replace", index=False
-            )
-            conn.execute(
-                """
-                INSERT OR IGNORE INTO control_entrenamiento (game_id)
-                SELECT game_id FROM temp_baseline_entrenados
-                """
-            )
-            conn.execute("DROP TABLE temp_baseline_entrenados")
-            conn.execute(
-                "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
-                ("baseline_initialized", "1"),
-            )
-            conn.execute(
-                "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
-                ("baseline_season", str(temporada_objetivo)),
-            )
-            conn.commit()
-
-            print(
-                "ℹ️ Baseline de entrenamiento inicializado con "
-                f"{len(df_real)} juegos de la temporada {temporada_objetivo}."
-            )
-            return df_real.iloc[0:0].copy()
-
-        ids_entrenados = pd.read_sql("SELECT game_id FROM control_entrenamiento", conn)[
-            "game_id"
-        ].tolist()
-
-        df_nuevos = df_real[~df_real["game_id"].isin(ids_entrenados)].copy()
-
-        return df_nuevos
-
-
-def actualizar_umbral_reentrenamiento(mejora_accuracy, paso=200, minimo=200):
-    """Actualiza el umbral del siguiente entrenamiento (200, 400, 600...) hasta mejorar."""
+    )
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
             """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
@@ -686,33 +619,52 @@ def actualizar_umbral_reentrenamiento(mejora_accuracy, paso=200, minimo=200):
                    value TEXT
                )"""
         )
+        total = conn.execute(
+            "SELECT COUNT(*) FROM historico_real WHERE substr(fecha,1,4) = ?",
+            (str(temporada_objetivo),),
+        ).fetchone()[0]
 
         row = conn.execute(
-            "SELECT value FROM metadata_entrenamiento WHERE key = 'next_training_threshold'"
+            "SELECT value FROM metadata_entrenamiento WHERE key = 'last_retrain_milestone'"
         ).fetchone()
-
         try:
-            actual = int(row[0]) if row and row[0] else minimo
+            last_milestone = int(row[0]) if row and row[0] else 0
         except Exception:
-            actual = minimo
+            last_milestone = 0
 
-        siguiente = minimo if mejora_accuracy else max(minimo, actual) + paso
-        outcome = "improved" if mejora_accuracy else "no_improvement"
+    next_milestone = next(
+        (m for m in MILESTONES_TEMPORADA if m > last_milestone), None
+    )
 
+    if next_milestone is None:
+        print(f"✅ Todos los milestones de temporada completados. Total en BD: {total}")
+        return False, total, None
+
+    should_train = total >= next_milestone
+    print(
+        f"📊 Juegos temporada {temporada_objetivo}: {total} "
+        f"| Último milestone: {last_milestone} "
+        f"| Próximo milestone: {next_milestone} "
+        f"| Entrenar: {should_train}"
+    )
+    return should_train, total, next_milestone
+
+
+def registrar_milestone_cumplido(milestone):
+    """Registra que el milestone fue procesado (con o sin mejora de accuracy)."""
+    with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
-            ("next_training_threshold", str(siguiente)),
+            """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
+                   key TEXT PRIMARY KEY,
+                   value TEXT
+               )"""
         )
         conn.execute(
             "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
-            ("last_training_outcome", outcome),
+            ("last_retrain_milestone", str(milestone)),
         )
         conn.commit()
-
-    print(
-        "🎯 Umbral de reentrenamiento actualizado: "
-        f"{'reset a 200' if mejora_accuracy else f'escalado a {siguiente}'}"
-    )
+    print(f"🎯 Milestone {milestone}/2430 registrado como completado.")
 
 
 # ============================================================================
@@ -866,8 +818,19 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
     print(" INICIANDO ACTUALIZACIÓN INCREMENTAL MLB V3.5")
     print("=" * 80)
 
-    # 1. Carga de datos
-    df_nuevos = obtener_juegos_no_entrenados()
+    # 1. Verificar milestone antes de proceder
+    should_train, _total_real, next_milestone = verificar_milestone_reentrenamiento()
+    if not should_train:
+        print("ℹ️ No se alcanzó ningún milestone de reentrenamiento. Saliendo.")
+        return
+
+    print(
+        f"🎯 Milestone alcanzado: {next_milestone}/2430 — "
+        f"Entrenando con todos los juegos de la temporada ({_total_real} registros)."
+    )
+
+    # 2. Carga de todos los juegos de la temporada
+    df_nuevos = obtener_todos_los_juegos_temporada()
 
     if not df_nuevos.empty:
         df_nuevos["score_home"] = pd.to_numeric(
@@ -1051,7 +1014,7 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
     accuracy_nuevo = accuracy_score(y_test, y_pred_new)
     print(f"📈 Accuracy nueva versión (Optimizado): {accuracy_nuevo:.2%}")
 
-    # 10. Guardar si hay mejora
+    # 10. Guardar si hay mejora — en cualquier caso registrar el milestone
     if accuracy_nuevo >= accuracy_actual_en_nuevos:
         print("✅ MEJORA DETECTADA. Actualizando modelo oficial.")
 
@@ -1061,15 +1024,14 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
 
         model_nuevo.get_booster().save_model(MODELO_PATH)
 
-        registrar_juegos_entrenados(df_nuevos)
-        actualizar_umbral_reentrenamiento(mejora_accuracy=True)
+        registrar_milestone_cumplido(next_milestone)
 
         if os.path.exists(CACHE_PATH):
             shutil.copy(CACHE_PATH, CACHE_PATH + ".bak")
             print("✅ Copia de seguridad del caché creada (.bak)")
     else:
         print("⚠️ No hubo mejora con los nuevos parámetros. Manteniendo versión previa.")
-        actualizar_umbral_reentrenamiento(mejora_accuracy=False)
+        registrar_milestone_cumplido(next_milestone)
 
 
 # ============================================================================
