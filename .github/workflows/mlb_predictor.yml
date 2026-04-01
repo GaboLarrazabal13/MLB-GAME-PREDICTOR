@@ -75,7 +75,7 @@ jobs:
           cd src
           python mlb_update_real_results.py
 
-      - name: Verificar juegos pendientes de entrenamiento
+      - name: Verificar milestone de reentrenamiento
         id: check_training_all
         run: |
           cd src
@@ -86,74 +86,37 @@ jobs:
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
+          MILESTONES = [486, 972, 1458, 1944, 2430]
           season = str(datetime.now(ZoneInfo("America/New_York")).year)
 
           with sqlite3.connect(DB_PATH) as conn:
             conn.execute(
-              "CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)"
-            )
-            conn.execute(
               "CREATE TABLE IF NOT EXISTS metadata_entrenamiento (key TEXT PRIMARY KEY, value TEXT)"
             )
-
-            baseline = conn.execute(
-              "SELECT value FROM metadata_entrenamiento WHERE key='baseline_initialized'"
-            ).fetchone()
-
-            if baseline is None:
-              conn.execute(
-                """
-                INSERT OR IGNORE INTO control_entrenamiento(game_id)
-                SELECT fecha || '_' || home_team || '_' || away_team
-                FROM historico_real
-                WHERE substr(fecha,1,4)=?
-                """,
-                (season,),
-              )
-              conn.execute(
-                "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('baseline_initialized','1')"
-              )
-              conn.execute(
-                "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('baseline_season',?)",
-                (season,),
-              )
-              conn.commit()
-
-            pending = conn.execute(
-              """
-              SELECT COUNT(*)
-              FROM historico_real
-              WHERE substr(fecha,1,4)=?
-              AND (fecha || '_' || home_team || '_' || away_team) NOT IN (
-                SELECT game_id FROM control_entrenamiento
-              )
-              """,
+            total = conn.execute(
+              "SELECT COUNT(*) FROM historico_real WHERE substr(fecha,1,4)=?",
               (season,),
             ).fetchone()[0]
 
-            threshold_row = conn.execute(
-              "SELECT value FROM metadata_entrenamiento WHERE key='next_training_threshold'"
+            row = conn.execute(
+              "SELECT value FROM metadata_entrenamiento WHERE key='last_retrain_milestone'"
             ).fetchone()
             try:
-              threshold = int(threshold_row[0]) if threshold_row and threshold_row[0] else 200
+              last_milestone = int(row[0]) if row and row[0] else 0
             except Exception:
-              threshold = 200
+              last_milestone = 0
 
-            conn.execute(
-              "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('next_training_threshold',?)",
-              (str(threshold),),
-            )
-            conn.commit()
+          next_milestone = next((m for m in MILESTONES if m > last_milestone), None)
+          should_train = next_milestone is not None and total >= next_milestone
 
-          should_train = pending >= threshold
-
-          print(f"PENDING_GAMES={pending}")
-          print(f"TRAINING_THRESHOLD={threshold}")
+          print(f"TOTAL_GAMES={total}")
+          print(f"LAST_MILESTONE={last_milestone}")
+          print(f"NEXT_MILESTONE={next_milestone}")
           print(f"SHOULD_TRAIN={'true' if should_train else 'false'}")
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
-            f.write(f"pending_games={pending}\n")
-            f.write(f"training_threshold={threshold}\n")
+            f.write(f"total_games={total}\n")
+            f.write(f"next_milestone={next_milestone}\n")
             f.write(f"should_train={'true' if should_train else 'false'}\n")
           PY
 
@@ -540,7 +503,7 @@ jobs:
           restore-keys: |
             mlb-data-
       
-      - name: Verificar juegos pendientes de entrenamiento
+      - name: Verificar milestone de reentrenamiento
         id: check_training
         run: |
           cd src
@@ -551,74 +514,37 @@ jobs:
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
+          MILESTONES = [486, 972, 1458, 1944, 2430]
           season = str(datetime.now(ZoneInfo("America/New_York")).year)
 
           with sqlite3.connect(DB_PATH) as conn:
             conn.execute(
-              "CREATE TABLE IF NOT EXISTS control_entrenamiento (game_id TEXT PRIMARY KEY)"
-            )
-            conn.execute(
               "CREATE TABLE IF NOT EXISTS metadata_entrenamiento (key TEXT PRIMARY KEY, value TEXT)"
             )
-
-            baseline = conn.execute(
-              "SELECT value FROM metadata_entrenamiento WHERE key='baseline_initialized'"
-            ).fetchone()
-
-            if baseline is None:
-              conn.execute(
-                """
-                INSERT OR IGNORE INTO control_entrenamiento(game_id)
-                SELECT fecha || '_' || home_team || '_' || away_team
-                FROM historico_real
-                WHERE substr(fecha,1,4)=?
-                """,
-                (season,),
-              )
-              conn.execute(
-                "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('baseline_initialized','1')"
-              )
-              conn.execute(
-                "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('baseline_season',?)",
-                (season,),
-              )
-              conn.commit()
-
-            pending = conn.execute(
-              """
-              SELECT COUNT(*)
-              FROM historico_real
-              WHERE substr(fecha,1,4)=?
-              AND (fecha || '_' || home_team || '_' || away_team) NOT IN (
-                SELECT game_id FROM control_entrenamiento
-              )
-              """,
+            total = conn.execute(
+              "SELECT COUNT(*) FROM historico_real WHERE substr(fecha,1,4)=?",
               (season,),
             ).fetchone()[0]
 
-            threshold_row = conn.execute(
-              "SELECT value FROM metadata_entrenamiento WHERE key='next_training_threshold'"
+            row = conn.execute(
+              "SELECT value FROM metadata_entrenamiento WHERE key='last_retrain_milestone'"
             ).fetchone()
             try:
-              threshold = int(threshold_row[0]) if threshold_row and threshold_row[0] else 200
+              last_milestone = int(row[0]) if row and row[0] else 0
             except Exception:
-              threshold = 200
+              last_milestone = 0
 
-            conn.execute(
-              "INSERT OR REPLACE INTO metadata_entrenamiento(key,value) VALUES('next_training_threshold',?)",
-              (str(threshold),),
-            )
-            conn.commit()
+          next_milestone = next((m for m in MILESTONES if m > last_milestone), None)
+          should_train = next_milestone is not None and total >= next_milestone
 
-          should_train = pending >= threshold
-          print(f"PENDING_GAMES={pending}")
-          print(f"TRAINING_THRESHOLD={threshold}")
-          print(f"Juegos pendientes de entrenamiento: {pending}")
+          print(f"TOTAL_GAMES={total}")
+          print(f"LAST_MILESTONE={last_milestone}")
+          print(f"NEXT_MILESTONE={next_milestone}")
           print(f"SHOULD_TRAIN={'true' if should_train else 'false'}")
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
-            f.write(f"PENDING_GAMES={pending}\n")
-            f.write(f"TRAINING_THRESHOLD={threshold}\n")
+            f.write(f"total_games={total}\n")
+            f.write(f"next_milestone={next_milestone}\n")
             f.write(f"SHOULD_TRAIN={'true' if should_train else 'false'}\n")
           PY
       
@@ -638,7 +564,7 @@ jobs:
             echo "No hay cambios para commit"
             exit 0
           fi
-          git commit -m "🤖 Modelo reentrenado: $(date +'%Y-%m-%d') - ${{ steps.check_training.outputs.PENDING_GAMES }} juegos nuevos"
+          git commit -m "🤖 Modelo reentrenado: $(date +'%Y-%m-%d') — milestone ${{ steps.check_training.outputs.next_milestone }}/2430"
           for intento in 1 2 3; do
             git pull --no-rebase -X ours origin ${{ github.ref_name }} || true
             if git push origin HEAD:${{ github.ref_name }}; then
