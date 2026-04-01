@@ -54,6 +54,7 @@ def predecir_juego(
     year=2026,
     modo_auto=False,
     fecha_partido=None,
+    hacer_scraping=True,
 ):
     """
     Predice el resultado de un juego de MLB
@@ -65,6 +66,7 @@ def predecir_juego(
         away_pitcher: Nombre del lanzador abridor visitante
         year: Año para scraping de estadísticas
         modo_auto: Si es True, suprime algunos prints
+        hacer_scraping: Si es False, solo usa features temporales (sin HTTP a Baseball-Ref)
 
     Returns:
         Dict con resultado de la predicción o None si hay error
@@ -109,7 +111,7 @@ def predecir_juego(
 
         # 6. Extracción de features híbrida (temporal + scraping)
         features_dict = extraer_features_hibridas(
-            row_data, df_historico=df_historico, hacer_scraping=True, session_cache={}
+            row_data, df_historico=df_historico, hacer_scraping=hacer_scraping, session_cache={}
         )
 
         if not features_dict:

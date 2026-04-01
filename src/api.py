@@ -269,6 +269,7 @@ def _backfill_predicciones_fecha(fecha: str) -> int:
                 year=int(row.get("year", 2026)),
                 modo_auto=True,
                 fecha_partido=fecha,
+                hacer_scraping=False,  # solo features temporales para respuesta rápida
             )
             if res:
                 generadas += 1
