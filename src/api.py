@@ -227,6 +227,72 @@ def _obtener_estado_fechas(conn):
     }
 
 
+def _backfill_predicciones_fecha(fecha: str) -> int:
+    """Genera predicciones faltantes para una fecha usando datos ya guardados en DB.
+
+    Prioriza `historico_partidos` (fuente original de predicción del día) y, si no hay
+    filas para la fecha, intenta con `historico_real` como recuperación.
+    """
+    with sqlite3.connect(DB_PATH) as conn:
+        df_juegos = pd.read_sql(
+            """
+            SELECT fecha, home_team, away_team, home_pitcher, away_pitcher, COALESCE(year, 2026) AS year
+            FROM historico_partidos
+            WHERE fecha = ?
+            """,
+            conn,
+            params=[fecha],
+        )
+
+        if df_juegos.empty:
+            df_juegos = pd.read_sql(
+                """
+                SELECT fecha, home_team, away_team, home_pitcher, away_pitcher, COALESCE(year, 2026) AS year
+                FROM historico_real
+                WHERE fecha = ?
+                """,
+                conn,
+                params=[fecha],
+            )
+
+    if df_juegos.empty:
+        return 0
+
+    generadas = 0
+    for _, row in df_juegos.iterrows():
+        try:
+            res = predecir_juego(
+                row["home_team"],
+                row["away_team"],
+                row.get("home_pitcher", ""),
+                row.get("away_pitcher", ""),
+                year=int(row.get("year", 2026)),
+                modo_auto=True,
+                fecha_partido=fecha,
+            )
+            if res:
+                generadas += 1
+        except Exception:
+            continue
+
+    if generadas > 0:
+        run_source = os.getenv("RUN_SOURCE", "api_backfill").strip().lower() or "api_backfill"
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute(
+                """
+                INSERT INTO sync_control (dataset, source, fecha, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(dataset, source)
+                DO UPDATE SET fecha = excluded.fecha,
+                              updated_at = CURRENT_TIMESTAMP
+                """,
+                ("predictions_today", run_source, fecha),
+            )
+            conn.commit()
+
+    return generadas
+
+
 # ============================================================================
 # ENDPOINTS - INFORMACIÓN GENERAL
 # ============================================================================
@@ -889,6 +955,19 @@ async def comparar_predicciones_resultados(fecha: str):
                             df = pd.read_sql(query, conn, params=[fecha])
                 except Exception:
                     # Si el backfill falla, mantenemos respuesta vacía sin romper el endpoint.
+                    pass
+
+        # Si hay resultados reales pero faltan predicciones, intentar completar predicciones
+        # usando los datos ya almacenados para esa fecha.
+        if not df.empty and "prediccion" in df.columns:
+            faltantes = int(df["prediccion"].isna().sum())
+            if faltantes > 0:
+                try:
+                    generadas = _backfill_predicciones_fecha(fecha)
+                    if generadas > 0:
+                        with sqlite3.connect(DB_PATH) as conn:
+                            df = pd.read_sql(query, conn, params=[fecha])
+                except Exception:
                     pass
 
         if df.empty:

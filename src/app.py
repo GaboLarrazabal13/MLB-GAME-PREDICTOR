@@ -991,11 +991,12 @@ with st.sidebar:
     pagina = st.radio(
         "Selecciona una sección:",
         [
-            "⚾ Predicción Manual",
             "📅 Partidos de Hoy",
             "📊 Comparación & Historial",
+            "⚾ Predicción Manual",
             "🧠 Acerca del Modelo",
         ],
+        index=0,
         label_visibility="collapsed",
     )
 
@@ -1767,7 +1768,7 @@ elif pagina == "📊 Comparación & Historial":
             f"Última fecha con resultados comparables disponibles: {compare_latest}"
         )
 
-    col1, col2, col3 = st.columns([2, 1, 1])
+    col1, col2, col3 = st.columns([3, 1, 1], vertical_alignment="bottom")
 
     with col1:
         fecha_seleccionada = st.date_input(
@@ -1777,18 +1778,50 @@ elif pagina == "📊 Comparación & Historial":
         )
 
     with col2:
-        if st.button(" Analizar Fecha", type="primary", use_container_width=True):
+        if st.button("📅 Analizar Fecha", type="primary", use_container_width=True):
             st.session_state.fecha_analizar = fecha_seleccionada
+            st.session_state.pop("stats_30d", None)
 
     with col3:
-        if st.button("Ver Estadísticas", use_container_width=True):
+        if st.button("📈 Ver Estadísticas", use_container_width=True):
             try:
                 response = requests.get(f"{API_URL}/stats/accuracy?dias=30")
                 if response.status_code == 200:
-                    stats = response.json()
-                    st.json(stats)
+                    st.session_state.stats_30d = response.json()
+                else:
+                    st.session_state.stats_30d = None
             except Exception as e:
                 st.error(f"Error obteniendo estadísticas: {e}")
+                st.session_state.stats_30d = None
+
+    if st.session_state.get("stats_30d"):
+        _s = st.session_state.stats_30d
+        _periodo = _s.get("periodo", "Últimos 30 días")
+        _total = _s.get("total", 0)
+        _aciertos = _s.get("aciertos", 0)
+        _acc = _s.get("accuracy_general", 0)
+        _por_conf = _s.get("por_confianza", {})
+
+        st.markdown(f"### 📈 Estadísticas — {_periodo}")
+        _c1, _c2, _c3 = st.columns(3)
+        _c1.metric("Total Partidos", _total)
+        _c2.metric("Aciertos", _aciertos)
+        _c3.metric("Accuracy General", f"{_acc:.1f}%")
+
+        if _por_conf:
+            st.markdown("#### Desglose por Nivel de Confianza")
+            _iconos = {"ALTA": "🟡", "MODERADA": "🟢", "BAJA": "🔵", "MUY ALTA": "🔴"}
+            _conf_cols = st.columns(len(_por_conf))
+            for _i, (_nivel, _datos) in enumerate(_por_conf.items()):
+                with _conf_cols[_i]:
+                    _icono = _iconos.get(_nivel, "⚪")
+                    st.metric(
+                        label=f"{_icono} {_nivel}",
+                        value=f"{_datos.get('accuracy', 0):.1f}%",
+                        delta=f"{_datos.get('aciertos', 0)}/{_datos.get('total', 0)} aciertos",
+                        delta_color="off",
+                    )
+        st.divider()
 
     if "fecha_analizar" in st.session_state:
         fecha_str = st.session_state.fecha_analizar.strftime("%Y-%m-%d")
@@ -1823,43 +1856,102 @@ elif pagina == "📊 Comparación & Historial":
 
             for partido in partidos:
                 acierto = partido.get("acierto", 0)
+                _ht = partido["home_team"]
+                _at = partido["away_team"]
+                _hn = get_team_display_name(_ht)
+                _an = get_team_display_name(_at)
+                _h_logo = get_team_logo_html(_ht, 28)
+                _a_logo = get_team_logo_html(_at, 28)
+                _score_a = partido["score_away"]
+                _score_h = partido["score_home"]
+                _badge = "✅" if acierto else "❌"
 
                 with st.expander(
-                    f"{'✅' if acierto else '❌'} {partido['away_team']} @ {partido['home_team']} - {partido['score_away']}-{partido['score_home']}",
+                    f"{_badge}  {_an} @ {_hn}  —  {_score_a}-{_score_h}",
                     expanded=False,
                 ):
+                    prob_h = partido.get("prob_home", 0)
+                    prob_a = partido.get("prob_away", 0)
+                    prob_h_norm = normalizar_probabilidad(prob_h)
+                    prob_a_norm = normalizar_probabilidad(prob_a)
+                    prediccion_code = partido.get("prediccion", "")
+                    prediccion_nombre = get_team_display_name(prediccion_code) if prediccion_code else "N/A"
+                    pred_logo = get_team_logo_html(prediccion_code, 22) if prediccion_code else ""
+
+                    ganador_real_code = _ht if partido["ganador_real"] == 1 else _at
+                    ganador_real_nombre = get_team_display_name(ganador_real_code)
+                    ganador_real_logo = get_team_logo_html(ganador_real_code, 22)
+
+                    confianza = partido.get("confianza", "N/A")
+                    color_conf = {"MUY ALTA": "#ef4444", "ALTA": "#f59e0b", "MODERADA": "#22c55e", "BAJA": "#64748b"}.get(confianza, "#64748b")
+
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
-                        st.markdown("** Predicción**")
-                        st.write(f"Ganador: {partido.get('prediccion', 'N/A')}")
-                        prob_h = partido.get("prob_home", 0)
-                        prob_a = partido.get("prob_away", 0)
-                        # FIX: Normalizar probabilidades
-                        prob_h_norm = normalizar_probabilidad(prob_h)
-                        prob_a_norm = normalizar_probabilidad(prob_a)
-                        st.write(f"Prob Home: {prob_h_norm * 100:.1f}%")
-                        st.write(f"Prob Away: {prob_a_norm * 100:.1f}%")
+                        st.markdown(
+                            f"""
+<div style="background:rgba(59,130,246,0.06);border-radius:10px;padding:14px 16px;">
+  <div style="font-size:0.75rem;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🤖 Predicción</div>
+  <div style="display:flex;align-items:center;gap:6px;font-size:1rem;font-weight:600;margin-bottom:10px;">
+    {pred_logo}{prediccion_nombre}
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+    <span style="display:flex;align-items:center;gap:4px;font-size:0.85rem;">{get_team_logo_html(_ht,16)}{_hn}</span>
+    <span style="font-weight:700;font-size:0.95rem;">{prob_h_norm*100:.1f}%</span>
+  </div>
+  <div style="background:#e2e8f0;border-radius:4px;height:6px;margin-bottom:8px;">
+    <div style="background:#3b82f6;width:{prob_h_norm*100:.1f}%;height:6px;border-radius:4px;"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+    <span style="display:flex;align-items:center;gap:4px;font-size:0.85rem;">{get_team_logo_html(_at,16)}{_an}</span>
+    <span style="font-weight:700;font-size:0.95rem;">{prob_a_norm*100:.1f}%</span>
+  </div>
+  <div style="background:#e2e8f0;border-radius:4px;height:6px;">
+    <div style="background:#8b5cf6;width:{prob_a_norm*100:.1f}%;height:6px;border-radius:4px;"></div>
+  </div>
+</div>""",
+                            unsafe_allow_html=True,
+                        )
 
                     with col2:
-                        st.markdown("** Resultado Real**")
-                        ganador_real = (
-                            partido["home_team"]
-                            if partido["ganador_real"] == 1
-                            else partido["away_team"]
-                        )
-                        st.write(f"Ganador: {ganador_real}")
-                        st.write(
-                            f"Score: {partido['score_away']}-{partido['score_home']}"
+                        st.markdown(
+                            f"""
+<div style="background:rgba(16,185,129,0.06);border-radius:10px;padding:14px 16px;">
+  <div style="font-size:0.75rem;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">⚾ Resultado Real</div>
+  <div style="display:flex;align-items:center;gap:6px;font-size:1rem;font-weight:600;margin-bottom:12px;">
+    {ganador_real_logo}{ganador_real_nombre}
+  </div>
+  <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:8px;">
+    <div style="text-align:center;">
+      <div style="font-size:0.75rem;color:#64748b;">{_an}</div>
+      <div style="font-size:2rem;font-weight:800;line-height:1;">{_score_a}</div>
+    </div>
+    <div style="font-size:1rem;color:#64748b;font-weight:600;">—</div>
+    <div style="text-align:center;">
+      <div style="font-size:0.75rem;color:#64748b;">{_hn}</div>
+      <div style="font-size:2rem;font-weight:800;line-height:1;">{_score_h}</div>
+    </div>
+  </div>
+</div>""",
+                            unsafe_allow_html=True,
                         )
 
                     with col3:
-                        st.markdown("**✓ Verificación**")
-                        if acierto:
-                            st.success("✅ ACIERTO")
-                        else:
-                            st.error("❌ ERROR")
-                        st.write(f"Confianza: {partido.get('confianza', 'N/A')}")
+                        res_bg = "rgba(34,197,94,0.08)" if acierto else "rgba(239,68,68,0.08)"
+                        res_color = "#16a34a" if acierto else "#dc2626"
+                        res_text = "ACIERTO ✅" if acierto else "ERROR ❌"
+                        st.markdown(
+                            f"""
+<div style="background:{res_bg};border-radius:10px;padding:14px 16px;text-align:center;">
+  <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">✓ Verificación</div>
+  <div style="font-size:1.3rem;font-weight:800;color:{res_color};margin-bottom:14px;">{res_text}</div>
+  <div style="background:rgba(0,0,0,0.05);border-radius:6px;padding:6px 10px;display:inline-block;">
+    <span style="font-size:0.75rem;color:#64748b;">Confianza: </span>
+    <span style="font-size:0.85rem;font-weight:700;color:{color_conf};">{confianza}</span>
+  </div>
+</div>""",
+                            unsafe_allow_html=True,
+                        )
         else:
             st.info(f" No hay datos disponibles para {fecha_str}")
 

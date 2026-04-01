@@ -275,6 +275,14 @@ def predecir_juego(
                 "confianza": conf_label,
                 "tipo": "AUTOMATICO" if modo_auto else "MANUAL",
             }
+            # Reemplazo por juego para evitar duplicados y mantener la corrida no destructiva.
+            conn.execute(
+                """
+                DELETE FROM predicciones_historico
+                WHERE fecha = ? AND home_team = ? AND away_team = ?
+                """,
+                (row_data["fecha"], home_team, away_team),
+            )
             pd.DataFrame([db_data]).to_sql(
                 "predicciones_historico", conn, if_exists="append", index=False
             )
@@ -298,12 +306,17 @@ def ejecutar_flujo_diario():
         return
 
     run_source = os.getenv("RUN_SOURCE", "local").strip().lower()
+    target_date = os.getenv("TARGET_DATE", "").strip()
 
     with sqlite3.connect(DB_PATH) as conn:
         try:
-            fecha_objetivo = conn.execute(
-                "SELECT MAX(fecha) FROM historico_partidos"
-            ).fetchone()[0]
+            if target_date:
+                fecha_objetivo = target_date
+            else:
+                fecha_objetivo = conn.execute(
+                    "SELECT MAX(fecha) FROM historico_partidos"
+                ).fetchone()[0]
+
             if not fecha_objetivo:
                 print("🔭 No hay juegos registrados en historico_partidos.")
                 return
@@ -314,12 +327,25 @@ def ejecutar_flujo_diario():
                 params=[fecha_objetivo],
             )
 
-            # Limpiar predicciones previas de la misma fecha para evitar mezcla
-            # de corridas antiguas con la corrida actual.
-            conn.execute(
-                "DELETE FROM predicciones_historico WHERE fecha = ?",
-                (fecha_objetivo,),
-            )
+            # Backfill manual: si se fuerza TARGET_DATE y no existe en historico_partidos,
+            # intentamos reconstruir desde historico_real para no perder esa jornada.
+            if df_hoy.empty and target_date:
+                df_hoy = pd.read_sql(
+                    """
+                    SELECT
+                        fecha,
+                        home_team,
+                        away_team,
+                        home_pitcher,
+                        away_pitcher,
+                        COALESCE(year, 2026) AS year
+                    FROM historico_real
+                    WHERE fecha = ?
+                    """,
+                    conn,
+                    params=[fecha_objetivo],
+                )
+
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS sync_control (
                            dataset TEXT,
@@ -335,7 +361,12 @@ def ejecutar_flujo_diario():
             return
 
     if df_hoy.empty:
-        print("🔭 No hay juegos registrados para hoy.")
+        if target_date:
+            print(
+                f"🔭 No hay juegos registrados para TARGET_DATE={fecha_objetivo} en historico_partidos ni historico_real."
+            )
+        else:
+            print("🔭 No hay juegos registrados para hoy.")
         return
 
     print(f"📅 Se encontraron {len(df_hoy)} juegos para hoy\n")
@@ -364,16 +395,21 @@ def ejecutar_flujo_diario():
         else:
             print("❌ Error en predicción\n")
 
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """INSERT INTO sync_control (dataset, source, fecha, updated_at)
-                       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                       ON CONFLICT(dataset, source)
-                       DO UPDATE SET fecha = excluded.fecha,
-                                     updated_at = CURRENT_TIMESTAMP""",
-            ("predictions_today", run_source, fecha_objetivo),
+    if resultados:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute(
+                """INSERT INTO sync_control (dataset, source, fecha, updated_at)
+                           VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                           ON CONFLICT(dataset, source)
+                           DO UPDATE SET fecha = excluded.fecha,
+                                         updated_at = CURRENT_TIMESTAMP""",
+                ("predictions_today", run_source, fecha_objetivo),
+            )
+            conn.commit()
+    else:
+        print(
+            "⚠️ No se actualizará sync_control para predictions_today: no hubo predicciones exitosas."
         )
-        conn.commit()
 
     print(
         f"\n✅ Proceso completado: {len(resultados)}/{len(df_hoy)} predicciones exitosas"

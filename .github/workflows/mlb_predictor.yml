@@ -21,6 +21,11 @@ on:
           - update_results
           - train
           - predict
+      target_date:
+        description: 'Fecha objetivo opcional para predicción/backfill (YYYY-MM-DD). Vacío = fecha más reciente.'
+        required: false
+        default: ''
+        type: string
 
 concurrency:
   group: mlb-predictor-${{ github.ref }}
@@ -132,7 +137,7 @@ jobs:
         if: steps.scrape_all.outcome == 'success'
         run: |
           cd src
-          RUN_SOURCE=workflow python mlb_predict_engine.py
+          RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
 
       - name: Validar fecha de cartelera (ET)
         id: validate_dates_all
@@ -179,7 +184,7 @@ jobs:
         run: |
           cd src
           RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
-          RUN_SOURCE=workflow python mlb_predict_engine.py
+          RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
 
       - name: Revalidar fecha de cartelera (ET)
         if: steps.scrape_all.outcome == 'success' && steps.validate_dates_all.outputs.is_ok != 'true'
@@ -286,7 +291,7 @@ jobs:
         if: steps.scrape.outcome == 'success'
         run: |
           cd src
-          RUN_SOURCE=workflow python mlb_predict_engine.py
+          RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
 
       - name: Validar fecha de cartelera (ET)
         id: validate_dates_scrape
@@ -333,7 +338,7 @@ jobs:
         run: |
           cd src
           RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
-          RUN_SOURCE=workflow python mlb_predict_engine.py
+          RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
 
       - name: Revalidar fecha de cartelera (ET)
         if: steps.scrape.outcome == 'success' && steps.validate_dates_scrape.outputs.is_ok != 'true'
@@ -614,7 +619,7 @@ jobs:
       - name: Generar predicciones
         run: |
           cd src
-          RUN_SOURCE=workflow python mlb_predict_engine.py
+          RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
       
       - name: Commit predicciones
         run: |
