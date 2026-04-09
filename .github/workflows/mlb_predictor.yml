@@ -18,6 +18,7 @@ on:
         options:
           - all
           - scrape
+          - post_scrape_validate
           - update_results
           - train
           - predict
@@ -249,7 +250,7 @@ jobs:
   scrape_daily_games:
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'schedule' ||
+      github.event.schedule == '30 17 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scrape')
     
     steps:
@@ -286,7 +287,7 @@ jobs:
           cd src
           RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
         continue-on-error: true
-      
+
       - name: Generar predicciones si hay datos nuevos
         if: steps.scrape.outcome == 'success'
         run: |
@@ -372,7 +373,7 @@ jobs:
           ):
               raise SystemExit("❌ Desfase de fecha persiste tras reintento de scraper/predict")
           PY
-      
+
       - name: Commit y push de datos actualizados
         if: steps.scrape.outcome == 'success'
         run: |
@@ -398,6 +399,81 @@ jobs:
             sleep 3
           done
         continue-on-error: true
+
+  # ============================================================================
+  # JOB 1B: VALIDACION POST-SCRAPING (1H DESPUES)
+  # ============================================================================
+  post_scrape_validation:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.schedule == '30 18 * * *' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'post_scrape_validate')
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+
+      - name: Restaurar caché de datos
+        uses: actions/cache@v3
+        with:
+          path: |
+            data/
+            models/
+            cache/
+          key: mlb-data-${{ github.sha }}
+          restore-keys: |
+            mlb-data-
+
+      - name: Validar y recuperar juegos con anomalias
+        id: post_validate
+        continue-on-error: true
+        run: |
+          cd src
+          POST_SCRAPE_MAX_ATTEMPTS=3 POST_SCRAPE_WAIT_SECONDS=300 python post_scrape_pitcher_recovery.py
+
+      - name: Commit y push de correcciones post-scrape
+        if: steps.post_validate.outcome == 'success'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/ cache/
+          if git diff --cached --quiet; then
+            echo "No hay cambios para commit"
+            exit 0
+          fi
+          git commit -m "🩺 Validación post-scrape: correcciones automáticas $(date +'%Y-%m-%d %H:%M')"
+          for intento in 1 2 3; do
+            git pull --no-rebase -X ours origin ${{ github.ref_name }} || true
+            if git push origin HEAD:${{ github.ref_name }}; then
+              echo "Push exitoso en intento $intento"
+              break
+            fi
+            if [ "$intento" -eq 3 ]; then
+              echo "❌ No se pudo hacer push tras 3 intentos"
+              exit 1
+            fi
+            echo "⚠️ Reintentando push ($intento/3)..."
+            sleep 3
+          done
+
+      - name: Marcar fallo del job si persisten anomalias
+        if: steps.post_validate.outcome != 'success'
+        run: |
+          echo "❌ Persisten anomalias tras 3 intentos post-scrape. Requiere ejecucion manual."
+          exit 1
   
   # ============================================================================
   # JOB 2: ACTUALIZACIÓN DE RESULTADOS (5 AM del día siguiente)

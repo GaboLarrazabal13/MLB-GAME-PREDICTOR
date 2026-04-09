@@ -5,11 +5,13 @@ Ejecutar: streamlit run app.py
 
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import pandas as pd
 import plotly.graph_objects as go
 import requests
 import streamlit as st
@@ -535,6 +537,99 @@ def render_system_status_panel(api_ok, api_data):
         """,
             unsafe_allow_html=True,
         )
+
+
+def obtener_estadisticas_motor_total():
+    """Devuelve métricas históricas del motor usando la base local."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            total_predicciones = conn.execute(
+                "SELECT COUNT(*) FROM predicciones_historico"
+            ).fetchone()[0]
+
+            df_eval = pd.read_sql(
+                """
+                SELECT
+                    CASE
+                        WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
+                             (r.ganador = 0 AND p.prediccion = r.away_team)
+                        THEN 1
+                        ELSE 0
+                    END as acierto
+                FROM historico_real r
+                INNER JOIN predicciones_historico p
+                    ON r.fecha = p.fecha
+                    AND r.home_team = p.home_team
+                    AND r.away_team = p.away_team
+                """,
+                conn,
+            )
+
+        total_validados = int(len(df_eval))
+        aciertos = int(df_eval["acierto"].sum()) if total_validados else 0
+        tasa_exito = round((aciertos / total_validados) * 100, 2) if total_validados else 0.0
+
+        return {
+            "total_predicciones": int(total_predicciones),
+            "total_validados": total_validados,
+            "aciertos": aciertos,
+            "tasa_exito": tasa_exito,
+            "error": None,
+        }
+    except Exception as e:
+        return {
+            "total_predicciones": 0,
+            "total_validados": 0,
+            "aciertos": 0,
+            "tasa_exito": 0.0,
+            "error": str(e),
+        }
+
+
+def render_motor_lifetime_panel():
+    """Renderiza métricas de por vida del motor de predicción."""
+    stats = obtener_estadisticas_motor_total()
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown(
+            f"""
+        <div class="stats-card">
+            <h4>Partidos Predichos (Vida)</h4>
+            <p style="font-size: 1.35rem; color: #1e40af; font-weight: 900;">{stats['total_predicciones']:,}</p>
+            <p style="color: #64748b; margin: 0;">Total histórico generado por el motor</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    with col2:
+        st.markdown(
+            f"""
+        <div class="stats-card">
+            <h4>Tasa de Éxito (Vida)</h4>
+            <p style="font-size: 1.35rem; color: #10b981; font-weight: 900;">{stats['tasa_exito']:.2f}%</p>
+            <p style="color: #64748b; margin: 0;">Aciertos sobre partidos con resultado real</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    with col3:
+        st.markdown(
+            f"""
+        <div class="stats-card">
+            <h4>Partidos Validados</h4>
+            <p style="font-size: 1.35rem; color: #0f172a; font-weight: 900;">{stats['aciertos']:,}/{stats['total_validados']:,}</p>
+            <p style="color: #64748b; margin: 0;">Aciertos acumulados en histórico real</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    if stats["error"]:
+        st.warning(f"No se pudieron cargar estadísticas históricas del motor: {stats['error']}")
 
 
 api_ok, api_data = verificar_api_salud()
@@ -1794,8 +1889,9 @@ elif pagina == "📊 Comparación & Historial":
                 st.error(f"Error obteniendo estadísticas: {e}")
                 st.session_state.stats_30d = None
 
-    if st.session_state.get("stats_30d"):
-        _s = st.session_state.stats_30d
+    _stats_30d = st.session_state.get("stats_30d")
+    if isinstance(_stats_30d, dict):
+        _s = _stats_30d
         _periodo = _s.get("periodo", "Últimos 30 días")
         _total = _s.get("total", 0)
         _aciertos = _s.get("aciertos", 0)
@@ -1977,6 +2073,9 @@ elif pagina == "🧠 Acerca del Modelo":
 
     st.markdown("### Estado del Sistema")
     render_system_status_panel(api_ok, api_data)
+
+    st.markdown("### Estadísticas Totales del Motor")
+    render_motor_lifetime_panel()
 
     st.markdown(
         """
