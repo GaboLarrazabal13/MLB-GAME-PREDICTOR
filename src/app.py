@@ -466,7 +466,9 @@ def ejecutar_scraper_manual():
             )
 
             if scrape_result.returncode != 0:
-                error_output = (scrape_result.stderr or scrape_result.stdout or "").strip()
+                error_output = (
+                    scrape_result.stderr or scrape_result.stdout or ""
+                ).strip()
                 if error_output:
                     return False, f"❌ El scraper falló: {error_output[-300:]}"
                 return False, "⚠️ El scraper no devolvió datos para hoy"
@@ -482,10 +484,15 @@ def ejecutar_scraper_manual():
             if predict_result.returncode == 0:
                 return True, "✅ Partidos y predicciones actualizados exitosamente"
 
-            error_output = (predict_result.stderr or predict_result.stdout or "").strip()
+            error_output = (
+                predict_result.stderr or predict_result.stdout or ""
+            ).strip()
             if error_output:
                 return False, f"❌ Las predicciones fallaron: {error_output[-300:]}"
-            return False, "⚠️ Se actualizaron los partidos, pero falló la generación de predicciones"
+            return (
+                False,
+                "⚠️ Se actualizaron los partidos, pero falló la generación de predicciones",
+            )
     except subprocess.TimeoutExpired:
         return False, "❌ Timeout: El proceso tardó más de 5 minutos"
     except Exception as e:
@@ -567,7 +574,9 @@ def obtener_estadisticas_motor_total():
 
         total_validados = int(len(df_eval))
         aciertos = int(df_eval["acierto"].sum()) if total_validados else 0
-        tasa_exito = round((aciertos / total_validados) * 100, 2) if total_validados else 0.0
+        tasa_exito = (
+            round((aciertos / total_validados) * 100, 2) if total_validados else 0.0
+        )
 
         return {
             "total_predicciones": int(total_predicciones),
@@ -590,15 +599,21 @@ def render_motor_lifetime_panel():
     """Renderiza métricas de por vida del motor de predicción."""
     stats = obtener_estadisticas_motor_total()
 
-    col1, col2, col3 = st.columns(3)
+    total = stats["total_predicciones"]
+    validados = stats["total_validados"]
+    aciertos = stats["aciertos"]
+    tasa = stats["tasa_exito"]
+    pendientes = max(0, total - validados)
+
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.markdown(
             f"""
         <div class="stats-card">
-            <h4>Partidos Predichos (Vida)</h4>
-            <p style="font-size: 1.35rem; color: #1e40af; font-weight: 900;">{stats['total_predicciones']:,}</p>
-            <p style="color: #64748b; margin: 0;">Total histórico generado por el motor</p>
+            <h4>Predicciones Totales</h4>
+            <p style="font-size: 1.35rem; color: #1e40af; font-weight: 900;">{total:,}</p>
+            <p style="color: #64748b; margin: 0;">Generadas por el motor desde el inicio</p>
         </div>
         """,
             unsafe_allow_html=True,
@@ -608,9 +623,9 @@ def render_motor_lifetime_panel():
         st.markdown(
             f"""
         <div class="stats-card">
-            <h4>Tasa de Éxito (Vida)</h4>
-            <p style="font-size: 1.35rem; color: #10b981; font-weight: 900;">{stats['tasa_exito']:.2f}%</p>
-            <p style="color: #64748b; margin: 0;">Aciertos sobre partidos con resultado real</p>
+            <h4>Con Resultado Real</h4>
+            <p style="font-size: 1.35rem; color: #7c3aed; font-weight: 900;">{validados:,}</p>
+            <p style="color: #64748b; margin: 0;">Partidos jugados y con resultado conocido</p>
         </div>
         """,
             unsafe_allow_html=True,
@@ -620,16 +635,55 @@ def render_motor_lifetime_panel():
         st.markdown(
             f"""
         <div class="stats-card">
-            <h4>Partidos Validados</h4>
-            <p style="font-size: 1.35rem; color: #0f172a; font-weight: 900;">{stats['aciertos']:,}/{stats['total_validados']:,}</p>
-            <p style="color: #64748b; margin: 0;">Aciertos acumulados en histórico real</p>
+            <h4>Tasa de Acierto</h4>
+            <p style="font-size: 1.35rem; color: #10b981; font-weight: 900;">{tasa:.1f}%</p>
+            <p style="color: #64748b; margin: 0;">{aciertos:,} aciertos de {validados:,} validados</p>
         </div>
         """,
             unsafe_allow_html=True,
         )
 
+    with col4:
+        st.markdown(
+            f"""
+        <div class="stats-card">
+            <h4>Pendientes de Validar</h4>
+            <p style="font-size: 1.35rem; color: #f59e0b; font-weight: 900;">{pendientes:,}</p>
+            <p style="color: #64748b; margin: 0;">Partidos sin resultado registrado aún</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    # Barra de progreso visual
+    if validados > 0:
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.markdown(
+                "**Cobertura de validación** (partidos con resultado real vs. totales)"
+            )
+            cobertura = validados / total if total > 0 else 0
+            st.progress(
+                cobertura, text=f"{validados:,} de {total:,} ({cobertura * 100:.1f}%)"
+            )
+        with col_g2:
+            st.markdown("**Tasa de acierto** (predicciones correctas sobre validadas)")
+            tasa_frac = aciertos / validados if validados > 0 else 0
+            color_text = (
+                "verde"
+                if tasa_frac >= 0.55
+                else ("amarillo" if tasa_frac >= 0.50 else "rojo")
+            )
+            _ = color_text  # solo para referencia semántica
+            st.progress(
+                tasa_frac, text=f"{aciertos:,} correctas de {validados:,} ({tasa:.1f}%)"
+            )
+
     if stats["error"]:
-        st.warning(f"No se pudieron cargar estadísticas históricas del motor: {stats['error']}")
+        st.warning(
+            f"No se pudieron cargar estadísticas históricas del motor: {stats['error']}"
+        )
 
 
 api_ok, api_data = verificar_api_salud()
@@ -1021,7 +1075,9 @@ def renderizar_analisis_detallado_partido(
                     if batter and isinstance(batter, dict):
                         nombre_batter = batter.get("nombre", "N/A")
                         if nombre_batter and nombre_batter != "N/A":
-                            with st.expander(f"#{i} - {nombre_batter}", expanded=(i == 1)):
+                            with st.expander(
+                                f"#{i} - {nombre_batter}", expanded=(i == 1)
+                            ):
                                 k1, k2, k3, k4 = st.columns(4)
                                 with k1:
                                     st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
@@ -1045,7 +1101,9 @@ def renderizar_analisis_detallado_partido(
                     if batter and isinstance(batter, dict):
                         nombre_batter = batter.get("nombre", "N/A")
                         if nombre_batter and nombre_batter != "N/A":
-                            with st.expander(f"#{i} - {nombre_batter}", expanded=(i == 1)):
+                            with st.expander(
+                                f"#{i} - {nombre_batter}", expanded=(i == 1)
+                            ):
                                 k1, k2, k3, k4 = st.columns(4)
                                 with k1:
                                     st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
@@ -1763,7 +1821,7 @@ elif pagina == "📅 Partidos de Hoy":
 
                         game_id = partido.get(
                             "game_id",
-                            f"{partido.get('fecha','')}_{partido['away_team']}_{partido['home_team']}",
+                            f"{partido.get('fecha', '')}_{partido['away_team']}_{partido['home_team']}",
                         )
 
                         with st.expander(
@@ -1779,7 +1837,10 @@ elif pagina == "📅 Partidos de Hoy":
                                     "No hay lanzadores definidos para este partido. No se puede generar el análisis detallado."
                                 )
                             else:
-                                if game_id not in st.session_state.detalles_partidos_hoy:
+                                if (
+                                    game_id
+                                    not in st.session_state.detalles_partidos_hoy
+                                ):
                                     if st.button(
                                         "Cargar análisis detallado",
                                         key=f"load_detail_{game_id}",
@@ -1971,15 +2032,28 @@ elif pagina == "📊 Comparación & Historial":
                     prob_h_norm = normalizar_probabilidad(prob_h)
                     prob_a_norm = normalizar_probabilidad(prob_a)
                     prediccion_code = partido.get("prediccion", "")
-                    prediccion_nombre = get_team_display_name(prediccion_code) if prediccion_code else "N/A"
-                    pred_logo = get_team_logo_html(prediccion_code, 22) if prediccion_code else ""
+                    prediccion_nombre = (
+                        get_team_display_name(prediccion_code)
+                        if prediccion_code
+                        else "N/A"
+                    )
+                    pred_logo = (
+                        get_team_logo_html(prediccion_code, 22)
+                        if prediccion_code
+                        else ""
+                    )
 
                     ganador_real_code = _ht if partido["ganador_real"] == 1 else _at
                     ganador_real_nombre = get_team_display_name(ganador_real_code)
                     ganador_real_logo = get_team_logo_html(ganador_real_code, 22)
 
                     confianza = partido.get("confianza", "N/A")
-                    color_conf = {"MUY ALTA": "#ef4444", "ALTA": "#f59e0b", "MODERADA": "#22c55e", "BAJA": "#64748b"}.get(confianza, "#64748b")
+                    color_conf = {
+                        "MUY ALTA": "#ef4444",
+                        "ALTA": "#f59e0b",
+                        "MODERADA": "#22c55e",
+                        "BAJA": "#64748b",
+                    }.get(confianza, "#64748b")
 
                     col1, col2, col3 = st.columns(3)
 
@@ -1992,18 +2066,18 @@ elif pagina == "📊 Comparación & Historial":
     {pred_logo}{prediccion_nombre}
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-    <span style="display:flex;align-items:center;gap:4px;font-size:0.85rem;">{get_team_logo_html(_ht,16)}{_hn}</span>
-    <span style="font-weight:700;font-size:0.95rem;">{prob_h_norm*100:.1f}%</span>
+    <span style="display:flex;align-items:center;gap:4px;font-size:0.85rem;">{get_team_logo_html(_ht, 16)}{_hn}</span>
+    <span style="font-weight:700;font-size:0.95rem;">{prob_h_norm * 100:.1f}%</span>
   </div>
   <div style="background:#e2e8f0;border-radius:4px;height:6px;margin-bottom:8px;">
-    <div style="background:#3b82f6;width:{prob_h_norm*100:.1f}%;height:6px;border-radius:4px;"></div>
+    <div style="background:#3b82f6;width:{prob_h_norm * 100:.1f}%;height:6px;border-radius:4px;"></div>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-    <span style="display:flex;align-items:center;gap:4px;font-size:0.85rem;">{get_team_logo_html(_at,16)}{_an}</span>
-    <span style="font-weight:700;font-size:0.95rem;">{prob_a_norm*100:.1f}%</span>
+    <span style="display:flex;align-items:center;gap:4px;font-size:0.85rem;">{get_team_logo_html(_at, 16)}{_an}</span>
+    <span style="font-weight:700;font-size:0.95rem;">{prob_a_norm * 100:.1f}%</span>
   </div>
   <div style="background:#e2e8f0;border-radius:4px;height:6px;">
-    <div style="background:#8b5cf6;width:{prob_a_norm*100:.1f}%;height:6px;border-radius:4px;"></div>
+    <div style="background:#8b5cf6;width:{prob_a_norm * 100:.1f}%;height:6px;border-radius:4px;"></div>
   </div>
 </div>""",
                             unsafe_allow_html=True,
@@ -2033,7 +2107,11 @@ elif pagina == "📊 Comparación & Historial":
                         )
 
                     with col3:
-                        res_bg = "rgba(34,197,94,0.08)" if acierto else "rgba(239,68,68,0.08)"
+                        res_bg = (
+                            "rgba(34,197,94,0.08)"
+                            if acierto
+                            else "rgba(239,68,68,0.08)"
+                        )
                         res_color = "#16a34a" if acierto else "#dc2626"
                         res_text = "ACIERTO ✅" if acierto else "ERROR ❌"
                         st.markdown(

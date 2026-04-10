@@ -55,6 +55,7 @@ def predecir_juego(
     modo_auto=False,
     fecha_partido=None,
     hacer_scraping=True,
+    guardar_db=True,
 ):
     """
     Predice el resultado de un juego de MLB
@@ -111,7 +112,10 @@ def predecir_juego(
 
         # 6. Extracción de features híbrida (temporal + scraping)
         features_dict = extraer_features_hibridas(
-            row_data, df_historico=df_historico, hacer_scraping=hacer_scraping, session_cache={}
+            row_data,
+            df_historico=df_historico,
+            hacer_scraping=hacer_scraping,
+            session_cache={},
         )
 
         if not features_dict:
@@ -259,35 +263,36 @@ def predecir_juego(
             print("=" * 75 + "\n")
 
         # 14. Guardar predicción en base de datos
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.execute("""CREATE TABLE IF NOT EXISTS predicciones_historico
-                           (fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
-                            away_pitcher TEXT, prob_home REAL, prob_away REAL,
-                            prediccion TEXT, confianza TEXT, tipo TEXT)""")
+        db_data = {
+            "fecha": row_data["fecha"],
+            "home_team": home_team,
+            "away_team": away_team,
+            "home_pitcher": home_pitcher,
+            "away_pitcher": away_pitcher,
+            "prob_home": prob_home_pct,
+            "prob_away": prob_away_pct,
+            "prediccion": ganador_code,
+            "confianza": conf_label,
+            "tipo": "AUTOMATICO" if modo_auto else "MANUAL",
+        }
 
-            db_data = {
-                "fecha": row_data["fecha"],
-                "home_team": home_team,
-                "away_team": away_team,
-                "home_pitcher": home_pitcher,
-                "away_pitcher": away_pitcher,
-                "prob_home": prob_home_pct,
-                "prob_away": prob_away_pct,
-                "prediccion": ganador_code,
-                "confianza": conf_label,
-                "tipo": "AUTOMATICO" if modo_auto else "MANUAL",
-            }
-            # Reemplazo por juego para evitar duplicados y mantener la corrida no destructiva.
-            conn.execute(
-                """
-                DELETE FROM predicciones_historico
-                WHERE fecha = ? AND home_team = ? AND away_team = ?
-                """,
-                (row_data["fecha"], home_team, away_team),
-            )
-            pd.DataFrame([db_data]).to_sql(
-                "predicciones_historico", conn, if_exists="append", index=False
-            )
+        if guardar_db:
+            with sqlite3.connect(DB_PATH) as conn:
+                conn.execute("""CREATE TABLE IF NOT EXISTS predicciones_historico
+                               (fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
+                                away_pitcher TEXT, prob_home REAL, prob_away REAL,
+                                prediccion TEXT, confianza TEXT, tipo TEXT)""")
+                # Reemplazo por juego para evitar duplicados y mantener la corrida no destructiva.
+                conn.execute(
+                    """
+                    DELETE FROM predicciones_historico
+                    WHERE fecha = ? AND home_team = ? AND away_team = ?
+                    """,
+                    (row_data["fecha"], home_team, away_team),
+                )
+                pd.DataFrame([db_data]).to_sql(
+                    "predicciones_historico", conn, if_exists="append", index=False
+                )
 
         return db_data
 

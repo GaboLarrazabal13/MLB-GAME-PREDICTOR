@@ -216,7 +216,9 @@ def _obtener_estado_fechas(conn):
         compare_latest = None
 
     return {
-        "games_latest": _obtener_fecha_publicada(conn, "games_today", "historico_partidos"),
+        "games_latest": _obtener_fecha_publicada(
+            conn, "games_today", "historico_partidos"
+        ),
         "predictions_latest": _obtener_fecha_publicada(
             conn, "predictions_today", "predicciones_historico"
         ),
@@ -277,7 +279,9 @@ def _backfill_predicciones_fecha(fecha: str) -> int:
             continue
 
     if generadas > 0:
-        run_source = os.getenv("RUN_SOURCE", "api_backfill").strip().lower() or "api_backfill"
+        run_source = (
+            os.getenv("RUN_SOURCE", "api_backfill").strip().lower() or "api_backfill"
+        )
         with sqlite3.connect(DB_PATH) as conn:
             conn.execute(
                 """
@@ -457,7 +461,7 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             scrape_player_stats,
         )
 
-        # Realizar predicción básica primero
+        # Realizar predicción básica primero (sin guardar en DB para no corromper las predicciones diarias)
         resultado = predecir_juego(
             home_team=home_code,
             away_team=away_code,
@@ -465,6 +469,7 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             away_pitcher=request.away_pitcher,
             year=request.year,
             modo_auto=True,
+            guardar_db=False,
         )
 
         if not resultado:
@@ -504,7 +509,9 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             away_pitcher_link = None
 
         # Función auxiliar para obtener stats de lanzador con fallback de años
-        def obtener_pitcher_con_fallback(pitcher_name, pitcher_link, team_code, request_year):
+        def obtener_pitcher_con_fallback(
+            pitcher_name, pitcher_link, team_code, request_year
+        ):
             """
             Intenta obtener stats del pitcher:
             1. Por link directo (si está disponible)
@@ -575,8 +582,12 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             )
 
         # Re-scrape para el año final que se usará (para bateadores y bullpen)
-        bat_home, pit_home = scrape_player_stats(home_code, home_fallback["year_usado"], session_cache)
-        bat_away, pit_away = scrape_player_stats(away_code, away_fallback["year_usado"], session_cache)
+        bat_home, pit_home = scrape_player_stats(
+            home_code, home_fallback["year_usado"], session_cache
+        )
+        bat_away, pit_away = scrape_player_stats(
+            away_code, away_fallback["year_usado"], session_cache
+        )
 
         # Extraer Top 3 bateadores
         home_batters_stats = encontrar_mejor_bateador(bat_home)
