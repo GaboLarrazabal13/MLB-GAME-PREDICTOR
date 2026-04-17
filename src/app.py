@@ -1674,6 +1674,12 @@ elif pagina == "📅 Partidos de Hoy":
         st.stop()
 
     try:
+        from zoneinfo import ZoneInfo
+
+        # IMPORTANTE: Usar siempre ET (zona horaria MLB)
+        ahora_et = datetime.now(ZoneInfo("America/New_York"))
+        fecha_hoy_et = ahora_et.strftime("%Y-%m-%d")
+
         response_partidos = requests.get(f"{API_URL}/games/today", timeout=10)
         response_predicciones = requests.get(f"{API_URL}/predictions/today", timeout=10)
 
@@ -1694,28 +1700,26 @@ elif pagina == "📅 Partidos de Hoy":
                     partido.update(pred_dict[partido["game_id"]])
 
         # Mostrar y operar siempre con referencia horaria USA (ET).
-        ahora_et = datetime.now(ZoneInfo("America/New_York"))
-        fecha_hoy = ahora_et.strftime("%Y-%m-%d")
         hora_et = ahora_et.strftime("%H:%M")
         fechas_api = sorted({p.get("fecha") for p in partidos if p.get("fecha")})
 
         st.caption(
-            f"Referencia horaria MLB (ET): {fecha_hoy} {hora_et}. "
+            f"Referencia horaria MLB (ET): {fecha_hoy_et} {hora_et}. "
             "Si accedes desde otra zona horaria, la jornada visible puede parecer de 'ayer'."
         )
 
         if fechas_api:
             if len(fechas_api) == 1:
                 st.info(
-                    f"Fecha cargada por la API: {fechas_api[0]} | Fecha actual: {fecha_hoy}"
+                    f"Fecha cargada por la API: {fechas_api[0]} | Fecha actual: {fecha_hoy_et}"
                 )
             else:
                 st.info(
-                    f"Fechas cargadas por la API: {', '.join(fechas_api)} | Fecha actual: {fecha_hoy}"
+                    f"Fechas cargadas por la API: {', '.join(fechas_api)} | Fecha actual: {fecha_hoy_et}"
                 )
 
-        partidos_hoy = [p for p in partidos if p.get("fecha") == fecha_hoy]
-        fecha_mostrada = fecha_hoy
+        partidos_hoy = [p for p in partidos if p.get("fecha") == fecha_hoy_et]
+        fecha_mostrada = fecha_hoy_et
 
         if partidos_hoy:
             partidos = partidos_hoy
@@ -1723,7 +1727,7 @@ elif pagina == "📅 Partidos de Hoy":
             fecha_mostrada = max(fechas_api)
             partidos = [p for p in partidos if p.get("fecha") == fecha_mostrada]
             st.warning(
-                f"No hay cartelera para hoy en ET ({fecha_hoy}). "
+                f"No hay cartelera para hoy en ET ({fecha_hoy_et}). "
                 f"Mostrando la última fecha disponible: {fecha_mostrada}."
             )
         else:
@@ -1830,7 +1834,7 @@ elif pagina == "📅 Partidos de Hoy":
                         ):
                             home_pitcher = partido.get("home_pitcher", "")
                             away_pitcher = partido.get("away_pitcher", "")
-                            year_detalle = int(str(partido.get("fecha", fecha_hoy))[:4])
+                            year_detalle = int(str(partido.get("fecha", fecha_hoy_et))[:4])
 
                             if not home_pitcher or not away_pitcher:
                                 st.warning(
