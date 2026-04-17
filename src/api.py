@@ -461,7 +461,7 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             scrape_player_stats,
         )
 
-        # Realizar predicción básica primero (o-demand, sin guardar para evitar conflictos con /predictions/today)
+        # Realizar predicción básica primero (sin guardar en DB para no corromper las predicciones diarias)
         resultado = predecir_juego(
             home_team=home_code,
             away_team=away_code,
@@ -730,15 +730,8 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
 
 @app.get("/games/today", response_model=list[PartidoHoy])
 async def obtener_partidos_hoy():
-    """Obtiene los partidos programados para hoy (en ET)"""
+    """Obtiene los partidos programados para hoy"""
     try:
-        from zoneinfo import ZoneInfo
-        from datetime import datetime
-
-        # Obtener fecha actual en ET (zona horaria MLB)
-        ahora_et = datetime.now(ZoneInfo("America/New_York"))
-        fecha_objetivo_hoy = ahora_et.strftime("%Y-%m-%d")
-
         with sqlite3.connect(DB_PATH) as conn:
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS sync_control (
@@ -749,6 +742,12 @@ async def obtener_partidos_hoy():
                            PRIMARY KEY(dataset, source)
                        )"""
             )
+            fecha_objetivo = _obtener_fecha_publicada(
+                conn, "games_today", "historico_partidos"
+            )
+
+            if not fecha_objetivo:
+                return []
 
             query = """
                 SELECT game_id, fecha, home_team, away_team, home_pitcher, away_pitcher
@@ -756,14 +755,14 @@ async def obtener_partidos_hoy():
                 WHERE fecha = ?
                 ORDER BY home_team
             """
-            df = pd.read_sql(query, conn, params=[fecha_objetivo_hoy])
+            df = pd.read_sql(query, conn, params=[fecha_objetivo])
 
-            # Si no hay partidos para hoy en ET, intenta con la fecha más reciente
+            # Si sync_control apunta a una fecha sin datos, usar el último snapshot real.
             if df.empty:
                 fecha_fallback = conn.execute(
                     "SELECT MAX(fecha) FROM historico_partidos"
                 ).fetchone()[0]
-                if fecha_fallback:
+                if fecha_fallback and fecha_fallback != fecha_objetivo:
                     df = pd.read_sql(query, conn, params=[fecha_fallback])
 
         if df.empty:
@@ -789,15 +788,8 @@ async def obtener_partidos_hoy():
 
 @app.get("/predictions/today", response_model=list[dict])
 async def obtener_predicciones_hoy():
-    """Obtiene las predicciones generadas para hoy (en ET)"""
+    """Obtiene las predicciones generadas para hoy"""
     try:
-        from zoneinfo import ZoneInfo
-        from datetime import datetime
-
-        # Obtener fecha actual en ET (zona horaria MLB)
-        ahora_et = datetime.now(ZoneInfo("America/New_York"))
-        fecha_objetivo_hoy = ahora_et.strftime("%Y-%m-%d")
-
         with sqlite3.connect(DB_PATH) as conn:
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS sync_control (
@@ -808,6 +800,16 @@ async def obtener_predicciones_hoy():
                            PRIMARY KEY(dataset, source)
                        )"""
             )
+            fecha_objetivo = _obtener_fecha_publicada(
+                conn, "predictions_today", "predicciones_historico"
+            )
+            if not fecha_objetivo:
+                fecha_objetivo = conn.execute(
+                    "SELECT MAX(fecha) FROM historico_partidos"
+                ).fetchone()[0]
+
+            if not fecha_objetivo:
+                return []
 
             query = """
                 SELECT p.*, hp.game_id
@@ -819,15 +821,7 @@ async def obtener_predicciones_hoy():
                 WHERE p.fecha = ?
                 ORDER BY p.prob_home DESC
             """
-            df = pd.read_sql(query, conn, params=[fecha_objetivo_hoy])
-
-            # Si no hay predicciones para hoy en ET, intenta con la fecha más reciente
-            if df.empty:
-                fecha_fallback = conn.execute(
-                    "SELECT MAX(fecha) FROM predicciones_historico"
-                ).fetchone()[0]
-                if fecha_fallback:
-                    df = pd.read_sql(query, conn, params=[fecha_fallback])
+            df = pd.read_sql(query, conn, params=[fecha_objetivo])
 
         if df.empty:
             return []
