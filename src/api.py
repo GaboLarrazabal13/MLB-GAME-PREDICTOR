@@ -789,7 +789,7 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
                     "El analisis detallado excedio el tiempo limite del servidor. "
                     "Intenta nuevamente en unos segundos."
                 ),
-            )
+            ) from None
 
         try:
             resultado = await asyncio.to_thread(
@@ -819,7 +819,7 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
                     "El analisis detallado excedio el tiempo limite del servidor. "
                     "Intenta nuevamente en unos segundos."
                 ),
-            )
+            ) from None
 
         prob_home_decimal = (
             resultado["prob_home"] / 100.0
