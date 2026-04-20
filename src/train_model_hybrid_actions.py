@@ -231,7 +231,9 @@ def obtener_stats_pitcher_por_link(pitcher_link, target_year=None, session_cache
             return session_cache[cache_key]
 
     try:
-        url = pitcher_link
+        url = str(pitcher_link).strip()
+        url = url.replace("baseball-reference.coom", "baseball-reference.com")
+        url = url.replace("baseball-reference.comm", "baseball-reference.com")
         if pitcher_link.startswith("/"):
             url = f"https://www.baseball-reference.com{pitcher_link}"
 
