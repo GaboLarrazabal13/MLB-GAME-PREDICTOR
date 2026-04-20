@@ -793,7 +793,7 @@ def crear_gauge_confianza(confianza):
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def obtener_prediccion_detallada_partido(
-    home_team, away_team, home_pitcher, away_pitcher, year
+    home_team, away_team, home_pitcher, away_pitcher, year, request_timeout=300
 ):
     """Obtiene la predicción detallada para un partido usando la API."""
     try:
@@ -806,7 +806,7 @@ def obtener_prediccion_detallada_partido(
                 "away_pitcher": away_pitcher,
                 "year": year,
             },
-            timeout=120,
+            timeout=request_timeout,
         )
 
         if response.status_code == 200:
@@ -1674,8 +1674,8 @@ elif pagina == "📅 Partidos de Hoy":
         st.stop()
 
     try:
-        response_partidos = requests.get(f"{API_URL}/games/today", timeout=10)
-        response_predicciones = requests.get(f"{API_URL}/predictions/today", timeout=10)
+        response_partidos = requests.get(f"{API_URL}/games/today", timeout=30)
+        response_predicciones = requests.get(f"{API_URL}/predictions/today", timeout=30)
 
         partidos = (
             response_partidos.json() if response_partidos.status_code == 200 else []
