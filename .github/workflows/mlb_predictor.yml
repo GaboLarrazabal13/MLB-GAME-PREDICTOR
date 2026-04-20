@@ -72,6 +72,8 @@ jobs:
             mlb-data-
 
       - name: Actualizar resultados reales
+        env:
+          TARGET_DATE: ${{ github.event.inputs.target_date }}
         run: |
           cd src
           python mlb_update_real_results.py
