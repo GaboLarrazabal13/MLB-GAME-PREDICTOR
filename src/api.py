@@ -3,6 +3,7 @@ API FastAPI para MLB Predictor V3.5 - VERSIÓN CORREGIDA
 Endpoints para predicciones manuales, automáticas y análisis de rendimiento
 """
 
+import asyncio
 import os
 import sqlite3
 import sys
@@ -53,8 +54,14 @@ RATE_LIMIT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "180"))
 RATE_LIMIT_PREDICT_MAX_REQUESTS = int(
     os.getenv("RATE_LIMIT_PREDICT_MAX_REQUESTS", "30")
 )
+DETAILED_ANALYSIS_TIMEOUT_SECONDS = int(
+    os.getenv("DETAILED_ANALYSIS_TIMEOUT_SECONDS", "75")
+)
+DETAILED_CACHE_TTL_SECONDS = int(os.getenv("DETAILED_CACHE_TTL_SECONDS", "3600"))
 _rate_limit_store: dict[str, deque[float]] = defaultdict(deque)
 _rate_limit_lock = Lock()
+_detailed_prediction_cache: dict[tuple[str, str, str, str, int], tuple[float, dict]] = {}
+_detailed_prediction_cache_lock = Lock()
 
 
 def _get_client_ip(request: Request) -> str:
@@ -62,6 +69,36 @@ def _get_client_ip(request: Request) -> str:
     if x_forwarded_for:
         return x_forwarded_for.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
+
+
+def _get_detailed_cache_key(request: "PrediccionRequest") -> tuple[str, str, str, str, int]:
+    return (
+        request.home_team,
+        request.away_team,
+        request.home_pitcher,
+        request.away_pitcher,
+        int(request.year or 2026),
+    )
+
+
+def _get_cached_detailed_prediction(cache_key):
+    now = time.time()
+    with _detailed_prediction_cache_lock:
+        cached = _detailed_prediction_cache.get(cache_key)
+        if not cached:
+            return None
+
+        cached_at, payload = cached
+        if now - cached_at > DETAILED_CACHE_TTL_SECONDS:
+            _detailed_prediction_cache.pop(cache_key, None)
+            return None
+
+        return payload
+
+
+def _set_cached_detailed_prediction(cache_key, payload):
+    with _detailed_prediction_cache_lock:
+        _detailed_prediction_cache[cache_key] = (time.time(), payload)
 
 
 @app.middleware("http")
@@ -426,8 +463,7 @@ async def crear_prediccion_manual(request: PrediccionRequest):
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}") from e
 
 
-@app.post("/predict/detailed")
-async def crear_prediccion_detallada(request: PrediccionRequest):
+def _crear_prediccion_detallada_sync(request: PrediccionRequest):
     """
     VERSIÓN CORREGIDA: Crea predicción detallada con stats completas
     """
@@ -728,23 +764,39 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}") from e
 
 
+@app.post("/predict/detailed")
+async def crear_prediccion_detallada(request: PrediccionRequest):
+    cache_key = _get_detailed_cache_key(request)
+    cached_payload = _get_cached_detailed_prediction(cache_key)
+    if cached_payload is not None:
+        return cached_payload
+
+    try:
+        payload = await asyncio.wait_for(
+            asyncio.to_thread(_crear_prediccion_detallada_sync, request),
+            timeout=DETAILED_ANALYSIS_TIMEOUT_SECONDS,
+        )
+    except TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                "El analisis detallado excedio el tiempo limite del servidor. "
+                "Intenta nuevamente en unos segundos."
+            ),
+        ) from exc
+
+    _set_cached_detailed_prediction(cache_key, payload)
+    return payload
+
+
 @app.get("/games/today", response_model=list[PartidoHoy])
 async def obtener_partidos_hoy():
-    """Obtiene los partidos programados para hoy"""
+    """Obtiene los partidos de la jornada mas reciente en la base de datos"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            conn.execute(
-                """CREATE TABLE IF NOT EXISTS sync_control (
-                           dataset TEXT,
-                           source TEXT,
-                           fecha TEXT,
-                           updated_at TEXT,
-                           PRIMARY KEY(dataset, source)
-                       )"""
-            )
-            fecha_objetivo = _obtener_fecha_publicada(
-                conn, "games_today", "historico_partidos"
-            )
+            fecha_objetivo = conn.execute(
+                "SELECT MAX(fecha) FROM historico_partidos"
+            ).fetchone()[0]
 
             if not fecha_objetivo:
                 return []
@@ -756,14 +808,6 @@ async def obtener_partidos_hoy():
                 ORDER BY home_team
             """
             df = pd.read_sql(query, conn, params=[fecha_objetivo])
-
-            # Si sync_control apunta a una fecha sin datos, usar el último snapshot real.
-            if df.empty:
-                fecha_fallback = conn.execute(
-                    "SELECT MAX(fecha) FROM historico_partidos"
-                ).fetchone()[0]
-                if fecha_fallback and fecha_fallback != fecha_objetivo:
-                    df = pd.read_sql(query, conn, params=[fecha_fallback])
 
         if df.empty:
             return []
@@ -788,25 +832,12 @@ async def obtener_partidos_hoy():
 
 @app.get("/predictions/today", response_model=list[dict])
 async def obtener_predicciones_hoy():
-    """Obtiene las predicciones generadas para hoy"""
+    """Obtiene las predicciones de la jornada mas reciente en la base de datos"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            conn.execute(
-                """CREATE TABLE IF NOT EXISTS sync_control (
-                           dataset TEXT,
-                           source TEXT,
-                           fecha TEXT,
-                           updated_at TEXT,
-                           PRIMARY KEY(dataset, source)
-                       )"""
-            )
-            fecha_objetivo = _obtener_fecha_publicada(
-                conn, "predictions_today", "predicciones_historico"
-            )
-            if not fecha_objetivo:
-                fecha_objetivo = conn.execute(
-                    "SELECT MAX(fecha) FROM historico_partidos"
-                ).fetchone()[0]
+            fecha_objetivo = conn.execute(
+                "SELECT MAX(fecha) FROM predicciones_historico"
+            ).fetchone()[0]
 
             if not fecha_objetivo:
                 return []

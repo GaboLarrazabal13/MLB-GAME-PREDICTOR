@@ -419,13 +419,12 @@ st.markdown(
 def verificar_api_salud():
     """Verifica el estado de la API"""
     try:
-        response = requests.get(f"{API_URL}/health", timeout=5)
+        response = requests.get(f"{API_URL}/health", timeout=15)
         if response.status_code == 200:
             return True, response.json()
         return False, None
     except Exception as e:
-        st.error(f"Error verificando salud API: {e}")
-        return False, None
+        return False, {"error": str(e)}
 
 
 def get_team_logo_html(team_code, size=40):
@@ -1670,12 +1669,13 @@ elif pagina == "📅 Partidos de Hoy":
     )
 
     if not api_ok:
-        st.error("❌ La API no está disponible")
-        st.stop()
+        st.warning(
+            "La API no respondio al health check a tiempo. Intentando cargar datos igualmente..."
+        )
 
     try:
-        response_partidos = requests.get(f"{API_URL}/games/today", timeout=10)
-        response_predicciones = requests.get(f"{API_URL}/predictions/today", timeout=10)
+        response_partidos = requests.get(f"{API_URL}/games/today", timeout=30)
+        response_predicciones = requests.get(f"{API_URL}/predictions/today", timeout=30)
 
         partidos = (
             response_partidos.json() if response_partidos.status_code == 200 else []
