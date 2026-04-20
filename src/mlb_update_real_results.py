@@ -464,3 +464,43 @@ if __name__ == "__main__":
 
         # Retornar código de salida para GitHub Actions
         sys.exit(0 if resultado else 1)
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Actualizador de resultados reales MLB"
+    )
+    parser.add_argument(
+        "--verificar", action="store_true", help="Verificar juegos pendientes"
+    )
+    parser.add_argument(
+        "--fecha", type=str, default=None,
+        help="Fecha específica a procesar (formato YYYY-MM-DD). Si no se indica, usa TARGET_DATE env var o auto-detección."
+    )
+    args = parser.parse_args()
+
+    if args.verificar:
+        verificar_juegos_pendientes()
+    else:
+        # Soporte para fecha específica via argumento o variable de entorno
+        target_date = args.fecha or os.environ.get("TARGET_DATE", "").strip()
+
+        if target_date:
+            print(f"\n🎯 Modo backfill — fecha objetivo: {target_date}")
+            try:
+                fecha_bref = _formatear_fecha_bref_desde_db(target_date)
+                year_val = int(target_date[:4])
+                resultado = actualizar_resultados_reales_en_fecha(fecha_bref, target_date, year_val)
+            except Exception as exc:
+                print(f"❌ Error al procesar fecha {target_date}: {exc}")
+                resultado = False
+        else:
+            resultado = actualizar_resultados_reales()
+
+        # Verificar pendientes después de actualizar
+        if resultado:
+            print("\n" + "=" * 70)
+            verificar_juegos_pendientes()
+
+        # Retornar código de salida para GitHub Actions
+        sys.exit(0 if resultado else 1)
