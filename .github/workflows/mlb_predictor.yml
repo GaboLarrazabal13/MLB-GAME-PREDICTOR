@@ -118,10 +118,15 @@ jobs:
           echo "total_days=$TOTAL_DIAS" >> "$GITHUB_OUTPUT"
 
       - name: Ejecutar backfill día por día (scrape + predict + update_results)
+        id: run_backfill
         run: |
           START_DATE='${{ steps.validate_range.outputs.start_date }}'
           END_DATE='${{ steps.validate_range.outputs.end_date }}'
           CURRENT_DATE="$START_DATE"
+          OK_COUNT=0
+          FAILED_COUNT=0
+          OK_FILE=$(mktemp)
+          FAIL_FILE=$(mktemp)
 
           echo "🚀 Iniciando backfill de $START_DATE a $END_DATE"
 
@@ -130,16 +135,68 @@ jobs:
             echo "=============================================================="
             echo "📅 Procesando fecha: $CURRENT_DATE"
             echo "=============================================================="
+            DATE_FAILED=0
 
             cd src
 
-            RUN_SOURCE=workflow TARGET_DATE="$CURRENT_DATE" SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
-            RUN_SOURCE=workflow TARGET_DATE="$CURRENT_DATE" python mlb_predict_engine.py
-            TARGET_DATE="$CURRENT_DATE" python mlb_update_real_results.py
+            if ! RUN_SOURCE=workflow TARGET_DATE="$CURRENT_DATE" SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py; then
+              echo "❌ Falló scraping para $CURRENT_DATE"
+              DATE_FAILED=1
+            fi
+
+            if ! RUN_SOURCE=workflow TARGET_DATE="$CURRENT_DATE" python mlb_predict_engine.py; then
+              echo "❌ Falló predicción para $CURRENT_DATE"
+              DATE_FAILED=1
+            fi
+
+            if ! TARGET_DATE="$CURRENT_DATE" python mlb_update_real_results.py; then
+              echo "❌ Falló actualización de resultados para $CURRENT_DATE"
+              DATE_FAILED=1
+            fi
 
             cd ..
+
+            if [ "$DATE_FAILED" -eq 0 ]; then
+              OK_COUNT=$((OK_COUNT + 1))
+              echo "$CURRENT_DATE" >> "$OK_FILE"
+              echo "✅ Fecha completada: $CURRENT_DATE"
+            else
+              FAILED_COUNT=$((FAILED_COUNT + 1))
+              echo "$CURRENT_DATE" >> "$FAIL_FILE"
+              echo "⚠️ Fecha con errores: $CURRENT_DATE"
+            fi
+
             CURRENT_DATE=$(date -d "$CURRENT_DATE +1 day" +%Y-%m-%d)
           done
+
+          echo ""
+          echo "================ Resumen Backfill ================"
+          echo "✅ Fechas exitosas: $OK_COUNT"
+          cat "$OK_FILE" || true
+          echo "⚠️ Fechas con error: $FAILED_COUNT"
+          cat "$FAIL_FILE" || true
+          echo "=================================================="
+
+          {
+            echo "ok_count=$OK_COUNT"
+            echo "failed_count=$FAILED_COUNT"
+            echo "ok_dates<<EOF"
+            cat "$OK_FILE" || true
+            echo "EOF"
+            echo "failed_dates<<EOF"
+            cat "$FAIL_FILE" || true
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Mostrar resumen consolidado
+        run: |
+          echo "Backfill completado."
+          echo "- Exitosas: ${{ steps.run_backfill.outputs.ok_count }}"
+          echo "- Fallidas: ${{ steps.run_backfill.outputs.failed_count }}"
+          echo "Fechas exitosas:"
+          echo '${{ steps.run_backfill.outputs.ok_dates }}'
+          echo "Fechas fallidas:"
+          echo '${{ steps.run_backfill.outputs.failed_dates }}'
 
       - name: Commit y push de resultados por rango
         run: |
@@ -164,6 +221,12 @@ jobs:
             echo "⚠️ Reintentando push ($intento/3)..."
             sleep 3
           done
+
+      - name: Marcar fallo si hubo fechas fallidas
+        if: steps.run_backfill.outputs.failed_count != '0'
+        run: |
+          echo "❌ Backfill completado con fechas fallidas. Revisar log de resumen."
+          exit 1
 
   # ============================================================================
   # JOB MANUAL: PIPELINE COMPLETO SECUENCIAL
