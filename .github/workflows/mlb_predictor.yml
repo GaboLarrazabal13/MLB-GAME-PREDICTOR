@@ -2,8 +2,11 @@ name: MLB Predictor Automation
 
 on:
   schedule:
-    # Scraping principal: ~1:30 PM ET (horario de verano)
+    # Referencia operativa en horario USA (America/New_York)
+    # Scraping principal: ~12:30 ET en horario de verano (~11:30 ET en invierno)
     - cron: '30 17 * * *'
+    # Reentrenamiento una hora después: ~13:30 ET en verano (~12:30 ET en invierno)
+    - cron: '30 18 * * *'
   
   workflow_dispatch:  # Permite ejecución manual
     inputs:
@@ -247,7 +250,7 @@ jobs:
   scrape_daily_games:
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'schedule' ||
+      github.event.schedule == '30 17 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scrape')
     
     steps:
@@ -282,7 +285,7 @@ jobs:
         id: scrape
         run: |
           cd src
-          TARGET_DATE='${{ github.event.inputs.target_date }}' RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
+          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
         continue-on-error: true
 
       - name: Generar predicciones si hay datos nuevos
@@ -335,7 +338,7 @@ jobs:
         if: steps.scrape.outcome == 'success' && steps.validate_dates_scrape.outputs.is_ok != 'true'
         run: |
           cd src
-          TARGET_DATE='${{ github.event.inputs.target_date }}' RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
+          RUN_SOURCE=workflow SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
           RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
 
       - name: Revalidar fecha de cartelera (ET)
@@ -402,9 +405,8 @@ jobs:
   # ============================================================================
   post_scrape_validation:
     runs-on: ubuntu-latest
-    needs: [scrape_daily_games]
     if: |
-      needs.scrape_daily_games.result == 'success' ||
+      github.event.schedule == '30 18 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'post_scrape_validate')
 
     steps:
