@@ -1087,10 +1087,51 @@ async def comparar_predicciones_resultados(fecha: str):
                     pass
 
         if df.empty:
+            # No hay resultados reales: devolver predicciones solas si existen
+            query_pred_only = """
+                SELECT
+                    hp.game_id,
+                    hp.fecha,
+                    hp.home_team,
+                    hp.away_team,
+                    hp.home_pitcher,
+                    hp.away_pitcher,
+                    NULL as score_home,
+                    NULL as score_away,
+                    NULL as ganador_real,
+                    p.prediccion,
+                    p.prob_home,
+                    p.prob_away,
+                    p.confianza,
+                    NULL as acierto
+                FROM predicciones_historico p
+                LEFT JOIN historico_partidos hp
+                    ON p.fecha = hp.fecha
+                    AND p.home_team = hp.home_team
+                    AND p.away_team = hp.away_team
+                WHERE p.fecha = ?
+                ORDER BY p.prob_home DESC
+            """
+            with sqlite3.connect(DB_PATH) as conn:
+                df = pd.read_sql(query_pred_only, conn, params=[fecha])
+
+            if df.empty:
+                return {
+                    "fecha": fecha,
+                    "partidos": [],
+                    "estadisticas": {"total": 0, "aciertos": 0, "accuracy": 0.0, "solo_predicciones": True},
+                }
+
+            df_json = df.astype(object).where(pd.notna(df), None)
             return {
                 "fecha": fecha,
-                "partidos": [],
-                "estadisticas": {"total": 0, "aciertos": 0, "accuracy": 0.0},
+                "partidos": df_json.to_dict("records"),
+                "estadisticas": {
+                    "total": len(df),
+                    "aciertos": 0,
+                    "accuracy": 0.0,
+                    "solo_predicciones": True,
+                },
             }
 
         # Calcular estadísticas

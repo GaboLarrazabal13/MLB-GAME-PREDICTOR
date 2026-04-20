@@ -1875,6 +1875,10 @@ elif pagina == "📅 Partidos de Hoy":
                                             st.error(
                                                 f"No se pudo cargar el análisis detallado: {payload}"
                                             )
+                                            st.caption(
+                                                "Tip: si el error persiste, intenta borrar la caché de la app "
+                                                "con el menú ⋮ → Clear cache, o recarga la página."
+                                            )
                                 else:
                                     renderizar_analisis_detallado_partido(
                                         st.session_state.detalles_partidos_hoy[game_id],
@@ -1915,10 +1919,13 @@ elif pagina == "📊 Comparación & Historial":
         estado_fechas = {}
 
     compare_latest = estado_fechas.get("compare_latest")
-    default_compare_date = datetime.now().date() - timedelta(days=1)
-    if compare_latest:
+    predictions_latest = estado_fechas.get("predictions_latest")
+    # Usar la fecha de predicciones como default si compare_latest es viejo (>3 días)
+    default_compare_date = datetime.now(ZoneInfo("America/New_York")).date() - timedelta(days=1)
+    fecha_ref = predictions_latest or compare_latest
+    if fecha_ref:
         try:
-            default_compare_date = datetime.strptime(compare_latest, "%Y-%m-%d").date()
+            default_compare_date = datetime.strptime(fecha_ref, "%Y-%m-%d").date()
         except ValueError:
             pass
 
@@ -1927,9 +1934,10 @@ elif pagina == "📊 Comparación & Historial":
 
     st.markdown("### 📅 Selecciona una Fecha")
 
-    if compare_latest:
+    if predictions_latest:
         st.caption(
-            f"Última fecha con resultados comparables disponibles: {compare_latest}"
+            f"Última fecha con predicciones: {predictions_latest}"
+            + (f" | Última fecha con resultados reales: {compare_latest}" if compare_latest else "")
         )
 
     col1, col2, col3 = st.columns([3, 1, 1], vertical_alignment="bottom")
@@ -2002,22 +2010,28 @@ elif pagina == "📊 Comparación & Historial":
         if comparacion and comparacion["partidos"]:
             partidos = comparacion["partidos"]
             stats = comparacion["estadisticas"]
+            solo_predicciones = stats.get("solo_predicciones", False)
 
-            st.markdown("### Rendimiento del Día")
+            if solo_predicciones:
+                st.info("📋 Predicciones del día — Los resultados reales aún no están disponibles.")
+                st.markdown("### Predicciones")
+                col1 = st.columns(1)[0]
+                with col1:
+                    st.metric("Total Partidos", stats["total"])
+            else:
+                st.markdown("### Rendimiento del Día")
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Partidos", stats["total"])
+                with col2:
+                    st.metric("Aciertos", stats["aciertos"])
+                with col3:
+                    st.metric("Accuracy", f"{stats['accuracy']:.1f}%")
+                with col4:
+                    errores = stats["total"] - stats["aciertos"]
+                    st.metric("Errores", errores)
 
-            col1, col2, col3, col4 = st.columns(4)
-
-            with col1:
-                st.metric("Total Partidos", stats["total"])
-            with col2:
-                st.metric("Aciertos", stats["aciertos"])
-            with col3:
-                st.metric("Accuracy", f"{stats['accuracy']:.1f}%")
-            with col4:
-                errores = stats["total"] - stats["aciertos"]
-                st.metric("Errores", errores)
-
-            st.markdown("### Resultados Detallados")
+            st.markdown("### Resultados Detallados" if not solo_predicciones else "### Partidos")
 
             for partido in partidos:
                 acierto = partido.get("acierto", 0)
@@ -2031,10 +2045,12 @@ elif pagina == "📊 Comparación & Historial":
                 _score_h = partido["score_home"]
                 _badge = "✅" if acierto else "❌"
 
-                with st.expander(
-                    f"{_badge}  {_an} @ {_hn}  —  {_score_a}-{_score_h}",
-                    expanded=False,
-                ):
+                _titulo_exp = (
+                    f"{_an} @ {_hn}"
+                    if solo_predicciones or _score_a is None
+                    else f"{_badge}  {_an} @ {_hn}  —  {_score_a}-{_score_h}"
+                )
+                with st.expander(_titulo_exp, expanded=False):
                     prob_h = partido.get("prob_home", 0)
                     prob_a = partido.get("prob_away", 0)
                     prob_h_norm = normalizar_probabilidad(prob_h)
