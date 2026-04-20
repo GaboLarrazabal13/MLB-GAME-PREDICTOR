@@ -17,6 +17,7 @@ on:
         type: choice
         options:
           - all
+          - backfill_range
           - scrape
           - post_scrape_validate
           - update_results
@@ -24,6 +25,11 @@ on:
           - predict
       target_date:
         description: 'Fecha objetivo opcional para predicción/backfill (YYYY-MM-DD). Vacío = fecha más reciente.'
+        required: false
+        default: ''
+        type: string
+      target_end_date:
+        description: 'Fecha final opcional para backfill por rango (YYYY-MM-DD). Vacío = mismo día que target_date.'
         required: false
         default: ''
         type: string
@@ -36,6 +42,129 @@ permissions:
   contents: write
 
 jobs:
+  # ============================================================================
+  # JOB MANUAL: BACKFILL POR RANGO DE FECHAS
+  # ============================================================================
+  backfill_range_pipeline:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'backfill_range'
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+
+      - name: Restaurar caché de datos
+        uses: actions/cache@v3
+        with:
+          path: |
+            data/
+            models/
+            cache/
+          key: mlb-data-${{ github.sha }}
+          restore-keys: |
+            mlb-data-
+
+      - name: Validar rango de fechas
+        id: validate_range
+        run: |
+          START_RAW='${{ github.event.inputs.target_date }}'
+          END_RAW='${{ github.event.inputs.target_end_date }}'
+
+          if [ -z "$START_RAW" ]; then
+            echo "❌ target_date es obligatorio para job=backfill_range"
+            exit 1
+          fi
+
+          if [ -z "$END_RAW" ]; then
+            END_RAW="$START_RAW"
+          fi
+
+          if ! date -d "$START_RAW" >/dev/null 2>&1; then
+            echo "❌ target_date inválida: $START_RAW (usa YYYY-MM-DD)"
+            exit 1
+          fi
+
+          if ! date -d "$END_RAW" >/dev/null 2>&1; then
+            echo "❌ target_end_date inválida: $END_RAW (usa YYYY-MM-DD)"
+            exit 1
+          fi
+
+          START_DATE=$(date -d "$START_RAW" +%Y-%m-%d)
+          END_DATE=$(date -d "$END_RAW" +%Y-%m-%d)
+
+          if [ "$(date -d "$START_DATE" +%s)" -gt "$(date -d "$END_DATE" +%s)" ]; then
+            echo "❌ Rango inválido: target_date ($START_DATE) es mayor que target_end_date ($END_DATE)"
+            exit 1
+          fi
+
+          TOTAL_DIAS=$(( ( $(date -d "$END_DATE" +%s) - $(date -d "$START_DATE" +%s) ) / 86400 + 1 ))
+
+          echo "✅ Rango validado: $START_DATE -> $END_DATE ($TOTAL_DIAS día/s)"
+          echo "start_date=$START_DATE" >> "$GITHUB_OUTPUT"
+          echo "end_date=$END_DATE" >> "$GITHUB_OUTPUT"
+          echo "total_days=$TOTAL_DIAS" >> "$GITHUB_OUTPUT"
+
+      - name: Ejecutar backfill día por día (scrape + predict + update_results)
+        run: |
+          START_DATE='${{ steps.validate_range.outputs.start_date }}'
+          END_DATE='${{ steps.validate_range.outputs.end_date }}'
+          CURRENT_DATE="$START_DATE"
+
+          echo "🚀 Iniciando backfill de $START_DATE a $END_DATE"
+
+          while [ "$(date -d "$CURRENT_DATE" +%s)" -le "$(date -d "$END_DATE" +%s)" ]; do
+            echo ""
+            echo "=============================================================="
+            echo "📅 Procesando fecha: $CURRENT_DATE"
+            echo "=============================================================="
+
+            cd src
+
+            RUN_SOURCE=workflow TARGET_DATE="$CURRENT_DATE" SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
+            RUN_SOURCE=workflow TARGET_DATE="$CURRENT_DATE" python mlb_predict_engine.py
+            TARGET_DATE="$CURRENT_DATE" python mlb_update_real_results.py
+
+            cd ..
+            CURRENT_DATE=$(date -d "$CURRENT_DATE +1 day" +%Y-%m-%d)
+          done
+
+      - name: Commit y push de resultados por rango
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/ cache/ models/
+          if git diff --cached --quiet; then
+            echo "No hay cambios para commit"
+            exit 0
+          fi
+          git commit -m "🗓️ Backfill por rango: ${{ steps.validate_range.outputs.start_date }} a ${{ steps.validate_range.outputs.end_date }}"
+          for intento in 1 2 3; do
+            git pull --no-rebase -X ours origin ${{ github.ref_name }} || true
+            if git push origin HEAD:${{ github.ref_name }}; then
+              echo "Push exitoso en intento $intento"
+              break
+            fi
+            if [ "$intento" -eq 3 ]; then
+              echo "❌ No se pudo hacer push tras 3 intentos"
+              exit 1
+            fi
+            echo "⚠️ Reintentando push ($intento/3)..."
+            sleep 3
+          done
+
   # ============================================================================
   # JOB MANUAL: PIPELINE COMPLETO SECUENCIAL
   # ============================================================================
