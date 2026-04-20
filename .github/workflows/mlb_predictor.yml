@@ -2,11 +2,8 @@ name: MLB Predictor Automation
 
 on:
   schedule:
-    # Referencia operativa en horario USA (America/New_York)
-    # Scraping principal: ~12:30 ET en horario de verano (~11:30 ET en invierno)
+    # Scraping principal: ~1:30 PM ET (horario de verano)
     - cron: '30 17 * * *'
-    # Reentrenamiento una hora después: ~13:30 ET en verano (~12:30 ET en invierno)
-    - cron: '30 18 * * *'
   
   workflow_dispatch:  # Permite ejecución manual
     inputs:
@@ -250,7 +247,7 @@ jobs:
   scrape_daily_games:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '30 17 * * *' ||
+      github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scrape')
     
     steps:
@@ -405,8 +402,9 @@ jobs:
   # ============================================================================
   post_scrape_validation:
     runs-on: ubuntu-latest
+    needs: [scrape_daily_games]
     if: |
-      github.event.schedule == '30 18 * * *' ||
+      needs.scrape_daily_games.result == 'success' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'post_scrape_validate')
 
     steps:
