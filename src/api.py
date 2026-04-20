@@ -730,21 +730,13 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
 
 @app.get("/games/today", response_model=list[PartidoHoy])
 async def obtener_partidos_hoy():
-    """Obtiene los partidos programados para hoy"""
+    """Obtiene los partidos de la jornada más reciente en la base de datos"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            conn.execute(
-                """CREATE TABLE IF NOT EXISTS sync_control (
-                           dataset TEXT,
-                           source TEXT,
-                           fecha TEXT,
-                           updated_at TEXT,
-                           PRIMARY KEY(dataset, source)
-                       )"""
-            )
-            fecha_objetivo = _obtener_fecha_publicada(
-                conn, "games_today", "historico_partidos"
-            )
+            # Usar siempre MAX(fecha) de la tabla — lo que el workflow haya scrapeado más recientemente
+            fecha_objetivo = conn.execute(
+                "SELECT MAX(fecha) FROM historico_partidos"
+            ).fetchone()[0]
 
             if not fecha_objetivo:
                 return []
@@ -756,14 +748,6 @@ async def obtener_partidos_hoy():
                 ORDER BY home_team
             """
             df = pd.read_sql(query, conn, params=[fecha_objetivo])
-
-            # Si sync_control apunta a una fecha sin datos, usar el último snapshot real.
-            if df.empty:
-                fecha_fallback = conn.execute(
-                    "SELECT MAX(fecha) FROM historico_partidos"
-                ).fetchone()[0]
-                if fecha_fallback and fecha_fallback != fecha_objetivo:
-                    df = pd.read_sql(query, conn, params=[fecha_fallback])
 
         if df.empty:
             return []
@@ -788,25 +772,13 @@ async def obtener_partidos_hoy():
 
 @app.get("/predictions/today", response_model=list[dict])
 async def obtener_predicciones_hoy():
-    """Obtiene las predicciones generadas para hoy"""
+    """Obtiene las predicciones de la jornada más reciente en la base de datos"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            conn.execute(
-                """CREATE TABLE IF NOT EXISTS sync_control (
-                           dataset TEXT,
-                           source TEXT,
-                           fecha TEXT,
-                           updated_at TEXT,
-                           PRIMARY KEY(dataset, source)
-                       )"""
-            )
-            fecha_objetivo = _obtener_fecha_publicada(
-                conn, "predictions_today", "predicciones_historico"
-            )
-            if not fecha_objetivo:
-                fecha_objetivo = conn.execute(
-                    "SELECT MAX(fecha) FROM historico_partidos"
-                ).fetchone()[0]
+            # Usar siempre MAX(fecha) de predicciones — lo que el workflow generó más recientemente
+            fecha_objetivo = conn.execute(
+                "SELECT MAX(fecha) FROM predicciones_historico"
+            ).fetchone()[0]
 
             if not fecha_objetivo:
                 return []
