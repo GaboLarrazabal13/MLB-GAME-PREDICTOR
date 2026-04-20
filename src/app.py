@@ -826,6 +826,14 @@ def renderizar_analisis_detallado_partido(
     resultado_detallado, home_team, away_team, home_pitcher, away_pitcher
 ):
     """Renderiza en UI el mismo análisis detallado usado en Predicción Manual."""
+    if resultado_detallado.get("modo_degradado"):
+        st.warning(
+            resultado_detallado.get(
+                "mensaje",
+                "Analisis rapido activado: la fuente externa no respondio a tiempo.",
+            )
+        )
+
     ganador = resultado_detallado.get("ganador", home_team)
     prob_home = normalizar_probabilidad(resultado_detallado.get("prob_home", 0.5))
     prob_away = normalizar_probabilidad(resultado_detallado.get("prob_away", 0.5))

@@ -776,14 +776,87 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             asyncio.to_thread(_crear_prediccion_detallada_sync, request),
             timeout=DETAILED_ANALYSIS_TIMEOUT_SECONDS,
         )
-    except TimeoutError as exc:
-        raise HTTPException(
-            status_code=504,
-            detail=(
-                "El analisis detallado excedio el tiempo limite del servidor. "
-                "Intenta nuevamente en unos segundos."
+    except TimeoutError:
+        # Fallback: devolver analisis rapido sin scraping pesado para no dejar
+        # al frontend sin respuesta cuando Baseball-Reference esta lento/bloquea.
+        home_code = get_team_code(request.home_team)
+        away_code = get_team_code(request.away_team)
+
+        if not home_code or not away_code:
+            raise HTTPException(
+                status_code=504,
+                detail=(
+                    "El analisis detallado excedio el tiempo limite del servidor. "
+                    "Intenta nuevamente en unos segundos."
+                ),
+            )
+
+        try:
+            resultado = await asyncio.to_thread(
+                predecir_juego,
+                home_team=home_code,
+                away_team=away_code,
+                home_pitcher=request.home_pitcher,
+                away_pitcher=request.away_pitcher,
+                year=request.year,
+                modo_auto=True,
+                guardar_db=False,
+                hacer_scraping=False,
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=504,
+                detail=(
+                    "El analisis detallado excedio el tiempo limite del servidor y "
+                    "el modo rapido no pudo completarse."
+                ),
+            ) from exc
+
+        if not resultado:
+            raise HTTPException(
+                status_code=504,
+                detail=(
+                    "El analisis detallado excedio el tiempo limite del servidor. "
+                    "Intenta nuevamente en unos segundos."
+                ),
+            )
+
+        prob_home_decimal = (
+            resultado["prob_home"] / 100.0
+            if resultado["prob_home"] > 1
+            else resultado["prob_home"]
+        )
+        prob_away_decimal = (
+            resultado["prob_away"] / 100.0
+            if resultado["prob_away"] > 1
+            else resultado["prob_away"]
+        )
+
+        payload = {
+            "ganador": resultado["prediccion"],
+            "prob_home": prob_home_decimal,
+            "prob_away": prob_away_decimal,
+            "confianza": max(prob_home_decimal, prob_away_decimal),
+            "year_solicitado": request.year,
+            "year_usado_home": request.year,
+            "year_usado_away": request.year,
+            "razon_fallback_home": None,
+            "razon_fallback_away": None,
+            "ip_home": 0,
+            "ip_away": 0,
+            "features_usadas": {},
+            "stats_detalladas": {
+                "home_pitcher": {},
+                "away_pitcher": {},
+                "home_batters": [],
+                "away_batters": [],
+            },
+            "modo_degradado": True,
+            "mensaje": (
+                "Se devolvio analisis rapido porque el scraping detallado excedio "
+                "el tiempo limite."
             ),
-        ) from exc
+        }
 
     _set_cached_detailed_prediction(cache_key, payload)
     return payload
