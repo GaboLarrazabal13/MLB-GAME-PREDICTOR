@@ -164,9 +164,20 @@ def obtener_html(url, max_retries=None):
 
 def obtener_fechas_ejecucion():
     """Obtiene fechas formateadas para scraping"""
-    # Baseball-Reference publica "today" con horario del este (MLB).
-    # Usar ET evita desfasar fecha al correr en servidores UTC.
-    ahora = datetime.now(ZoneInfo("America/New_York"))
+    target_date = os.getenv("TARGET_DATE", "").strip()
+
+    if target_date:
+        try:
+            ahora = datetime.strptime(target_date, "%Y-%m-%d")
+        except ValueError:
+            print(
+                f"⚠️ TARGET_DATE inválida '{target_date}'. Se usará fecha actual en ET."
+            )
+            ahora = datetime.now(ZoneInfo("America/New_York"))
+    else:
+        # Baseball-Reference publica "today" con horario del este (MLB).
+        # Usar ET evita desfasar fecha al correr en servidores UTC.
+        ahora = datetime.now(ZoneInfo("America/New_York"))
 
     # Formato para Baseball-Reference (ej: "Monday, April 1, 2024")
     fecha_bref = ahora.strftime(
