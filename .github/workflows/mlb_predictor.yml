@@ -2,10 +2,12 @@ name: MLB Predictor Automation
 
 on:
   schedule:
-    # Referencia operativa en horario USA (America/New_York)
-    # Scraping principal: ~12:30 ET en horario de verano (~11:30 ET en invierno)
+    # Horarios en UTC. Referencia operativa en ET (America/New_York).
+    # Update de resultados reales (día siguiente)
+    - cron: '30 16 * * *'
+    # Scraping principal
     - cron: '30 17 * * *'
-    # Reentrenamiento una hora después: ~13:30 ET en verano (~12:30 ET en invierno)
+    # Validación post-scrape / tareas posteriores
     - cron: '30 18 * * *'
   
   workflow_dispatch:  # Permite ejecución manual
@@ -439,7 +441,7 @@ jobs:
           done
 
   # ============================================================================
-  # JOB 1: SCRAPING DIARIO (10 AM y 1 PM)
+  # JOB 1: SCRAPING DIARIO (schedule principal + manual)
   # ============================================================================
   scrape_daily_games:
     runs-on: ubuntu-latest
@@ -670,7 +672,7 @@ jobs:
           exit 1
   
   # ============================================================================
-  # JOB 2: ACTUALIZACIÓN DE RESULTADOS (5 AM del día siguiente)
+  # JOB 2: ACTUALIZACIÓN DE RESULTADOS (schedule + manual)
   # ============================================================================
   update_real_results:
     runs-on: ubuntu-latest
@@ -739,7 +741,7 @@ jobs:
         continue-on-error: true
   
   # ============================================================================
-  # JOB 3: REENTRENAMIENTO INCREMENTAL (6 AM diario)
+  # JOB 3: REENTRENAMIENTO INCREMENTAL (schedule + manual)
   # ============================================================================
   incremental_training:
     runs-on: ubuntu-latest

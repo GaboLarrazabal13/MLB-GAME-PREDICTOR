@@ -58,6 +58,9 @@ DETAILED_ANALYSIS_TIMEOUT_SECONDS = int(
     os.getenv("DETAILED_ANALYSIS_TIMEOUT_SECONDS", "75")
 )
 DETAILED_CACHE_TTL_SECONDS = int(os.getenv("DETAILED_CACHE_TTL_SECONDS", "3600"))
+DETAILED_SCRAPING_MAX_RETRIES = int(
+    os.getenv("DETAILED_SCRAPING_MAX_RETRIES", "1")
+)
 _rate_limit_store: dict[str, deque[float]] = defaultdict(deque)
 _rate_limit_lock = Lock()
 _detailed_prediction_cache: dict[tuple[str, str, str, str, int], tuple[float, dict]] = {}
@@ -99,6 +102,90 @@ def _get_cached_detailed_prediction(cache_key):
 def _set_cached_detailed_prediction(cache_key, payload):
     with _detailed_prediction_cache_lock:
         _detailed_prediction_cache[cache_key] = (time.time(), payload)
+
+
+def _crear_payload_degradado_rapido(request: "PrediccionRequest", motivo: str | None = None):
+    home_code = get_team_code(request.home_team)
+    away_code = get_team_code(request.away_team)
+
+    if not home_code or not away_code:
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                "El analisis detallado no pudo completarse y el modo rapido "
+                "no se pudo inicializar."
+            ),
+        )
+
+    try:
+        resultado = predecir_juego(
+            home_team=home_code,
+            away_team=away_code,
+            home_pitcher=request.home_pitcher,
+            away_pitcher=request.away_pitcher,
+            year=request.year,
+            modo_auto=True,
+            guardar_db=False,
+            hacer_scraping=False,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                "El analisis detallado no pudo completarse y el modo rapido "
+                "tambien fallo."
+            ),
+        ) from exc
+
+    if not resultado:
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                "El analisis detallado no pudo completarse y el modo rapido "
+                "no devolvio resultado."
+            ),
+        )
+
+    prob_home_decimal = (
+        resultado["prob_home"] / 100.0
+        if resultado["prob_home"] > 1
+        else resultado["prob_home"]
+    )
+    prob_away_decimal = (
+        resultado["prob_away"] / 100.0
+        if resultado["prob_away"] > 1
+        else resultado["prob_away"]
+    )
+
+    mensaje_base = (
+        "Se devolvio analisis rapido porque el scraping detallado no estuvo "
+        "disponible dentro de los limites de la solicitud."
+    )
+    if motivo:
+        mensaje_base = f"{mensaje_base} Motivo: {motivo}"
+
+    return {
+        "ganador": resultado["prediccion"],
+        "prob_home": prob_home_decimal,
+        "prob_away": prob_away_decimal,
+        "confianza": max(prob_home_decimal, prob_away_decimal),
+        "year_solicitado": request.year,
+        "year_usado_home": request.year,
+        "year_usado_away": request.year,
+        "razon_fallback_home": None,
+        "razon_fallback_away": None,
+        "ip_home": 0,
+        "ip_away": 0,
+        "features_usadas": {},
+        "stats_detalladas": {
+            "home_pitcher": {},
+            "away_pitcher": {},
+            "home_batters": [],
+            "away_batters": [],
+        },
+        "modo_degradado": True,
+        "mensaje": mensaje_base,
+    }
 
 
 @app.middleware("http")
@@ -506,6 +593,7 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
             year=request.year,
             modo_auto=True,
             guardar_db=False,
+            hacer_scraping=False,
         )
 
         if not resultado:
@@ -567,11 +655,21 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                 try:
                     if pitcher_link and str(pitcher_link).strip():
                         stats = obtener_stats_pitcher_por_link(
-                            pitcher_link, year, session_cache
+                            pitcher_link,
+                            year,
+                            session_cache,
+                            max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
+                            fast_fail_403=True,
                         )
 
                     if not stats:
-                        bat, pit = scrape_player_stats(team_code, year, session_cache)
+                        bat, pit = scrape_player_stats(
+                            team_code,
+                            year,
+                            session_cache,
+                            max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
+                            fast_fail_403=True,
+                        )
                         if pit is None:
                             continue
                         stats = encontrar_lanzador(pit, pitcher_name)
@@ -619,10 +717,18 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
 
         # Re-scrape para el año final que se usará (para bateadores y bullpen)
         bat_home, pit_home = scrape_player_stats(
-            home_code, home_fallback["year_usado"], session_cache
+            home_code,
+            home_fallback["year_usado"],
+            session_cache,
+            max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
+            fast_fail_403=True,
         )
         bat_away, pit_away = scrape_player_stats(
-            away_code, away_fallback["year_usado"], session_cache
+            away_code,
+            away_fallback["year_usado"],
+            session_cache,
+            max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
+            fast_fail_403=True,
         )
 
         # Extraer Top 3 bateadores
@@ -777,86 +883,28 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             timeout=DETAILED_ANALYSIS_TIMEOUT_SECONDS,
         )
     except TimeoutError:
-        # Fallback: devolver analisis rapido sin scraping pesado para no dejar
-        # al frontend sin respuesta cuando Baseball-Reference esta lento/bloquea.
-        home_code = get_team_code(request.home_team)
-        away_code = get_team_code(request.away_team)
-
-        if not home_code or not away_code:
-            raise HTTPException(
-                status_code=504,
-                detail=(
-                    "El analisis detallado excedio el tiempo limite del servidor. "
-                    "Intenta nuevamente en unos segundos."
-                ),
-            ) from None
-
-        try:
-            resultado = await asyncio.to_thread(
-                predecir_juego,
-                home_team=home_code,
-                away_team=away_code,
-                home_pitcher=request.home_pitcher,
-                away_pitcher=request.away_pitcher,
-                year=request.year,
-                modo_auto=True,
-                guardar_db=False,
-                hacer_scraping=False,
-            )
-        except Exception as exc:
-            raise HTTPException(
-                status_code=504,
-                detail=(
-                    "El analisis detallado excedio el tiempo limite del servidor y "
-                    "el modo rapido no pudo completarse."
-                ),
-            ) from exc
-
-        if not resultado:
-            raise HTTPException(
-                status_code=504,
-                detail=(
-                    "El analisis detallado excedio el tiempo limite del servidor. "
-                    "Intenta nuevamente en unos segundos."
-                ),
-            ) from None
-
-        prob_home_decimal = (
-            resultado["prob_home"] / 100.0
-            if resultado["prob_home"] > 1
-            else resultado["prob_home"]
+        payload = await asyncio.to_thread(
+            _crear_payload_degradado_rapido,
+            request,
+            "timeout en analisis detallado",
         )
-        prob_away_decimal = (
-            resultado["prob_away"] / 100.0
-            if resultado["prob_away"] > 1
-            else resultado["prob_away"]
-        )
+    except HTTPException as exc:
+        # Si hubo error funcional de request, se propaga tal cual.
+        if exc.status_code == 400:
+            raise
 
-        payload = {
-            "ganador": resultado["prediccion"],
-            "prob_home": prob_home_decimal,
-            "prob_away": prob_away_decimal,
-            "confianza": max(prob_home_decimal, prob_away_decimal),
-            "year_solicitado": request.year,
-            "year_usado_home": request.year,
-            "year_usado_away": request.year,
-            "razon_fallback_home": None,
-            "razon_fallback_away": None,
-            "ip_home": 0,
-            "ip_away": 0,
-            "features_usadas": {},
-            "stats_detalladas": {
-                "home_pitcher": {},
-                "away_pitcher": {},
-                "home_batters": [],
-                "away_batters": [],
-            },
-            "modo_degradado": True,
-            "mensaje": (
-                "Se devolvio analisis rapido porque el scraping detallado excedio "
-                "el tiempo limite."
-            ),
-        }
+        # Para errores de scraping/datos del detallado, responder en modo degradado.
+        payload = await asyncio.to_thread(
+            _crear_payload_degradado_rapido,
+            request,
+            f"{exc.status_code}: {exc.detail}",
+        )
+    except Exception:
+        payload = await asyncio.to_thread(
+            _crear_payload_degradado_rapido,
+            request,
+            "error inesperado en analisis detallado",
+        )
 
     _set_cached_detailed_prediction(cache_key, payload)
     return payload

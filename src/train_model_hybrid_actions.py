@@ -94,7 +94,12 @@ def alinear_features_entrenamiento(X_new, model_actual=None):
 # ============================================================================
 
 
-def obtener_html(url, max_retries=None):
+def obtener_html(
+    url,
+    max_retries=None,
+    rate_limit_wait_override=None,
+    fast_fail_403=False,
+):
     """Obtiene HTML con reintentos y backoff exponencial"""
     if max_retries is None:
         max_retries = SCRAPING_CONFIG["max_retries"]
@@ -130,7 +135,15 @@ def obtener_html(url, max_retries=None):
                 print(f"       Rate limit (429) detectado, esperando {wait_time}s...")
                 time.sleep(wait_time)
             elif response.status_code == 403:
-                wait_time = SCRAPING_CONFIG["rate_limit_wait"]
+                if fast_fail_403:
+                    print("       Error 403 (Forbidden) detectado, fast-fail activado.")
+                    return None
+
+                wait_time = (
+                    rate_limit_wait_override
+                    if rate_limit_wait_override is not None
+                    else SCRAPING_CONFIG["rate_limit_wait"]
+                )
                 print(f"       Error 403 (Forbidden), esperando {wait_time}s...")
                 time.sleep(wait_time)
             else:
@@ -165,7 +178,13 @@ def limpiar_dataframe(df):
     return df.reset_index(drop=True)
 
 
-def scrape_player_stats(team_code, year, session_cache=None):
+def scrape_player_stats(
+    team_code,
+    year,
+    session_cache=None,
+    max_retries_override=None,
+    fast_fail_403=False,
+):
     """Scrapea bateo y pitcheo de un equipo con caché de sesión"""
     team_code = str(team_code).upper().strip()
 
@@ -177,16 +196,28 @@ def scrape_player_stats(team_code, year, session_cache=None):
     url = f"https://www.baseball-reference.com/teams/{team_code}/{year}.shtml"
     if team_code == "OAK":
         # Fallback solicitado: si OAK falla 2 veces, intentar ATH.
-        html = obtener_html(url, max_retries=2)
+        html = obtener_html(
+            url,
+            max_retries=max_retries_override if max_retries_override is not None else 2,
+            fast_fail_403=fast_fail_403,
+        )
         if not html:
             alt_code = "ATH"
             alt_url = f"https://www.baseball-reference.com/teams/{alt_code}/{year}.shtml"
             print("       OAK sin respuesta tras 2 intentos, probando ATH...")
-            html = obtener_html(alt_url)
+            html = obtener_html(
+                alt_url,
+                max_retries=max_retries_override,
+                fast_fail_403=fast_fail_403,
+            )
             if html:
                 team_code = alt_code
     else:
-        html = obtener_html(url)
+        html = obtener_html(
+            url,
+            max_retries=max_retries_override,
+            fast_fail_403=fast_fail_403,
+        )
 
     if not html:
         return None, None
@@ -217,7 +248,13 @@ def scrape_player_stats(team_code, year, session_cache=None):
         return None, None
 
 
-def obtener_stats_pitcher_por_link(pitcher_link, target_year=None, session_cache=None):
+def obtener_stats_pitcher_por_link(
+    pitcher_link,
+    target_year=None,
+    session_cache=None,
+    max_retries_override=None,
+    fast_fail_403=False,
+):
     """
     Obtiene stats de un pitcher directamente por su link individual.
     Usa la tabla histórica del jugador para buscar una temporada específica.
@@ -237,7 +274,11 @@ def obtener_stats_pitcher_por_link(pitcher_link, target_year=None, session_cache
         if pitcher_link.startswith("/"):
             url = f"https://www.baseball-reference.com{pitcher_link}"
 
-        html = obtener_html(url)
+        html = obtener_html(
+            url,
+            max_retries=max_retries_override,
+            fast_fail_403=fast_fail_403,
+        )
 
         if not html:
             print(f"       ⚠️ No se pudo obtener HTML del pitcher: {pitcher_link}")
