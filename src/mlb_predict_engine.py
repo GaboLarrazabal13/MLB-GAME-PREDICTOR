@@ -320,8 +320,9 @@ def predecir_juego(
             "prediccion": ganador_code,
             "confianza": conf_label,
             "tipo": "AUTOMATICO" if modo_auto else "MANUAL",
-            "detalles": detalles,
         }
+
+        resultado_data = {**db_data, "detalles": detalles}
 
         if guardar_db:
             with sqlite3.connect(DB_PATH) as conn:
@@ -341,7 +342,7 @@ def predecir_juego(
                     "predicciones_historico", conn, if_exists="append", index=False
                 )
 
-        return db_data
+            return resultado_data
 
     except Exception as e:
         print(f"❌ Error crítico en motor: {e}")
