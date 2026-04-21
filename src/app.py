@@ -790,7 +790,6 @@ def crear_gauge_confianza(confianza):
     return fig
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
 def obtener_prediccion_detallada_partido(
     home_team, away_team, home_pitcher, away_pitcher, year
 ):

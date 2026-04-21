@@ -59,8 +59,11 @@ DETAILED_ANALYSIS_TIMEOUT_SECONDS = int(
 )
 DETAILED_CACHE_TTL_SECONDS = int(os.getenv("DETAILED_CACHE_TTL_SECONDS", "3600"))
 DETAILED_SCRAPING_MAX_RETRIES = int(
-    os.getenv("DETAILED_SCRAPING_MAX_RETRIES", "1")
+    os.getenv("DETAILED_SCRAPING_MAX_RETRIES", "2")
 )
+DETAILED_FAST_FAIL_403 = os.getenv(
+    "DETAILED_FAST_FAIL_403", "0"
+).strip().lower() in {"1", "true", "yes", "on"}
 _rate_limit_store: dict[str, deque[float]] = defaultdict(deque)
 _rate_limit_lock = Lock()
 _detailed_prediction_cache: dict[tuple[str, str, str, str, int], tuple[float, dict]] = {}
@@ -126,7 +129,7 @@ def _crear_payload_degradado_rapido(request: "PrediccionRequest", motivo: str | 
             year=request.year,
             modo_auto=True,
             guardar_db=False,
-            hacer_scraping=False,
+            hacer_scraping=True,
         )
     except Exception as exc:
         raise HTTPException(
@@ -659,7 +662,7 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                             year,
                             session_cache,
                             max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
-                            fast_fail_403=True,
+                            fast_fail_403=DETAILED_FAST_FAIL_403,
                         )
 
                     if not stats:
@@ -668,7 +671,7 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                             year,
                             session_cache,
                             max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
-                            fast_fail_403=True,
+                            fast_fail_403=DETAILED_FAST_FAIL_403,
                         )
                         if pit is None:
                             continue
@@ -721,14 +724,14 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
             home_fallback["year_usado"],
             session_cache,
             max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
-            fast_fail_403=True,
+            fast_fail_403=DETAILED_FAST_FAIL_403,
         )
         bat_away, pit_away = scrape_player_stats(
             away_code,
             away_fallback["year_usado"],
             session_cache,
             max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
-            fast_fail_403=True,
+            fast_fail_403=DETAILED_FAST_FAIL_403,
         )
 
         # Extraer Top 3 bateadores
@@ -888,23 +891,13 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
             request,
             "timeout en analisis detallado",
         )
-    except HTTPException as exc:
-        # Si hubo error funcional de request, se propaga tal cual.
-        if exc.status_code == 400:
-            raise
-
-        # Para errores de scraping/datos del detallado, responder en modo degradado.
-        payload = await asyncio.to_thread(
-            _crear_payload_degradado_rapido,
-            request,
-            f"{exc.status_code}: {exc.detail}",
-        )
-    except Exception:
-        payload = await asyncio.to_thread(
-            _crear_payload_degradado_rapido,
-            request,
-            "error inesperado en analisis detallado",
-        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error interno en analisis detallado: {str(exc)}",
+        ) from exc
 
     _set_cached_detailed_prediction(cache_key, payload)
     return payload
