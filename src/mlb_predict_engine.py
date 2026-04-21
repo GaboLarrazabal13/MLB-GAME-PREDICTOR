@@ -263,6 +263,52 @@ def predecir_juego(
             print("=" * 75 + "\n")
 
         # 14. Guardar predicción en base de datos
+        def _formatear_top_bateadores(feature_key):
+            bateadores = []
+            for b in features_dict.get(feature_key, []) or []:
+                if not isinstance(b, dict):
+                    continue
+                bateadores.append(
+                    {
+                        "nombre": b.get("n", "N/A"),
+                        "BA": float(b.get("ba", 0) or 0),
+                        "OBP": float(b.get("obp", 0) or 0),
+                        "SLG": float(b.get("slg", 0) or 0),
+                        "OPS": float(b.get("ops", 0) or 0),
+                        "HR": int(float(b.get("hr", 0) or 0)),
+                        "RBI": int(float(b.get("rbi", 0) or 0)),
+                    }
+                )
+            return bateadores
+
+        detalles = {
+            "year_usado": int(year),
+            "features_usadas": features_dict,
+            "stats_agregadas": stats_agregadas,
+            "stats_detalladas": {
+                "home_pitcher": {
+                    "nombre": features_dict.get("home_pitcher_name_real", home_pitcher),
+                    "ERA": float(features_dict.get("home_starter_ERA", 0) or 0),
+                    "WHIP": float(features_dict.get("home_starter_WHIP", 0) or 0),
+                    "H9": float(features_dict.get("home_starter_H9", 0) or 0),
+                    "SO9": float(features_dict.get("home_starter_SO9", 0) or 0),
+                    "W": int(float(features_dict.get("home_starter_W", 0) or 0)),
+                    "L": int(float(features_dict.get("home_starter_L", 0) or 0)),
+                },
+                "away_pitcher": {
+                    "nombre": features_dict.get("away_pitcher_name_real", away_pitcher),
+                    "ERA": float(features_dict.get("away_starter_ERA", 0) or 0),
+                    "WHIP": float(features_dict.get("away_starter_WHIP", 0) or 0),
+                    "H9": float(features_dict.get("away_starter_H9", 0) or 0),
+                    "SO9": float(features_dict.get("away_starter_SO9", 0) or 0),
+                    "W": int(float(features_dict.get("away_starter_W", 0) or 0)),
+                    "L": int(float(features_dict.get("away_starter_L", 0) or 0)),
+                },
+                "home_batters": _formatear_top_bateadores("home_top_3_batters_details"),
+                "away_batters": _formatear_top_bateadores("away_top_3_batters_details"),
+            },
+        }
+
         db_data = {
             "fecha": row_data["fecha"],
             "home_team": home_team,
@@ -274,6 +320,7 @@ def predecir_juego(
             "prediccion": ganador_code,
             "confianza": conf_label,
             "tipo": "AUTOMATICO" if modo_auto else "MANUAL",
+            "detalles": detalles,
         }
 
         if guardar_db:

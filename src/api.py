@@ -55,15 +55,9 @@ RATE_LIMIT_PREDICT_MAX_REQUESTS = int(
     os.getenv("RATE_LIMIT_PREDICT_MAX_REQUESTS", "30")
 )
 DETAILED_ANALYSIS_TIMEOUT_SECONDS = int(
-    os.getenv("DETAILED_ANALYSIS_TIMEOUT_SECONDS", "75")
+    os.getenv("DETAILED_ANALYSIS_TIMEOUT_SECONDS", "120")
 )
 DETAILED_CACHE_TTL_SECONDS = int(os.getenv("DETAILED_CACHE_TTL_SECONDS", "3600"))
-DETAILED_SCRAPING_MAX_RETRIES = int(
-    os.getenv("DETAILED_SCRAPING_MAX_RETRIES", "2")
-)
-DETAILED_FAST_FAIL_403 = os.getenv(
-    "DETAILED_FAST_FAIL_403", "0"
-).strip().lower() in {"1", "true", "yes", "on"}
 _rate_limit_store: dict[str, deque[float]] = defaultdict(deque)
 _rate_limit_lock = Lock()
 _detailed_prediction_cache: dict[tuple[str, str, str, str, int], tuple[float, dict]] = {}
@@ -126,10 +120,10 @@ def _crear_payload_degradado_rapido(request: "PrediccionRequest", motivo: str | 
             away_team=away_code,
             home_pitcher=request.home_pitcher,
             away_pitcher=request.away_pitcher,
-            year=request.year,
+            year=int(request.year or 2026),
             modo_auto=True,
             guardar_db=False,
-            hacer_scraping=True,
+            hacer_scraping=False,
         )
     except Exception as exc:
         raise HTTPException(
@@ -524,7 +518,7 @@ async def crear_prediccion_manual(request: PrediccionRequest):
             away_team=away_code,
             home_pitcher=request.home_pitcher,
             away_pitcher=request.away_pitcher,
-            year=request.year,
+            year=int(request.year or 2026),
             modo_auto=True,
         )
 
@@ -555,7 +549,7 @@ async def crear_prediccion_manual(request: PrediccionRequest):
 
 def _crear_prediccion_detallada_sync(request: PrediccionRequest):
     """
-    VERSIÓN CORREGIDA: Crea predicción detallada con stats completas
+    Crea predicción detallada reutilizando el mismo pipeline de Predicción Manual.
     """
     try:
         # Validar códigos de equipos
@@ -576,27 +570,16 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                 status_code=400, detail="Los equipos no pueden ser iguales"
             )
 
-        # Importar funciones de scraping
-        from mlb_feature_engineering import calcular_super_features
-        from train_model_hybrid_actions import (
-            calcular_stats_equipo,
-            encontrar_lanzador,
-            encontrar_mejor_bateador,
-            extraer_top_relevistas,
-            obtener_stats_pitcher_por_link,
-            scrape_player_stats,
-        )
-
-        # Realizar predicción básica primero (sin guardar en DB para no corromper las predicciones diarias)
+        # Reusar el mismo motor de Predicción Manual para evitar divergencias de lógica.
         resultado = predecir_juego(
             home_team=home_code,
             away_team=away_code,
             home_pitcher=request.home_pitcher,
             away_pitcher=request.away_pitcher,
-            year=request.year,
+            year=int(request.year or 2026),
             modo_auto=True,
             guardar_db=False,
-            hacer_scraping=False,
+            hacer_scraping=True,
         )
 
         if not resultado:
@@ -604,210 +587,15 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                 status_code=500, detail="No se pudo completar la predicción"
             )
 
-        # Scraping para estadísticas detalladas
-        session_cache = {}
-
-        home_pitcher_link = None
-        away_pitcher_link = None
-        try:
-            with sqlite3.connect(DB_PATH) as conn:
-                row = conn.execute(
-                    """
-                    SELECT home_pitcher_link, away_pitcher_link
-                    FROM historico_partidos
-                    WHERE home_team = ?
-                      AND away_team = ?
-                      AND home_pitcher = ?
-                      AND away_pitcher = ?
-                    ORDER BY fecha DESC
-                    LIMIT 1
-                    """,
-                    (
-                        request.home_team,
-                        request.away_team,
-                        request.home_pitcher,
-                        request.away_pitcher,
-                    ),
-                ).fetchone()
-            if row:
-                home_pitcher_link, away_pitcher_link = row
-        except Exception:
-            home_pitcher_link = None
-            away_pitcher_link = None
-
-        # Función auxiliar para obtener stats de lanzador con fallback de años
-        def obtener_pitcher_con_fallback(
-            pitcher_name, pitcher_link, team_code, request_year
-        ):
-            """
-            Intenta obtener stats del pitcher:
-            1. Por link directo (si está disponible)
-            2. Fallback por nombre en años: 2026, 2025, 2024
-            """
-            fallback_info = {
-                "year_usado": None,
-                "ip_detectados": 0,
-                "razon_fallback": None,
-                "stats": None,
-            }
-
-            razon_previa = None
-
-            for year in [request_year, 2025, 2024]:
-                stats = None
-                try:
-                    if pitcher_link and str(pitcher_link).strip():
-                        stats = obtener_stats_pitcher_por_link(
-                            pitcher_link,
-                            year,
-                            session_cache,
-                            max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
-                            fast_fail_403=DETAILED_FAST_FAIL_403,
-                        )
-
-                    if not stats:
-                        bat, pit = scrape_player_stats(
-                            team_code,
-                            year,
-                            session_cache,
-                            max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
-                            fast_fail_403=DETAILED_FAST_FAIL_403,
-                        )
-                        if pit is None:
-                            continue
-                        stats = encontrar_lanzador(pit, pitcher_name)
-
-                    if stats:
-                        ip = stats.get("IP", 0)
-
-                        if year == request_year and ip <= 15:
-                            razon_previa = f"Año {request_year}: {ip} IP insuficientes"
-                            continue
-
-                        fallback_info["stats"] = stats
-                        fallback_info["year_usado"] = year
-                        fallback_info["ip_detectados"] = ip
-
-                        if year != request_year:
-                            fallback_info["razon_fallback"] = (
-                                razon_previa
-                                or f"Pitcher no encontrado en {request_year}"
-                            )
-
-                        return fallback_info
-                except Exception:
-                    continue
-
-            return fallback_info
-
-        # Obtener stats para ambos lanzadores con fallback
-        home_fallback = obtener_pitcher_con_fallback(
-            request.home_pitcher, home_pitcher_link, home_code, request.year
-        )
-        away_fallback = obtener_pitcher_con_fallback(
-            request.away_pitcher, away_pitcher_link, away_code, request.year
-        )
-
-        home_pitcher_stats = home_fallback["stats"]
-        away_pitcher_stats = away_fallback["stats"]
-
-        # Validar que se encontraron los lanzadores
-        if not home_pitcher_stats or not away_pitcher_stats:
-            raise HTTPException(
-                status_code=404,
-                detail="No se encontraron uno o ambos lanzadores en ningún año disponible.",
-            )
-
-        # Re-scrape para el año final que se usará (para bateadores y bullpen)
-        bat_home, pit_home = scrape_player_stats(
-            home_code,
-            home_fallback["year_usado"],
-            session_cache,
-            max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
-            fast_fail_403=DETAILED_FAST_FAIL_403,
-        )
-        bat_away, pit_away = scrape_player_stats(
-            away_code,
-            away_fallback["year_usado"],
-            session_cache,
-            max_retries_override=DETAILED_SCRAPING_MAX_RETRIES,
-            fast_fail_403=DETAILED_FAST_FAIL_403,
-        )
-
-        # Extraer Top 3 bateadores
-        home_batters_stats = encontrar_mejor_bateador(bat_home)
-        away_batters_stats = encontrar_mejor_bateador(bat_away)
-
-        # Extraer stats de bullpen
-        home_bullpen = extraer_top_relevistas(pit_home)
-        away_bullpen = extraer_top_relevistas(pit_away)
-
-        # Calcular stats generales de equipos
-        stats_home = calcular_stats_equipo(bat_home, pit_home)
-        stats_away = calcular_stats_equipo(bat_away, pit_away)
-
-        # Construir features para super features
-        features_dict = {
-            "home_team_OPS": stats_home.get("team_OPS_mean", 0.75),
-            "away_team_OPS": stats_away.get("team_OPS_mean", 0.75),
-            "home_starter_ERA": home_pitcher_stats["ERA"],
-            "away_starter_ERA": away_pitcher_stats["ERA"],
-            "home_starter_WHIP": home_pitcher_stats["WHIP"],
-            "away_starter_WHIP": away_pitcher_stats["WHIP"],
-            "home_best_OPS": home_batters_stats["best_bat_OPS"]
-            if home_batters_stats
-            else 0.85,
-            "away_best_OPS": away_batters_stats["best_bat_OPS"]
-            if away_batters_stats
-            else 0.85,
-            "home_bullpen_WHIP": home_bullpen["bullpen_WHIP_mean"]
-            if home_bullpen
-            else 1.3,
-            "away_bullpen_WHIP": away_bullpen["bullpen_WHIP_mean"]
-            if away_bullpen
-            else 1.3,
-            "home_bullpen_ERA": home_bullpen["bullpen_ERA_mean"]
-            if home_bullpen
-            else 4.0,
-            "away_bullpen_ERA": away_bullpen["bullpen_ERA_mean"]
-            if away_bullpen
-            else 4.0,
+        detalles = resultado.get("detalles") or {}
+        stats_detalladas = detalles.get("stats_detalladas") or {
+            "home_pitcher": {},
+            "away_pitcher": {},
+            "home_batters": [],
+            "away_batters": [],
         }
-
-        # Calcular super features
-        features_dict = calcular_super_features(features_dict)
-
-        # CORRECCIÓN: Formatear bateadores correctamente
-        home_batters_list = []
-        away_batters_list = []
-
-        if home_batters_stats and "detalles_visuales" in home_batters_stats:
-            for batter in home_batters_stats["detalles_visuales"]:
-                home_batters_list.append(
-                    {
-                        "nombre": batter.get("n", "N/A"),
-                        "BA": batter.get("ba", 0.0),
-                        "OBP": batter.get("obp", 0.0),
-                        "SLG": batter.get("slg", 0.0),
-                        "OPS": batter.get("ops", 0.0),
-                        "HR": int(batter.get("hr", 0)),
-                        "RBI": int(batter.get("rbi", 0)),
-                    }
-                )
-
-        if away_batters_stats and "detalles_visuales" in away_batters_stats:
-            for batter in away_batters_stats["detalles_visuales"]:
-                away_batters_list.append(
-                    {
-                        "nombre": batter.get("n", "N/A"),
-                        "BA": batter.get("ba", 0.0),
-                        "OBP": batter.get("obp", 0.0),
-                        "SLG": batter.get("slg", 0.0),
-                        "OPS": batter.get("ops", 0.0),
-                        "HR": int(batter.get("hr", 0)),
-                        "RBI": int(batter.get("rbi", 0)),
-                    }
-                )
+        features_usadas = detalles.get("features_usadas") or {}
+        year_usado = detalles.get("year_usado", request.year)
 
         # CORRECCIÓN: Calcular confianza correctamente (es una probabilidad 0-1, no porcentaje)
         prob_home_decimal = (
@@ -829,39 +617,14 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
             "prob_away": prob_away_decimal,
             "confianza": confianza_decimal,  # CORREGIDO: valor entre 0-1
             "year_solicitado": request.year,
-            "year_usado_home": home_fallback["year_usado"],
-            "year_usado_away": away_fallback["year_usado"],
-            "razon_fallback_home": home_fallback["razon_fallback"],
-            "razon_fallback_away": away_fallback["razon_fallback"],
-            "ip_home": home_fallback["ip_detectados"],
-            "ip_away": away_fallback["ip_detectados"],
-            "features_usadas": features_dict,
-            "stats_detalladas": {
-                "home_pitcher": {
-                    "nombre": home_pitcher_stats.get(
-                        "nombre_real", request.home_pitcher
-                    ),  # NOMBRE REAL
-                    "ERA": home_pitcher_stats["ERA"],
-                    "WHIP": home_pitcher_stats["WHIP"],
-                    "H9": home_pitcher_stats.get("H9", 0),
-                    "SO9": home_pitcher_stats["SO9"],
-                    "W": int(home_pitcher_stats.get("W", 0)),
-                    "L": int(home_pitcher_stats.get("L", 0)),
-                },
-                "away_pitcher": {
-                    "nombre": away_pitcher_stats.get(
-                        "nombre_real", request.away_pitcher
-                    ),  # NOMBRE REAL
-                    "ERA": away_pitcher_stats["ERA"],
-                    "WHIP": away_pitcher_stats["WHIP"],
-                    "H9": away_pitcher_stats.get("H9", 0),
-                    "SO9": away_pitcher_stats["SO9"],
-                    "W": int(away_pitcher_stats.get("W", 0)),
-                    "L": int(away_pitcher_stats.get("L", 0)),
-                },
-                "home_batters": home_batters_list,  # CORREGIDO: lista formateada
-                "away_batters": away_batters_list,  # CORREGIDO: lista formateada
-            },
+            "year_usado_home": year_usado,
+            "year_usado_away": year_usado,
+            "razon_fallback_home": None,
+            "razon_fallback_away": None,
+            "ip_home": stats_detalladas.get("home_pitcher", {}).get("IP", 0),
+            "ip_away": stats_detalladas.get("away_pitcher", {}).get("IP", 0),
+            "features_usadas": features_usadas,
+            "stats_detalladas": stats_detalladas,
         }
 
     except HTTPException:
