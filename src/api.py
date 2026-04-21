@@ -666,6 +666,82 @@ async def crear_prediccion_detallada(request: PrediccionRequest):
     return payload
 
 
+@app.post("/predict/detailed/debug")
+async def debug_prediccion_detallada(request: PrediccionRequest):
+    """Diagnóstico del análisis detallado con tiempos por subpaso."""
+    home_code = get_team_code(request.home_team)
+    away_code = get_team_code(request.away_team)
+
+    if not home_code:
+        raise HTTPException(
+            status_code=400, detail=f"Equipo local no válido: {request.home_team}"
+        )
+    if not away_code:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Equipo visitante no válido: {request.away_team}",
+        )
+    if home_code == away_code:
+        raise HTTPException(status_code=400, detail="Los equipos no pueden ser iguales")
+
+    started_at = time.perf_counter()
+    resultado = await asyncio.to_thread(
+        predecir_juego,
+        home_team=home_code,
+        away_team=away_code,
+        home_pitcher=request.home_pitcher,
+        away_pitcher=request.away_pitcher,
+        year=int(request.year or 2026),
+        modo_auto=True,
+        guardar_db=False,
+        hacer_scraping=True,
+        debug=True,
+    )
+    elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
+
+    if not resultado:
+        return {
+            "success": False,
+            "elapsed_ms": elapsed_ms,
+            "error": "predecir_juego devolvió None",
+            "debug": {},
+        }
+
+    debug_data = resultado.get("_debug", {}) if isinstance(resultado, dict) else {}
+    detalles = resultado.get("detalles", {}) if isinstance(resultado, dict) else {}
+    stats = detalles.get("stats_detalladas", {}) if isinstance(detalles, dict) else {}
+    features = detalles.get("features_usadas", {}) if isinstance(detalles, dict) else {}
+
+    home_pitcher_stats = stats.get("home_pitcher", {}) if isinstance(stats, dict) else {}
+    away_pitcher_stats = stats.get("away_pitcher", {}) if isinstance(stats, dict) else {}
+    home_batters = stats.get("home_batters", []) if isinstance(stats, dict) else []
+    away_batters = stats.get("away_batters", []) if isinstance(stats, dict) else []
+
+    failed_stage = None
+    for stage in debug_data.get("stages", []):
+        if not stage.get("ok", True):
+            failed_stage = stage
+            break
+
+    return {
+        "success": bool(resultado) and not bool(resultado.get("error")),
+        "elapsed_ms": elapsed_ms,
+        "error": resultado.get("error"),
+        "failed_stage": failed_stage,
+        "summary": {
+            "features_count": len(features) if isinstance(features, dict) else 0,
+            "home_pitcher_has_stats": bool(home_pitcher_stats),
+            "away_pitcher_has_stats": bool(away_pitcher_stats),
+            "home_batters_count": len(home_batters) if isinstance(home_batters, list) else 0,
+            "away_batters_count": len(away_batters) if isinstance(away_batters, list) else 0,
+            "prediccion": resultado.get("prediccion"),
+            "prob_home": resultado.get("prob_home"),
+            "prob_away": resultado.get("prob_away"),
+        },
+        "debug": debug_data,
+    }
+
+
 @app.get("/games/today", response_model=list[PartidoHoy])
 async def obtener_partidos_hoy():
     """Obtiene los partidos de la jornada mas reciente en la base de datos"""

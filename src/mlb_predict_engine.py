@@ -5,6 +5,7 @@ Usa módulos centralizados para evitar duplicación de código
 
 import os
 import sqlite3
+import time
 import warnings
 
 import pandas as pd
@@ -56,6 +57,7 @@ def predecir_juego(
     fecha_partido=None,
     hacer_scraping=True,
     guardar_db=True,
+    debug=False,
 ):
     """
     Predice el resultado de un juego de MLB
@@ -72,23 +74,59 @@ def predecir_juego(
     Returns:
         Dict con resultado de la predicción o None si hay error
     """
+    debug_info = {
+        "enabled": bool(debug),
+        "stages": [],
+        "error": None,
+    }
+
+    def _debug_stage(name, start_ts, ok=True, extra=None):
+        if not debug:
+            return
+        stage = {
+            "name": name,
+            "ok": ok,
+            "elapsed_ms": round((time.perf_counter() - start_ts) * 1000, 2),
+        }
+        if extra is not None:
+            stage["extra"] = extra
+        debug_info["stages"].append(stage)
+
+    total_start = time.perf_counter()
+
     # 1. Validar que existe el modelo
+    stage_start = time.perf_counter()
     if not os.path.exists(MODELO_PATH):
         print(f"❌ Error: No existe el modelo en {MODELO_PATH}")
+        _debug_stage("model_exists", stage_start, ok=False)
+        debug_info["error"] = f"No existe el modelo en {MODELO_PATH}"
+        _debug_stage("total", total_start, ok=False)
+        if debug:
+            return {"error": debug_info["error"], "_debug": debug_info}
         return None
+    _debug_stage("model_exists", stage_start)
 
     # 2. Cargar modelo
     try:
+        stage_start = time.perf_counter()
         model = xgb.Booster()
         model.load_model(MODELO_PATH)
         expected_features = model.feature_names
+        _debug_stage("model_load", stage_start)
     except Exception as e:
         print(f"❌ Error cargando modelo: {e}")
+        _debug_stage("model_load", stage_start, ok=False, extra={"error": str(e)})
+        debug_info["error"] = f"Error cargando modelo: {e}"
+        _debug_stage("total", total_start, ok=False)
+        if debug:
+            return {"error": debug_info["error"], "_debug": debug_info}
         return None
 
     # 3. Normalizar nombres de lanzadores
+    stage_start = time.perf_counter()
     p_home_clean = normalizar_texto(home_pitcher)
     p_away_clean = normalizar_texto(away_pitcher)
+    _debug_stage("normalize_inputs", stage_start)
 
     # 4. Preparar datos del partido
     row_data = {
@@ -104,41 +142,74 @@ def predecir_juego(
 
     try:
         # 5. Cargar histórico de partidos
+        stage_start = time.perf_counter()
         with sqlite3.connect(DB_PATH) as conn:
             try:
                 df_historico = pd.read_sql("SELECT * FROM historico_real", conn)
             except Exception:
                 df_historico = pd.DataFrame()
+        _debug_stage(
+            "load_historical",
+            stage_start,
+            extra={"rows": int(len(df_historico))},
+        )
 
         # 6. Extracción de features híbrida (temporal + scraping)
+        stage_start = time.perf_counter()
         features_dict = extraer_features_hibridas(
             row_data,
             df_historico=df_historico,
             hacer_scraping=hacer_scraping,
             session_cache={},
         )
+        _debug_stage(
+            "extract_features",
+            stage_start,
+            ok=bool(features_dict),
+            extra={"count": int(len(features_dict or {})), "hacer_scraping": bool(hacer_scraping)},
+        )
 
         if not features_dict:
             print("❌ No se pudieron extraer las features necesarias")
+            debug_info["error"] = "No se pudieron extraer las features necesarias"
+            _debug_stage("total", total_start, ok=False)
+            if debug:
+                return {"error": debug_info["error"], "_debug": debug_info}
             return None
 
         # 7. Aplicar super features usando módulo centralizado
+        stage_start = time.perf_counter()
         features_dict = calcular_super_features(features_dict)
+        _debug_stage("super_features", stage_start)
 
         # 8. Validar datos extraídos
+        stage_start = time.perf_counter()
         warnings_data = detectar_outliers(features_dict)
+        _debug_stage(
+            "detect_outliers",
+            stage_start,
+            extra={"warnings": int(len(warnings_data or []))},
+        )
         if warnings_data and not modo_auto:
             print("\n⚠️ Advertencias de datos:")
             for w in warnings_data:
                 print(f"  {w}")
 
         # 9. Preparar DataFrame para predicción
+        stage_start = time.perf_counter()
         X_df = pd.DataFrame([features_dict])
         X_df = X_df.reindex(columns=expected_features, fill_value=0)
+        _debug_stage(
+            "prepare_matrix",
+            stage_start,
+            extra={"feature_columns": int(len(X_df.columns))},
+        )
 
         # 10. Realizar predicción
+        stage_start = time.perf_counter()
         dmatrix = xgb.DMatrix(X_df)
         prob_home = model.predict(dmatrix)[0]
+        _debug_stage("predict", stage_start)
 
         prob_home_pct = round(float(prob_home) * 100, 2)
         prob_away_pct = round(100 - prob_home_pct, 2)
@@ -149,7 +220,9 @@ def predecir_juego(
         ganador_full = get_team_name(ganador_code)
 
         # 12. Calcular estadísticas agregadas para análisis adicional
+        stage_start = time.perf_counter()
         stats_agregadas = calcular_estadisticas_agregadas(features_dict)
+        _debug_stage("aggregate_stats", stage_start)
 
         # 13. OUTPUT VISUAL ENRIQUECIDO
         if not modo_auto:
@@ -281,6 +354,7 @@ def predecir_juego(
                 )
             return bateadores
 
+        stage_start = time.perf_counter()
         detalles = {
             "year_usado": int(year),
             "features_usadas": features_dict,
@@ -308,6 +382,7 @@ def predecir_juego(
                 "away_batters": _formatear_top_bateadores("away_top_3_batters_details"),
             },
         }
+        _debug_stage("assemble_details", stage_start)
 
         db_data = {
             "fecha": row_data["fecha"],
@@ -325,6 +400,7 @@ def predecir_juego(
         resultado_data = {**db_data, "detalles": detalles}
 
         if guardar_db:
+            stage_start = time.perf_counter()
             with sqlite3.connect(DB_PATH) as conn:
                 conn.execute("""CREATE TABLE IF NOT EXISTS predicciones_historico
                                (fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
@@ -341,14 +417,23 @@ def predecir_juego(
                 pd.DataFrame([db_data]).to_sql(
                     "predicciones_historico", conn, if_exists="append", index=False
                 )
+            _debug_stage("db_write", stage_start)
 
-            return resultado_data
+        if debug:
+            _debug_stage("total", total_start)
+            resultado_data["_debug"] = debug_info
+
+        return resultado_data
 
     except Exception as e:
         print(f"❌ Error crítico en motor: {e}")
         import traceback
 
         traceback.print_exc()
+        debug_info["error"] = str(e)
+        _debug_stage("total", total_start, ok=False)
+        if debug:
+            return {"error": str(e), "_debug": debug_info}
         return None
 
 
