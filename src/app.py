@@ -1774,6 +1774,12 @@ elif pagina == "📅 Partidos de Hoy":
                 with st.container():
                     home_logo = get_team_logo_html(partido["home_team"], 50)
                     away_logo = get_team_logo_html(partido["away_team"], 50)
+                    home_pitcher_txt = (partido.get("home_pitcher") or "").strip()
+                    away_pitcher_txt = (partido.get("away_pitcher") or "").strip()
+                    if not home_pitcher_txt or not away_pitcher_txt:
+                        pitcher_line = "Lanzadores por confirmar"
+                    else:
+                        pitcher_line = f"{away_pitcher_txt} vs {home_pitcher_txt}"
 
                     col1, col2 = st.columns([3, 1])
 
@@ -1785,7 +1791,7 @@ elif pagina == "📅 Partidos de Hoy":
                                 {away_logo}{partido["away_team"]} @ {home_logo}{partido["home_team"]}
                             </div>
                             <div style="color: #64748b; margin: 0.5rem 0;">
-                                {partido.get("away_pitcher", "TBD")} vs {partido.get("home_pitcher", "TBD")}
+                                {pitcher_line}
                             </div>
                         </div>
                         """,

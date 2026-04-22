@@ -555,12 +555,59 @@ def ejecutar_pipeline_diario():
 
         total_juegos = len(equipos_hoy)
         for i, (away_team, home_team, preview_link) in enumerate(equipos_hoy, start=1):
+            def registrar_partido_pendiente(
+                motivo,
+                fecha_partido_db,
+                away_pitcher="",
+                home_pitcher="",
+                away_pitcher_link="",
+                home_pitcher_link="",
+                box_url=None,
+            ):
+                year_partido = int(fecha_partido_db[:4])
+                game_id = f"{fecha_partido_db}_{home_team}_{away_team}"
+                data_partidos.append(
+                    {
+                        "game_id": game_id,
+                        "box_score_url": box_url,
+                        "fecha": fecha_partido_db,
+                        "year": year_partido,
+                        "away_team": away_team,
+                        "home_team": home_team,
+                        "away_pitcher": away_pitcher or "",
+                        "home_pitcher": home_pitcher or "",
+                        "away_pitcher_link": away_pitcher_link or "",
+                        "home_pitcher_link": home_pitcher_link or "",
+                        "away_starter_ERA": 0.0,
+                        "away_starter_WHIP": 0.0,
+                        "away_starter_H9": 0.0,
+                        "away_starter_SO9": 0.0,
+                        "away_starter_W": 0,
+                        "away_starter_L": 0,
+                        "home_starter_ERA": 0.0,
+                        "home_starter_WHIP": 0.0,
+                        "home_starter_H9": 0.0,
+                        "home_starter_SO9": 0.0,
+                        "home_starter_W": 0,
+                        "home_starter_L": 0,
+                    }
+                )
+                errores_partidos.append(f"{away_team}@{home_team}:{motivo}")
+                print(
+                    "   ⚠️ Partido guardado como pendiente "
+                    f"({motivo})."
+                )
+
             try:
                 print(f"\n⚾ Procesando: {away_team} @ {home_team}")
 
                 if not preview_link:
                     print("   ⚠️ No se encontró link de preview para este partido")
-                    errores_partidos.append(f"{away_team}@{home_team}:sin_preview")
+                    registrar_partido_pendiente(
+                        "sin_preview",
+                        fecha_db,
+                        box_url=None,
+                    )
                     continue
 
                 # Extraer lanzadores del preview
@@ -578,8 +625,15 @@ def ejecutar_pipeline_diario():
                     print(
                         f"   ⚠️ No se encontraron lanzadores: {away_pitcher} vs {home_pitcher}"
                     )
-                    errores_partidos.append(
-                        f"{away_team}@{home_team}:lanzadores_incompletos"
+                    fecha_partido_db = extraer_fecha_desde_box_url(preview_link, fecha_db)
+                    registrar_partido_pendiente(
+                        "lanzadores_incompletos",
+                        fecha_partido_db,
+                        away_pitcher=away_pitcher or "",
+                        home_pitcher=home_pitcher or "",
+                        away_pitcher_link=away_pitcher_link,
+                        home_pitcher_link=home_pitcher_link,
+                        box_url=preview_link,
                     )
                     continue
 
@@ -645,7 +699,11 @@ def ejecutar_pipeline_diario():
 
             except Exception as e:
                 print(f"  ⚠️ Error en partido {away_team} @ {home_team}: {e}")
-                errores_partidos.append(f"{away_team}@{home_team}:exception")
+                registrar_partido_pendiente(
+                    "exception",
+                    fecha_db,
+                    box_url=preview_link,
+                )
             finally:
                 if espera_entre_partidos > 0 and i < total_juegos:
                     print(
