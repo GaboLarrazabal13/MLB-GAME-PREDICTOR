@@ -11,15 +11,18 @@ Objetivo:
 import os
 import sqlite3
 import time
+from datetime import datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from mlb_config import DB_PATH
 from mlb_daily_scraper import (
+    ejecutar_pipeline_diario,
     encontrar_lanzador,
     extraer_lanzadores_del_preview,
     scrape_player_stats,
 )
-from mlb_predict_engine import predecir_juego
+from mlb_predict_engine import ejecutar_flujo_diario, predecir_juego
 
 MISSING_TOKENS = {
     "",
@@ -57,6 +60,61 @@ def write_outputs(**kwargs: Any) -> None:
 def obtener_fecha_objetivo(conn: sqlite3.Connection) -> str | None:
     row = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()
     return row[0] if row and row[0] else None
+
+
+def obtener_max_fecha(conn: sqlite3.Connection, table: str) -> str | None:
+    row = conn.execute(f"SELECT MAX(fecha) FROM {table}").fetchone()
+    return row[0] if row and row[0] else None
+
+
+def evaluar_estado_fechas(conn: sqlite3.Connection) -> dict[str, Any]:
+    max_games = obtener_max_fecha(conn, "historico_partidos")
+    max_preds = obtener_max_fecha(conn, "predicciones_historico")
+
+    now_et = datetime.now(ZoneInfo("America/New_York"))
+    today_et = now_et.strftime("%Y-%m-%d")
+    yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+    valid_dates = {today_et, yesterday_et}
+
+    stale_games = bool(max_games) and max_games not in valid_dates
+    desync_pred_gt_games = bool(max_preds) and (
+        (not max_games) or (max_preds > max_games)
+    )
+
+    return {
+        "max_games": max_games,
+        "max_preds": max_preds,
+        "today_et": today_et,
+        "yesterday_et": yesterday_et,
+        "stale_games": stale_games,
+        "desync_pred_gt_games": desync_pred_gt_games,
+    }
+
+
+def ejecutar_refuerzo_scrape() -> None:
+    print("[post-scrape] Ejecutando ronda de refuerzo de scraping...")
+
+    prev = {
+        "RUN_SOURCE": os.getenv("RUN_SOURCE"),
+        "SCRAPER_MAX_ATTEMPTS": os.getenv("SCRAPER_MAX_ATTEMPTS"),
+        "SCRAPER_RETRY_WAIT_SECONDS": os.getenv("SCRAPER_RETRY_WAIT_SECONDS"),
+        "SCRAPER_SAVE_PARTIAL_ON_FINAL": os.getenv("SCRAPER_SAVE_PARTIAL_ON_FINAL"),
+    }
+
+    try:
+        os.environ["RUN_SOURCE"] = "post_scrape_validate"
+        os.environ["SCRAPER_MAX_ATTEMPTS"] = "1"
+        os.environ["SCRAPER_RETRY_WAIT_SECONDS"] = "10"
+        os.environ["SCRAPER_SAVE_PARTIAL_ON_FINAL"] = "1"
+
+        ejecutar_pipeline_diario()
+        ejecutar_flujo_diario()
+    finally:
+        for key, value in prev.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 def detectar_anomalias(conn: sqlite3.Connection, fecha: str) -> list[dict[str, Any]]:
@@ -280,7 +338,25 @@ def main() -> int:
         conn.commit()
 
     for intento in range(1, max_intentos + 1):
+        requiere_refuerzo_fecha = False
         with sqlite3.connect(DB_PATH) as conn:
+            estado = evaluar_estado_fechas(conn)
+            print(
+                "[post-scrape] Estado fechas -> "
+                f"max_games={estado['max_games']}, max_preds={estado['max_preds']}, "
+                f"today_et={estado['today_et']}, yesterday_et={estado['yesterday_et']}"
+            )
+
+            if estado["stale_games"] or estado["desync_pred_gt_games"]:
+                print(
+                    "[post-scrape] Detectado desfase de fecha/consistencia. "
+                    "Se intentará ronda extra de scraping."
+                )
+                requiere_refuerzo_fecha = True
+
+            if requiere_refuerzo_fecha:
+                continue
+
             fecha_objetivo = obtener_fecha_objetivo(conn)
             if not fecha_objetivo:
                 print("[post-scrape] No hay historico_partidos para validar. Finaliza en exito.")
@@ -324,7 +400,17 @@ def main() -> int:
                 print("[post-scrape] Recuperacion completada con exito.")
                 return 0
 
+        if requiere_refuerzo_fecha:
+            ejecutar_refuerzo_scrape()
+            if intento < max_intentos:
+                print(
+                    f"[post-scrape] Esperando {wait_seconds}s tras refuerzo de fecha..."
+                )
+                time.sleep(wait_seconds)
+            continue
+
         if intento < max_intentos:
+            ejecutar_refuerzo_scrape()
             print(f"[post-scrape] Esperando {wait_seconds}s antes del siguiente intento...")
             time.sleep(wait_seconds)
 
