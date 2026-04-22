@@ -313,6 +313,13 @@ def refrescar_partido(conn: sqlite3.Connection, partido: dict[str, Any]) -> bool
 def main() -> int:
     max_intentos = int(os.getenv("POST_SCRAPE_MAX_ATTEMPTS", "3"))
     wait_seconds = int(os.getenv("POST_SCRAPE_WAIT_SECONDS", "300"))
+    initial_max_games = ""
+    initial_max_preds = ""
+    final_max_games = ""
+    final_max_preds = ""
+    initial_anomalies = -1
+    final_anomalies = -1
+    total_fixed = 0
 
     print("[post-scrape] Inicio de validacion y recuperacion")
     print(f"[post-scrape] Config -> max_intentos={max_intentos}, wait_seconds={wait_seconds}")
@@ -341,6 +348,9 @@ def main() -> int:
         requiere_refuerzo_fecha = False
         with sqlite3.connect(DB_PATH) as conn:
             estado = evaluar_estado_fechas(conn)
+            if intento == 1:
+                initial_max_games = estado["max_games"] or ""
+                initial_max_preds = estado["max_preds"] or ""
             print(
                 "[post-scrape] Estado fechas -> "
                 f"max_games={estado['max_games']}, max_preds={estado['max_preds']}, "
@@ -364,13 +374,28 @@ def main() -> int:
                 return 0
 
             anomalias = detectar_anomalias(conn, fecha_objetivo)
+            if intento == 1:
+                initial_anomalies = len(anomalias)
             print(
                 f"[post-scrape] Intento {intento}/{max_intentos} -> fecha={fecha_objetivo}, anomalias={len(anomalias)}"
             )
 
             if not anomalias:
+                final_estado = evaluar_estado_fechas(conn)
+                final_max_games = final_estado["max_games"] or ""
+                final_max_preds = final_estado["max_preds"] or ""
+                final_anomalies = 0
                 write_outputs(status="ok", attempts=intento, anomalies=0, fecha=fecha_objetivo)
                 print("[post-scrape] Sin anomalias. Validacion aprobada.")
+                write_outputs(
+                    max_games_before=initial_max_games,
+                    max_preds_before=initial_max_preds,
+                    max_games_after=final_max_games,
+                    max_preds_after=final_max_preds,
+                    anomalies_before=initial_anomalies,
+                    anomalies_after=final_anomalies,
+                    fixed_total=total_fixed,
+                )
                 return 0
 
             fixed = 0
@@ -382,6 +407,7 @@ def main() -> int:
                     print(
                         f"   - ERROR inesperado en {partido.get('away_team')}@{partido.get('home_team')}: {exc}"
                     )
+            total_fixed += fixed
             conn.commit()
 
             pendientes = detectar_anomalias(conn, fecha_objetivo)
@@ -390,6 +416,10 @@ def main() -> int:
             )
 
             if not pendientes:
+                final_estado = evaluar_estado_fechas(conn)
+                final_max_games = final_estado["max_games"] or ""
+                final_max_preds = final_estado["max_preds"] or ""
+                final_anomalies = 0
                 write_outputs(
                     status="ok",
                     attempts=intento,
@@ -398,6 +428,15 @@ def main() -> int:
                     fecha=fecha_objetivo,
                 )
                 print("[post-scrape] Recuperacion completada con exito.")
+                write_outputs(
+                    max_games_before=initial_max_games,
+                    max_preds_before=initial_max_preds,
+                    max_games_after=final_max_games,
+                    max_preds_after=final_max_preds,
+                    anomalies_before=initial_anomalies,
+                    anomalies_after=final_anomalies,
+                    fixed_total=total_fixed,
+                )
                 return 0
 
         if requiere_refuerzo_fecha:
@@ -417,6 +456,10 @@ def main() -> int:
     with sqlite3.connect(DB_PATH) as conn:
         fecha_objetivo = obtener_fecha_objetivo(conn) or ""
         pendientes = detectar_anomalias(conn, fecha_objetivo) if fecha_objetivo else []
+        final_estado = evaluar_estado_fechas(conn)
+        final_max_games = final_estado["max_games"] or ""
+        final_max_preds = final_estado["max_preds"] or ""
+        final_anomalies = len(pendientes)
 
     print(
         f"[post-scrape] FALLO: persisten {len(pendientes)} anomalias tras {max_intentos} intentos."
@@ -426,6 +469,13 @@ def main() -> int:
         attempts=max_intentos,
         anomalies=len(pendientes),
         fecha=fecha_objetivo,
+        max_games_before=initial_max_games,
+        max_preds_before=initial_max_preds,
+        max_games_after=final_max_games,
+        max_preds_after=final_max_preds,
+        anomalies_before=initial_anomalies,
+        anomalies_after=final_anomalies,
+        fixed_total=total_fixed,
     )
     return 1
 
