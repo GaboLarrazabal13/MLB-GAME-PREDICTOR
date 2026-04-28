@@ -36,7 +36,11 @@ def parsear_fecha_schedule_header(header_text):
     if not header_text:
         return None
 
-    texto = " ".join(str(header_text).split())
+    # Limpiar espacios múltiples y saltos de línea
+    texto = " ".join(str(header_text).split()).strip()
+    
+    # Regex flexible para manejar posibles variaciones de espacios
+    # Formato esperado: Day, Month Day, Year (ej: Tuesday, April 28, 2026)
     match = re.match(r"^[A-Za-z]+,\s+([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})$", texto)
     if not match:
         return None
@@ -54,7 +58,10 @@ def iterar_secciones_schedule(soup):
     for h3 in soup.find_all("h3"):
         label = " ".join(h3.stripped_strings)
         header_date = parsear_fecha_schedule_header(label)
-        is_today = bool(h3.find("span", {"id": "today"}))
+        
+        # Identificar si es hoy: por span id="today" O si el label contiene "today"
+        # Bref a veces cambia el span por una clase o ID dinámico
+        is_today = bool(h3.find("span", id=re.compile(r"today", re.I))) or "today" in label.lower()
 
         games = []
         inferred_dates = []

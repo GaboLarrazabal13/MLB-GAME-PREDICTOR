@@ -49,16 +49,26 @@ def get_scraper_session(force_new=False):
                 "desktop": True,
             }
         )
+        # Headers más modernos y completos
         _SCRAPER_SESSION.headers.update(
             {
                 "User-Agent": (
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/123.0.0.0 Safari/537.36"
+                    "Chrome/124.0.0.0 Safari/537.36"
                 ),
-                "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
-                "Referer": "https://www.baseball-reference.com/",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Referer": "https://www.google.com/",
+                "DNT": "1",
                 "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "cross-site",
+                "Sec-Fetch-User": "?1",
+                "Cache-Control": "max-age=0",
             }
         )
     return _SCRAPER_SESSION
@@ -135,15 +145,27 @@ def obtener_html(url, max_retries=None):
             response = scraper.get(url, timeout=SCRAPING_CONFIG["timeout"])
 
             if response.status_code == 200:
+                # Verificar si es una página real o una página de Cloudflare/Bloqueo
+                if "Enable JavaScript and cookies to continue" in response.text or "Just a moment..." in response.text:
+                    print(f"       ⚠️ Detectado reto Cloudflare para {url}. Reintentando...")
+                    get_scraper_session(force_new=True)
+                    time.sleep(10)
+                    continue
+                
                 response.encoding = "utf-8"
                 return response.text
 
             if response.status_code in (403, 429):
-                wait_time = int((2**intento) * 5)
+                wait_time = int((2**intento) * 10) # Aumentado el tiempo base
                 print(
                     f"       Status {response.status_code} para {url}. "
                     f"Esperando {wait_time}s y renovando sesión..."
                 )
+                if response.status_code == 403:
+                    # Log breve del contenido para diagnóstico
+                    snippet = response.text[:200].replace('\n', ' ')
+                    print(f"       Snippet del error: {snippet}")
+
                 get_scraper_session(force_new=True)
                 time.sleep(wait_time)
                 continue
@@ -206,10 +228,17 @@ def extraer_equipos_del_dia(soup, fecha_objetivo_db):
         print("  ⚠️ No se encontró ninguna sección válida en el schedule")
         return equipos_lista
 
+    seccion_date = seccion.get('date')
     print(
         "  📍 Sección seleccionada: "
-        f"{seccion.get('label', 'sin etiqueta')} -> {seccion.get('date', 'sin fecha')}"
+        f"{seccion.get('label', 'sin etiqueta')} -> {seccion_date}"
     )
+    
+    # VALIDACIÓN CRÍTICA: La sección debe coincidir con la fecha objetivo
+    if seccion_date != fecha_objetivo_db:
+        print(f"  ❌ ERROR: La sección encontrada ({seccion_date}) NO coinciden con la fecha objetivo ({fecha_objetivo_db})")
+        print("  Esto indica que Baseball-Reference aún no ha publicado el calendario de hoy o el scraper está viendo una versión antigua.")
+        return []
 
     for game in seccion["games"]:
         try:
