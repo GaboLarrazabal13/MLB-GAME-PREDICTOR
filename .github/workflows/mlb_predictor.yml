@@ -344,14 +344,14 @@ jobs:
           python - <<'PY'
           import os
           import sqlite3
-          from datetime import datetime, timedelta
+          from datetime import datetime
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
           now_et = datetime.now(ZoneInfo("America/New_York"))
           today_et = now_et.strftime("%Y-%m-%d")
-          yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
-          valid_dates = {today_et, yesterday_et}
+          target_date = '${{ github.event.inputs.target_date }}'.strip()
+          expected_date = target_date or today_et
 
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
@@ -361,16 +361,18 @@ jobs:
               bool(max_games)
               and bool(max_preds)
               and max_games == max_preds
-              and max_games in valid_dates
+              and max_games == expected_date
           )
           print(f"today_et={today_et}")
-          print(f"yesterday_et={yesterday_et}")
+          print(f"target_date={target_date}")
+          print(f"expected_date={expected_date}")
           print(f"max_games={max_games}")
           print(f"max_preds={max_preds}")
           print(f"is_ok={is_ok}")
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
               f.write(f"today_et={today_et}\n")
+              f.write(f"expected_date={expected_date}\n")
               f.write(f"max_games={max_games}\n")
               f.write(f"max_preds={max_preds}\n")
               f.write(f"is_ok={'true' if is_ok else 'false'}\n")
@@ -389,14 +391,14 @@ jobs:
           cd src
           python - <<'PY'
           import sqlite3
-          from datetime import datetime, timedelta
+          from datetime import datetime
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
           now_et = datetime.now(ZoneInfo("America/New_York"))
           today_et = now_et.strftime("%Y-%m-%d")
-          yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
-          valid_dates = {today_et, yesterday_et}
+          target_date = '${{ github.event.inputs.target_date }}'.strip()
+          expected_date = target_date or today_et
 
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
@@ -404,14 +406,14 @@ jobs:
 
           print(
               "Post-retry => "
-              f"today_et={today_et}, yesterday_et={yesterday_et}, "
+              f"today_et={today_et}, target_date={target_date}, expected_date={expected_date}, "
               f"max_games={max_games}, max_preds={max_preds}"
           )
           if not (
               bool(max_games)
               and bool(max_preds)
               and max_games == max_preds
-              and max_games in valid_dates
+              and max_games == expected_date
           ):
               raise SystemExit("❌ Desfase de fecha persiste tras reintento de scraper/predict")
           PY
@@ -498,14 +500,14 @@ jobs:
           python - <<'PY'
           import os
           import sqlite3
-          from datetime import datetime, timedelta
+          from datetime import datetime
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
           now_et = datetime.now(ZoneInfo("America/New_York"))
           today_et = now_et.strftime("%Y-%m-%d")
-          yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
-          valid_dates = {today_et, yesterday_et}
+          target_date = '${{ github.event.inputs.target_date }}'.strip()
+          expected_date = target_date or today_et
 
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
@@ -515,16 +517,18 @@ jobs:
               bool(max_games)
               and bool(max_preds)
               and max_games == max_preds
-              and max_games in valid_dates
+              and max_games == expected_date
           )
           print(f"today_et={today_et}")
-          print(f"yesterday_et={yesterday_et}")
+          print(f"target_date={target_date}")
+          print(f"expected_date={expected_date}")
           print(f"max_games={max_games}")
           print(f"max_preds={max_preds}")
           print(f"is_ok={is_ok}")
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
               f.write(f"today_et={today_et}\n")
+              f.write(f"expected_date={expected_date}\n")
               f.write(f"max_games={max_games}\n")
               f.write(f"max_preds={max_preds}\n")
               f.write(f"is_ok={'true' if is_ok else 'false'}\n")
@@ -543,14 +547,14 @@ jobs:
           cd src
           python - <<'PY'
           import sqlite3
-          from datetime import datetime, timedelta
+          from datetime import datetime
           from zoneinfo import ZoneInfo
           from mlb_config import DB_PATH
 
           now_et = datetime.now(ZoneInfo("America/New_York"))
           today_et = now_et.strftime("%Y-%m-%d")
-          yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
-          valid_dates = {today_et, yesterday_et}
+          target_date = '${{ github.event.inputs.target_date }}'.strip()
+          expected_date = target_date or today_et
 
           with sqlite3.connect(DB_PATH) as conn:
               max_games = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
@@ -558,14 +562,14 @@ jobs:
 
           print(
               "Post-retry => "
-              f"today_et={today_et}, yesterday_et={yesterday_et}, "
+              f"today_et={today_et}, target_date={target_date}, expected_date={expected_date}, "
               f"max_games={max_games}, max_preds={max_preds}"
           )
           if not (
               bool(max_games)
               and bool(max_preds)
               and max_games == max_preds
-              and max_games in valid_dates
+              and max_games == expected_date
           ):
               raise SystemExit("❌ Desfase de fecha persiste tras reintento de scraper/predict")
           PY
