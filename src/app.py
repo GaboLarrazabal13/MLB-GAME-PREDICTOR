@@ -791,7 +791,7 @@ def crear_gauge_confianza(confianza):
 
 
 def obtener_prediccion_detallada_partido(
-    home_team, away_team, home_pitcher, away_pitcher, year
+    home_team, away_team, home_pitcher, away_pitcher, year, fecha=None
 ):
     """Obtiene la predicción detallada para un partido usando la API."""
     try:
@@ -803,6 +803,7 @@ def obtener_prediccion_detallada_partido(
                 "home_pitcher": home_pitcher,
                 "away_pitcher": away_pitcher,
                 "year": year,
+                "fecha": fecha
             },
             timeout=120,
         )
@@ -1869,6 +1870,7 @@ elif pagina == "📅 Partidos de Hoy":
                                                     home_pitcher,
                                                     away_pitcher,
                                                     year_detalle,
+                                                    partido.get("fecha", fecha_hoy)
                                                 )
                                             )
                                         if ok_detalle:

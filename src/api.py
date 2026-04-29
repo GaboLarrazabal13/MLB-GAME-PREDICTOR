@@ -237,6 +237,7 @@ class PrediccionRequest(BaseModel):
     home_pitcher: str = Field(..., description="Nombre del lanzador local")
     away_pitcher: str = Field(..., description="Nombre del lanzador visitante")
     year: int | None = Field(2026, description="Año para scraping de stats")
+    fecha: str | None = Field(None, description="Fecha del partido para buscar en caché")
 
     class Config:
         schema_extra = {
@@ -570,7 +571,69 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                 status_code=400, detail="Los equipos no pueden ser iguales"
             )
 
+        # Buscar en caché primero si tenemos fecha
+        import json
+        if request.fecha:
+            with sqlite3.connect(DB_PATH) as conn:
+                try:
+                    query = """
+                        SELECT prob_home, prob_away, prediccion, confianza, detalles
+                        FROM predicciones_historico
+                        WHERE fecha = ? AND home_team = ? AND away_team = ?
+                        LIMIT 1
+                    """
+                    row = conn.execute(query, (request.fecha, home_code, away_code)).fetchone()
+                    if row and row[4]:  # Si existe el JSON de detalles
+                        print(f"✅ Caché HIT para análisis detallado: {away_code} @ {home_code}")
+                        prob_home = row[0]
+                        prob_away = row[1]
+                        prediccion_code = row[2]
+                        confianza_label = row[3]
+                        
+                        # Manejar formato de porcentajes (algunos podrían estar como 60.0 en lugar de 0.6)
+                        prob_home_decimal = prob_home / 100.0 if prob_home > 1.0 else prob_home
+                        prob_away_decimal = prob_away / 100.0 if prob_away > 1.0 else prob_away
+
+                        detalles_json = row[4]
+                        detalles = json.loads(detalles_json)
+                        
+                        stats_detalladas = detalles.get("stats_detalladas") or {
+                            "home_pitcher": {},
+                            "away_pitcher": {},
+                            "home_batters": [],
+                            "away_batters": [],
+                        }
+                        features_usadas = detalles.get("features_usadas") or {}
+                        year_usado = detalles.get("year_usado", request.year)
+                        
+                        prob_max = max(prob_home_decimal, prob_away_decimal)
+                        if prob_max >= 0.65:
+                            confianza_decimal = 0.85
+                        elif prob_max >= 0.58:
+                            confianza_decimal = 0.70
+                        else:
+                            confianza_decimal = 0.55
+
+                        return {
+                            "ganador": prediccion_code,
+                            "prob_home": prob_home_decimal,
+                            "prob_away": prob_away_decimal,
+                            "confianza": confianza_decimal,
+                            "year_solicitado": request.year,
+                            "year_usado_home": year_usado,
+                            "year_usado_away": year_usado,
+                            "razon_fallback_home": None,
+                            "razon_fallback_away": None,
+                            "ip_home": stats_detalladas.get("home_pitcher", {}).get("IP", 0),
+                            "ip_away": stats_detalladas.get("away_pitcher", {}).get("IP", 0),
+                            "features_usadas": features_usadas,
+                            "stats_detalladas": stats_detalladas,
+                        }
+                except Exception as db_e:
+                    print(f"⚠️ Error leyendo caché de BD: {db_e}")
+
         # Reusar el mismo motor de Predicción Manual para evitar divergencias de lógica.
+        print(f"⚠️ Caché MISS (o sin fecha) para {away_code} @ {home_code}. Scrapeando...")
         resultado = predecir_juego(
             home_team=home_code,
             away_team=away_code,

@@ -3,6 +3,7 @@ Motor de Predicción MLB V3.5 - REFACTORIZADO
 Usa módulos centralizados para evitar duplicación de código
 """
 
+import json
 import os
 import sqlite3
 import time
@@ -384,6 +385,8 @@ def predecir_juego(
         }
         _debug_stage("assemble_details", stage_start)
 
+        detalles_json = json.dumps(detalles)
+
         db_data = {
             "fecha": row_data["fecha"],
             "home_team": home_team,
@@ -395,6 +398,7 @@ def predecir_juego(
             "prediccion": ganador_code,
             "confianza": conf_label,
             "tipo": "AUTOMATICO" if modo_auto else "MANUAL",
+            "detalles": detalles_json,
         }
 
         resultado_data = {**db_data, "detalles": detalles}
@@ -405,7 +409,14 @@ def predecir_juego(
                 conn.execute("""CREATE TABLE IF NOT EXISTS predicciones_historico
                                (fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
                                 away_pitcher TEXT, prob_home REAL, prob_away REAL,
-                                prediccion TEXT, confianza TEXT, tipo TEXT)""")
+                                prediccion TEXT, confianza TEXT, tipo TEXT, detalles TEXT)""")
+                
+                # Check if detalles column exists, if not, add it
+                cursor = conn.execute("PRAGMA table_info(predicciones_historico)")
+                columns = [col[1] for col in cursor.fetchall()]
+                if 'detalles' not in columns:
+                    conn.execute("ALTER TABLE predicciones_historico ADD COLUMN detalles TEXT")
+
                 # Reemplazo por juego para evitar duplicados y mantener la corrida no destructiva.
                 conn.execute(
                     """
@@ -517,15 +528,37 @@ def ejecutar_flujo_diario():
             f"Procesando juego {idx + 1}/{len(df_hoy)}: {row['away_team']} @ {row['home_team']}"
         )
 
-        resultado = predecir_juego(
-            row["home_team"],
-            row["away_team"],
-            row["home_pitcher"],
-            row["away_pitcher"],
-            year=row.get("year", 2026),
-            modo_auto=True,
-            fecha_partido=row.get("fecha", fecha_objetivo),
-        )
+        try:
+            resultado = predecir_juego(
+                row["home_team"],
+                row["away_team"],
+                row["home_pitcher"],
+                row["away_pitcher"],
+                year=row.get("year", 2026),
+                modo_auto=True,
+                fecha_partido=row.get("fecha", fecha_objetivo),
+                hacer_scraping=True
+            )
+        except Exception as e:
+            print(f"⚠️ Error en scraping detallado para {row['away_team']} @ {row['home_team']}: {e}")
+            resultado = None
+            
+        if not resultado:
+            print("⚠️ Reintentando en modo de datos temporales (hacer_scraping=False)...")
+            try:
+                resultado = predecir_juego(
+                    row["home_team"],
+                    row["away_team"],
+                    row["home_pitcher"],
+                    row["away_pitcher"],
+                    year=row.get("year", 2026),
+                    modo_auto=True,
+                    fecha_partido=row.get("fecha", fecha_objetivo),
+                    hacer_scraping=False
+                )
+            except Exception as e:
+                print(f"❌ Error en modo temporal para {row['away_team']} @ {row['home_team']}: {e}")
+                resultado = None
 
         if resultado:
             resultados.append(resultado)
@@ -533,7 +566,7 @@ def ejecutar_flujo_diario():
                 f"✅ Predicción: {resultado['prediccion']} (Confianza: {resultado['confianza']})\n"
             )
         else:
-            print("❌ Error en predicción\n")
+            print("❌ Error total en predicción: No se pudo predecir de ninguna forma\n")
 
     if resultados:
         with sqlite3.connect(DB_PATH) as conn:
