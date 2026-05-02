@@ -31,14 +31,18 @@ def extraer_fecha_desde_schedule_href(href):
     return f"{year}-{month}-{day}"
 
 
-def parsear_fecha_schedule_header(header_text):
-    """Convierte encabezados tipo 'Monday, March 30, 2026' a YYYY-MM-DD."""
+def parsear_fecha_schedule_header(header_text, target_date=None):
+    """Convierte encabezados tipo 'Monday, March 30, 2026' o 'Today's Games' a YYYY-MM-DD."""
     if not header_text:
         return None
 
     # Limpiar espacios múltiples y saltos de línea
     texto = " ".join(str(header_text).split()).strip()
     
+    # Caso especial: "Today's Games"
+    if "today's games" in texto.lower() and target_date:
+        return target_date
+
     # Regex flexible para manejar posibles variaciones de espacios
     # Formato esperado: Day, Month Day, Year (ej: Tuesday, April 28, 2026)
     match = re.match(r"^[A-Za-z]+,\s+([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})$", texto)
@@ -53,11 +57,11 @@ def parsear_fecha_schedule_header(header_text):
     return f"{int(year):04d}-{month:02d}-{int(day):02d}"
 
 
-def iterar_secciones_schedule(soup):
+def iterar_secciones_schedule(soup, target_date=None):
     """Itera las secciones del calendario con sus partidos y fecha inferida."""
     for h3 in soup.find_all("h3"):
         label = " ".join(h3.stripped_strings)
-        header_date = parsear_fecha_schedule_header(label)
+        header_date = parsear_fecha_schedule_header(label, target_date=target_date)
         
         # Identificar si es hoy: por span id="today" O si el label contiene "today"
         # Bref a veces cambia el span por una clase o ID dinámico
@@ -120,7 +124,7 @@ def iterar_secciones_schedule(soup):
 
 def seleccionar_seccion_schedule(soup, fecha_objetivo_db):
     """Selecciona la sección más adecuada para una fecha MLB concreta."""
-    secciones = list(iterar_secciones_schedule(soup))
+    secciones = list(iterar_secciones_schedule(soup, target_date=fecha_objetivo_db))
     if not secciones:
         return None
 

@@ -236,9 +236,13 @@ def extraer_equipos_del_dia(soup, fecha_objetivo_db):
     
     # VALIDACIÓN CRÍTICA: La sección debe coincidir con la fecha objetivo
     if seccion_date != fecha_objetivo_db:
-        print(f"  ❌ ERROR: La sección encontrada ({seccion_date}) NO coinciden con la fecha objetivo ({fecha_objetivo_db})")
-        print("  Esto indica que Baseball-Reference aún no ha publicado el calendario de hoy o el scraper está viendo una versión antigua.")
-        return []
+        if seccion.get("is_today") and seccion_date is None:
+            print(f"  ℹ️ Usando sección 'Today's Games' para la fecha {fecha_objetivo_db}")
+            seccion_date = fecha_objetivo_db
+        else:
+            print(f"  ❌ ERROR: La sección encontrada ({seccion_date}) NO coinciden con la fecha objetivo ({fecha_objetivo_db})")
+            print("  Esto indica que Baseball-Reference aún no ha publicado el calendario de hoy o el scraper está viendo una versión antigua.")
+            return []
 
     for game in seccion["games"]:
         try:
