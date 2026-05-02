@@ -410,6 +410,7 @@ def predecir_juego(
                                (fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
                                 away_pitcher TEXT, prob_home REAL, prob_away REAL,
                                 prediccion TEXT, confianza TEXT, tipo TEXT, detalles TEXT)""")
+                
                 # Check if detalles column exists, if not, add it
                 cursor = conn.execute("PRAGMA table_info(predicciones_historico)")
                 columns = [col[1] for col in cursor.fetchall()]
