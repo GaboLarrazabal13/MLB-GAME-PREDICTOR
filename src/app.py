@@ -1728,12 +1728,20 @@ elif pagina == "📅 Partidos de Hoy":
         if partidos_hoy:
             partidos = partidos_hoy
         elif fechas_api:
-            fecha_mostrada = max(fechas_api)
-            partidos = [p for p in partidos if p.get("fecha") == fecha_mostrada]
-            st.warning(
-                f"No hay cartelera para hoy en ET ({fecha_hoy}). "
-                f"Mostrando la última fecha disponible: {fecha_mostrada}."
-            )
+            fecha_max = max(fechas_api)
+            # Solo permitir fallback a 'ayer'
+            from datetime import datetime
+            diff_dias = (datetime.strptime(fecha_hoy, "%Y-%m-%d").date() - datetime.strptime(fecha_max, "%Y-%m-%d").date()).days
+            
+            if diff_dias == 1:
+                fecha_mostrada = fecha_max
+                partidos = [p for p in partidos if p.get("fecha") == fecha_mostrada]
+                st.warning(
+                    f"No hay cartelera para hoy en ET ({fecha_hoy}). "
+                    f"Mostrando la última fecha disponible: {fecha_mostrada}."
+                )
+            else:
+                partidos = []
         else:
             partidos = []
 
