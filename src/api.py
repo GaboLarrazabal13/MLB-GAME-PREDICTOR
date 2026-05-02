@@ -394,6 +394,7 @@ def _backfill_predicciones_fecha(fecha: str) -> int:
                 modo_auto=True,
                 fecha_partido=fecha,
                 hacer_scraping=False,  # solo features temporales para respuesta rápida
+                guardar_db=False,      # NO guardar en DB para no bajar la calidad del histórico
             )
             if res:
                 generadas += 1
@@ -588,15 +589,14 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                         prob_home = row[0]
                         prob_away = row[1]
                         prediccion_code = row[2]
-                        confianza_label = row[3]
-                        
+                        # row[3] es confianza_label, no se usa aquí
+
                         # Manejar formato de porcentajes (algunos podrían estar como 60.0 en lugar de 0.6)
                         prob_home_decimal = prob_home / 100.0 if prob_home > 1.0 else prob_home
                         prob_away_decimal = prob_away / 100.0 if prob_away > 1.0 else prob_away
 
                         detalles_json = row[4]
                         detalles = json.loads(detalles_json)
-                        
                         stats_detalladas = detalles.get("stats_detalladas") or {
                             "home_pitcher": {},
                             "away_pitcher": {},
@@ -605,7 +605,6 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                         }
                         features_usadas = detalles.get("features_usadas") or {}
                         year_usado = detalles.get("year_usado", request.year)
-                        
                         prob_max = max(prob_home_decimal, prob_away_decimal)
                         if prob_max >= 0.65:
                             confianza_decimal = 0.85

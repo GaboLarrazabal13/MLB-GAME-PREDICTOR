@@ -38,7 +38,7 @@ def parsear_fecha_schedule_header(header_text, target_date=None):
 
     # Limpiar espacios múltiples y saltos de línea
     texto = " ".join(str(header_text).split()).strip()
-    
+
     # Caso especial: "Today's Games"
     if "today's games" in texto.lower() and target_date:
         return target_date
@@ -62,7 +62,7 @@ def iterar_secciones_schedule(soup, target_date=None):
     for h3 in soup.find_all("h3"):
         label = " ".join(h3.stripped_strings)
         header_date = parsear_fecha_schedule_header(label, target_date=target_date)
-        
+
         # Identificar si es hoy: por span id="today" O si el label contiene "today"
         # Bref a veces cambia el span por una clase o ID dinámico
         is_today = bool(h3.find("span", id=re.compile(r"today", re.I))) or "today" in label.lower()

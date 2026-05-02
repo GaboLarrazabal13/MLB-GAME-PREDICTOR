@@ -151,7 +151,7 @@ def obtener_html(url, max_retries=None):
                     get_scraper_session(force_new=True)
                     time.sleep(10)
                     continue
-                
+
                 response.encoding = "utf-8"
                 return response.text
 
@@ -233,7 +233,7 @@ def extraer_equipos_del_dia(soup, fecha_objetivo_db):
         "  📍 Sección seleccionada: "
         f"{seccion.get('label', 'sin etiqueta')} -> {seccion_date}"
     )
-    
+
     # VALIDACIÓN CRÍTICA: La sección debe coincidir con la fecha objetivo
     if seccion_date != fecha_objetivo_db:
         if seccion.get("is_today") and seccion_date is None:

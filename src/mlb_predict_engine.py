@@ -410,7 +410,6 @@ def predecir_juego(
                                (fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
                                 away_pitcher TEXT, prob_home REAL, prob_away REAL,
                                 prediccion TEXT, confianza TEXT, tipo TEXT, detalles TEXT)""")
-                
                 # Check if detalles column exists, if not, add it
                 cursor = conn.execute("PRAGMA table_info(predicciones_historico)")
                 columns = [col[1] for col in cursor.fetchall()]
@@ -542,7 +541,6 @@ def ejecutar_flujo_diario():
         except Exception as e:
             print(f"⚠️ Error en scraping detallado para {row['away_team']} @ {row['home_team']}: {e}")
             resultado = None
-            
         if not resultado:
             print("⚠️ Reintentando en modo de datos temporales (hacer_scraping=False)...")
             try:
@@ -551,10 +549,11 @@ def ejecutar_flujo_diario():
                     row["away_team"],
                     row["home_pitcher"],
                     row["away_pitcher"],
-                    year=row.get("year", 2026),
+                    year=int(row.get("year", 2026)),
                     modo_auto=True,
                     fecha_partido=row.get("fecha", fecha_objetivo),
-                    hacer_scraping=False
+                    hacer_scraping=False,
+                    guardar_db=False
                 )
             except Exception as e:
                 print(f"❌ Error en modo temporal para {row['away_team']} @ {row['home_team']}: {e}")
