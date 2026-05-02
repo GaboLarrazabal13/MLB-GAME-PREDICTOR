@@ -394,7 +394,7 @@ def _backfill_predicciones_fecha(fecha: str) -> int:
                 modo_auto=True,
                 fecha_partido=fecha,
                 hacer_scraping=False,  # solo features temporales para respuesta rápida
-                guardar_db=False,      # NO guardar en DB para no bajar la calidad del histórico
+                guardar_db=True,       # GUARDAR en DB para que la comparación sea persistente
             )
             if res:
                 generadas += 1
