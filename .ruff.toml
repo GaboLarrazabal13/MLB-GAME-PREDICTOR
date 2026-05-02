@@ -1,0 +1,27 @@
+# Configuración de Ruff para el proyecto MLB Predictor
+extend-exclude = [
+    "backup",
+    "scratch",
+    "venv",
+    ".git",
+    "__pycache__",
+    "dist",
+    "build",
+    "node_modules"
+]
+
+line-length = 120
+
+[lint]
+select = ["E", "F", "I", "W"]
+ignore = [
+    "E501", # Líneas largas
+    "E722", # Bare except (usado en partes del motor por simplicidad de scraping)
+    "F401", # Imports no usados (común en __init__)
+]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

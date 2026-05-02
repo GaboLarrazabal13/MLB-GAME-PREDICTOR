@@ -1,0 +1,17 @@
+[tool.ruff]
+exclude = [
+    "backup",
+    "scratch",
+    "venv",
+    ".git",
+    "__pycache__",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]  # Ignorar líneas largas
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
