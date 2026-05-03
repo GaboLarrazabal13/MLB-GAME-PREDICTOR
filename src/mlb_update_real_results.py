@@ -450,29 +450,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--verificar", action="store_true", help="Verificar juegos pendientes"
     )
-    args = parser.parse_args()
-
-    if args.verificar:
-        verificar_juegos_pendientes()
-    else:
-        resultado = actualizar_resultados_reales()
-
-        # Verificar pendientes después de actualizar
-        if resultado:
-            print("\n" + "=" * 70)
-            verificar_juegos_pendientes()
-
-        # Retornar código de salida para GitHub Actions
-        sys.exit(0 if resultado else 1)
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Actualizador de resultados reales MLB"
-    )
-    parser.add_argument(
-        "--verificar", action="store_true", help="Verificar juegos pendientes"
-    )
     parser.add_argument(
         "--fecha", type=str, default=None,
         help="Fecha específica a procesar (formato YYYY-MM-DD). Si no se indica, usa TARGET_DATE env var o auto-detección."
