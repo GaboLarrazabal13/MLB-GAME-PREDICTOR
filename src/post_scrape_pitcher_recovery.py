@@ -74,9 +74,14 @@ def evaluar_estado_fechas(conn: sqlite3.Connection) -> dict[str, Any]:
     now_et = datetime.now(ZoneInfo("America/New_York"))
     today_et = now_et.strftime("%Y-%m-%d")
     yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
-    valid_dates = {today_et, yesterday_et}
 
-    stale_games = bool(max_games) and max_games not in valid_dates
+    # Si max_games es menor que hoy y ya son más de las 10 AM ET, consideramos que los datos están "stale".
+    is_past_morning = now_et.hour >= 10
+    today_missing = bool(max_games) and max_games < today_et and is_past_morning
+
+    valid_dates = {today_et, yesterday_et}
+    stale_games = (bool(max_games) and max_games not in valid_dates) or today_missing
+    
     desync_pred_gt_games = bool(max_preds) and (
         (not max_games) or (max_preds > max_games)
     )
@@ -87,8 +92,10 @@ def evaluar_estado_fechas(conn: sqlite3.Connection) -> dict[str, Any]:
         "today_et": today_et,
         "yesterday_et": yesterday_et,
         "stale_games": stale_games,
+        "today_missing": today_missing,
         "desync_pred_gt_games": desync_pred_gt_games,
     }
+
 
 
 def ejecutar_refuerzo_scrape() -> None:
