@@ -10,15 +10,15 @@
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-black.svg)](https://github.com/features/actions)
 [![Accuracy](https://img.shields.io/badge/Accuracy-74--80%25-brightgreen.svg)](#métricas-de-rendimiento)
 
-![MLB Predictor Logo](src/logo.png)
+[![MLB Predictor Logo](src/logo.png)](https://mlb-game-predictor-live.streamlit.app/)
 
-> **Acceso de producción:** Los enlaces de API y frontend no se publican en este repositorio por seguridad operativa.
+> **Acceso de producción:** Los enlaces de API no se publican en este repositorio por seguridad operativa.
 
 ---
 
 ## Tabla de Contenidos
 
-1. [Resumen Ejecutivo](#resumen-ejecutivo)
+1. [Acerca de este proyecto](#acerca-de-este-proyecto)
 2. [Arquitectura del Sistema](#arquitectura-del-sistema)
 3. [Pipeline de Datos Automatizado](#pipeline-de-datos-automatizado)
 4. [Motor de Machine Learning](#motor-de-machine-learning)
@@ -33,7 +33,7 @@
 
 ---
 
-## Resumen Ejecutivo
+## Acerca de este proyecto
 
 MLB Game Predictor es un sistema de predicción de partidos MLB de **grado de producción**. Ingiere datos diariamente de forma autónoma, entrena un modelo XGBoost con 38 features avanzadas, genera predicciones y mide su propio rendimiento — todo sin intervención manual.
 
