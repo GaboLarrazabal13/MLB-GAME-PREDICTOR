@@ -178,8 +178,8 @@ def menu_principal():
         print("2. 🧙 Re-predecir juegos FALLBACK (mejorar calidad)")
         print("3. 🧹 Limpiar duplicados y optimizar DB")
         print("4. 📋 Ver detalle de fechas con problemas")
-        print("5. 🚀 Subir base de datos a producción (commit + push)")
-        print("6. 🚪 Salir")
+        print("6. 🛠️  Sanación Masiva (Fix Gaps en toda la temporada)")
+        print("7. 🚪 Salir")
         
         choice = input("\nSeleccione una opción: ")
         
@@ -250,7 +250,11 @@ def menu_principal():
             input("\nPresione Enter para continuar...")
 
         elif choice == '6':
-            print("👋 Saliendo del sistema de mantenimiento...")
+            print("\n🔍 Buscando huecos en toda la temporada 2026...")
+            run_script("mlb_mass_healer.py")
+            input("\nPresione Enter para continuar...")
+        elif choice == '7':
+            print("👋 Saliendo...")
             break
         else:
             print("❌ Opción inválida.")

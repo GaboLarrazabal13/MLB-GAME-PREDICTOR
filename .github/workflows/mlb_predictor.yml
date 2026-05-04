@@ -492,6 +492,13 @@ jobs:
           cd src
           RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
 
+      - name: Verificar y sanar huecos recientes (Auto-Heal)
+        if: steps.scrape.outcome == 'success'
+        run: |
+          cd src
+          # El mass healer buscará huecos en la temporada y los arreglará
+          python mlb_mass_healer.py
+
       - name: Validar fecha de cartelera (ET)
         id: validate_dates_scrape
         if: steps.scrape.outcome == 'success'
