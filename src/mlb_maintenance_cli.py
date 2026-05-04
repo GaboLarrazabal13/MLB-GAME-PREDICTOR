@@ -1,0 +1,200 @@
+import sqlite3
+import os
+import sys
+import subprocess
+import time
+from datetime import datetime
+
+# Configuración de rutas
+# El script está en src/, así que BASE_DIR es el padre de src/
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "data", "mlb_reentrenamiento.db")
+SCRIPTS_DIR = os.path.join(BASE_DIR, "src")
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def get_connection():
+    return sqlite3.connect(DB_PATH)
+
+def check_db_health():
+    """Analiza la salud de la base de datos y retorna estadísticas de problemas."""
+    # print("\n🔍 Analizando salud de la base de datos...")
+    stats = {
+        "missing_results": [],
+        "fallback_predictions": [],
+        "total_predictions": 0,
+        "total_results": 0
+    }
+    
+    try:
+        if not os.path.exists(DB_PATH):
+            return stats
+            
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # 1. Total de registros
+        stats["total_predictions"] = cursor.execute("SELECT COUNT(*) FROM predicciones_historico").fetchone()[0]
+        stats["total_results"] = cursor.execute("SELECT COUNT(*) FROM historico_real").fetchone()[0]
+        
+        # 2. Predicciones sin resultados validados (Excluyendo hoy)
+        today = datetime.now().strftime("%Y-%m-%d")
+        query_missing = """
+            SELECT p.fecha, COUNT(*) 
+            FROM predicciones_historico p 
+            LEFT JOIN historico_real hr ON p.fecha = hr.fecha 
+                AND ( (p.home_team = hr.home_team AND p.away_team = hr.away_team) 
+                      OR (p.home_team = hr.away_team AND p.away_team = hr.home_team) )
+            WHERE hr.game_id IS NULL AND p.fecha < ?
+            GROUP BY p.fecha 
+            ORDER BY p.fecha DESC
+        """
+        stats["missing_results"] = cursor.execute(query_missing, (today,)).fetchall()
+        
+        # 3. Predicciones con calidad FALLBACK
+        cursor.execute("PRAGMA table_info(predicciones_historico)")
+        cols = [c[1] for c in cursor.fetchall()]
+        if 'tipo' in cols:
+            query_fallback = """
+                SELECT fecha, COUNT(*) 
+                FROM predicciones_historico 
+                WHERE tipo LIKE '%FALLBACK%'
+                GROUP BY fecha 
+                ORDER BY fecha DESC
+            """
+            stats["fallback_predictions"] = cursor.execute(query_fallback).fetchall()
+        
+        conn.close()
+    except Exception as e:
+        print(f"❌ Error al analizar DB: {e}")
+        
+    return stats
+
+def run_script(script_name, args=[]):
+    """Ejecuta un script de la carpeta src con argumentos."""
+    script_path = os.path.join(SCRIPTS_DIR, script_name)
+    
+    # Asegurarnos de que el script existe
+    if not os.path.exists(script_path):
+        print(f"❌ Error: El script {script_name} no existe en {SCRIPTS_DIR}")
+        return False
+
+    cmd = [sys.executable, script_path] + args
+    print(f"\n🚀 Ejecutando: {' '.join(cmd)}")
+    
+    try:
+        # Usamos subprocess.run con capture_output=False para que el usuario vea el progreso real
+        # del scraper o motor de predicción.
+        subprocess.run(cmd, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Error al ejecutar {script_name}: {e}")
+        return False
+
+def menu_principal():
+    while True:
+        clear_screen()
+        print("="*60)
+        print("⚾ MLB GAME PREDICTOR - SISTEMA DE MANTENIMIENTO ⚾")
+        print("="*60)
+        
+        stats = check_db_health()
+        
+        print(f"\n📊 RESUMEN DE ESTADO:")
+        print(f"   - Predicciones totales: {stats['total_predictions']}")
+        print(f"   - Resultados reales: {stats['total_results']}")
+        
+        total_missing = sum(count for _, count in stats["missing_results"])
+        if total_missing > 0:
+            print(f"   - ⚠️ Partidos sin validar: {total_missing} (en {len(stats['missing_results'])} fechas)")
+        else:
+            print(f"   - ✅ Todos los resultados están al día.")
+            
+        total_fallback = sum(count for _, count in stats["fallback_predictions"])
+        if total_fallback > 0:
+            print(f"   - ⚠️ Predicciones de baja calidad (FALLBACK): {total_fallback}")
+        else:
+            print(f"   - ✅ No hay predicciones incompletas.")
+        
+        print("\n" + "-"*60)
+        print("OPCIONES:")
+        print("1. 🔄 Recuperar resultados reales (validar aciertos)")
+        print("2. 🧙 Re-predecir juegos FALLBACK (mejorar calidad)")
+        print("3. 🧹 Limpiar duplicados y optimizar DB")
+        print("4. 📋 Ver detalle de fechas con problemas")
+        print("5. 🚪 Salir")
+        
+        choice = input("\nSeleccione una opción: ")
+        
+        if choice == '1':
+            if not stats["missing_results"]:
+                print("✅ No hay resultados pendientes.")
+                time.sleep(1.5)
+                continue
+            
+            print(f"\nSe intentará recuperar resultados para {len(stats['missing_results'])} fechas.")
+            confirm = input("¿Desea continuar? (s/n): ")
+            if confirm.lower() == 's':
+                for fecha, _ in stats["missing_results"]:
+                    print(f"\n📅 Procesando fecha: {fecha}")
+                    # Configuramos TARGET_DATE para que los scripts lo usen si lo necesitan
+                    os.environ["TARGET_DATE"] = fecha
+                    run_script("mlb_update_real_results.py", ["--fecha", fecha])
+                input("\nPresione Enter para continuar...")
+                
+        elif choice == '2':
+            if not stats["fallback_predictions"]:
+                print("✅ No hay juegos con calidad FALLBACK.")
+                time.sleep(1.5)
+                continue
+            
+            print(f"\nSe encontraron {total_fallback} juegos predichos sin datos avanzados.")
+            confirm = input("¿Desea intentar recuperarlos ahora? (s/n): ")
+            if confirm.lower() == 's':
+                for fecha, _ in stats["fallback_predictions"]:
+                    print(f"\n📅 Re-prediciendo fecha: {fecha}")
+                    os.environ["TARGET_DATE"] = fecha
+                    # Ejecutamos el motor. Él mismo leerá TARGET_DATE.
+                    run_script("mlb_predict_engine.py")
+                input("\nPresione Enter para continuar...")
+                
+        elif choice == '3':
+            print("\n🧹 Optimizando base de datos...")
+            try:
+                conn = get_connection()
+                conn.execute("VACUUM")
+                print("✅ VACUUM completado.")
+                conn.close()
+            except Exception as e:
+                print(f"❌ Error: {e}")
+            input("\nPresione Enter para continuar...")
+            
+        elif choice == '4':
+            clear_screen()
+            print("📋 DETALLE DE PROBLEMAS")
+            print("-" * 40)
+            if stats["missing_results"]:
+                print("\n📅 FECHAS SIN RESULTADOS (PENDIENTES):")
+                for fecha, count in stats["missing_results"]:
+                    print(f"  - {fecha}: {count} partidos")
+            
+            if stats["fallback_predictions"]:
+                print("\n⚠️ FECHAS CON PREDICCIONES FALLBACK (MEJORABLES):")
+                for fecha, count in stats["fallback_predictions"]:
+                    print(f"  - {fecha}: {count} partidos")
+            
+            if not stats["missing_results"] and not stats["fallback_predictions"]:
+                print("\n✨ Todo se ve perfecto. No hay tareas pendientes.")
+                
+            input("\nPresione Enter para volver al menú...")
+            
+        elif choice == '5':
+            print("👋 Saliendo del sistema de mantenimiento...")
+            break
+        else:
+            print("❌ Opción inválida.")
+            time.sleep(1)
+
+if __name__ == "__main__":
+    menu_principal()
