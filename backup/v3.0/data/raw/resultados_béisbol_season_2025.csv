@@ -1,0 +1,713 @@
+date,away_team,a_team_name,R_A,home_team,h_team_name,R_H,Ganador_Pitcher,Perdedor_Pitcher,Salvado_Pitcher,ganador
+2025-05-10,NYY,New York Yankees,7,OAK,Athletics,11,Grant Holman,Fernando Cruz,Mason Miller,1
+2025-05-10,ATL,Atlanta Braves,3,PIT,Pittsburgh Pirates,2,Scott Blewett,Chase Shugart,NotApplyed,0
+2025-05-10,STL,St. Louis Cardinals,4,WSN,Washington Nationals,2,Andre Pallante,Trevor Williams,Ryan Helsley,0
+2025-05-10,MIL,Milwaukee Brewers,2,TBR,Tampa Bay Rays,3,Pete Fairbanks,Grant Anderson,NotApplyed,1
+2025-05-10,PHI,Philadelphia Phillies,7,CLE,Cleveland Guardians,1,Ranger Suárez,Tanner Bibee,NotApplyed,0
+2025-05-10,TEX,Texas Rangers,10,DET,Detroit Tigers,3,Jacob deGrom,Jack Flaherty,NotApplyed,0
+2025-05-10,MIA,Miami Marlins,3,CHW,Chicago White Sox,1,Calvin Faucher,Jordan Leasure,Jesús Tinoco,0
+2025-05-10,CIN,Cincinnati Reds,13,HOU,Houston Astros,9,Graham Ashcraft,Lance McCullers Jr.,NotApplyed,0
+2025-05-10,BOS,Boston Red Sox,10,KCR,Kansas City Royals,1,Garrett Crochet,Cole Ragans,NotApplyed,0
+2025-05-10,SFG,San Francisco Giants,1,MIN,Minnesota Twins,2,Joe Ryan,Logan Webb,Jhoan Duran,1
+2025-05-10,CHC,Chicago Cubs,6,NYM,New York Mets,5,Cade Horton,Tylor Megill,Porter Hodge,0
+2025-05-10,LAD,Los Angeles Dodgers,0,ARI,Arizona Diamondbacks,3,Corbin Burnes,Dustin May,Ryne Nelson,1
+2025-05-10,SDP,San Diego Padres,21,COL,Colorado Rockies,0,Stephen Kolek,Bradley Blalock,NotApplyed,0
+2025-05-10,BAL,Baltimore Orioles,2,LAA,Los Angeles Angels,5,Jack Kochanowicz,Kyle Gibson,NotApplyed,1
+2025-05-10,TOR,Toronto Blue Jays,6,SEA,Seattle Mariners,3,Mason Fluharty,Carlos Vargas,Jeff Hoffman,0
+2025-05-15,WSN,Washington Nationals,2,ATL,Atlanta Braves,5,AJ Smith-Shawver,Trevor Williams,Raisel Iglesias,1
+2025-05-15,MIN,Minnesota Twins,4,BAL,Baltimore Orioles,0,Chris Paddack,Tomoyuki Sugano,NotApplyed,0
+2025-05-15,CHW,Chicago White Sox,1,CIN,Cincinnati Reds,7,Nick Martinez,Bryse Wilson,NotApplyed,1
+2025-05-15,TBR,Tampa Bay Rays,8,TOR,Toronto Blue Jays,3,Zack Littell,Kevin Gausman,NotApplyed,0
+2025-05-15,HOU,Houston Astros,0,TEX,Texas Rangers,1,Jacob deGrom,Hunter Brown,Shawn Armstrong,1
+2025-05-15,OAK,Athletics,2,LAD,Los Angeles Dodgers,19,Justin Wrobleski,Osvaldo Bido,NotApplyed,1
+2025-05-16,CHW,Chicago White Sox,3,CHC,Chicago Cubs,13,Cade Horton,Shane Smith,NotApplyed,1
+2025-05-16,CLE,Cleveland Guardians,4,CIN,Cincinnati Reds,5,Brady Singer,Tanner Bibee,Emilio Pagán,1
+2025-05-16,PIT,Pittsburgh Pirates,4,PHI,Philadelphia Phillies,8,Ranger Suárez,Ryan Borucki,José Alvarado,1
+2025-05-16,WSN,Washington Nationals,4,BAL,Baltimore Orioles,3,Jorge López,Félix Bautista,Kyle Finnegan,0
+2025-05-16,NYM,New York Mets,2,NYY,New York Yankees,6,Carlos Rodón,Tylor Megill,Luke Weaver,1
+2025-05-16,DET,Detroit Tigers,5,TOR,Toronto Blue Jays,4,Jack Flaherty,Bowden Francis,Beau Brieske,0
+2025-05-16,ATL,Atlanta Braves,4,BOS,Boston Red Sox,2,Chris Sale,Garrett Crochet,Raisel Iglesias,0
+2025-05-16,TBR,Tampa Bay Rays,4,MIA,Miami Marlins,9,Max Meyer,Taj Bradley,NotApplyed,1
+2025-05-16,STL,St. Louis Cardinals,10,KCR,Kansas City Royals,3,Andre Pallante,Cole Ragans,NotApplyed,0
+2025-05-16,HOU,Houston Astros,6,TEX,Texas Rangers,3,Kaleb Ort,Shawn Armstrong,NotApplyed,0
+2025-05-16,MIN,Minnesota Twins,3,MIL,Milwaukee Brewers,0,Joe Ryan,Chad Patrick,Cole Sands,0
+2025-05-16,COL,Colorado Rockies,0,ARI,Arizona Diamondbacks,8,Corbin Burnes,Carson Palmquist,NotApplyed,1
+2025-05-16,SEA,Seattle Mariners,5,SDP,San Diego Padres,1,Logan Evans,Stephen Kolek,NotApplyed,0
+2025-05-16,LAA,Los Angeles Angels,6,LAD,Los Angeles Dodgers,2,Jack Kochanowicz,Dustin May,NotApplyed,0
+2025-05-16,OAK,Athletics,1,SFG,San Francisco Giants,9,Logan Webb,JP Sears,NotApplyed,1
+2025-05-17,NYM,New York Mets,3,NYY,New York Yankees,2,Reed Garrett,Fernando Cruz,Edwin Díaz,0
+2025-05-17,CHW,Chicago White Sox,3,CHC,Chicago Cubs,7,Matthew Boyd,Sean Burke,NotApplyed,1
+2025-05-17,DET,Detroit Tigers,1,TOR,Toronto Blue Jays,2,Jeff Hoffman,Brenan Hanifee,NotApplyed,1
+2025-05-17,WSN,Washington Nationals,10,BAL,Baltimore Orioles,6,Jake Irvin,Kyle Gibson,NotApplyed,0
+2025-05-17,TBR,Tampa Bay Rays,4,MIA,Miami Marlins,0,Drew Rasmussen,Sandy Alcantara,NotApplyed,0
+2025-05-17,PIT,Pittsburgh Pirates,2,PHI,Philadelphia Phillies,5,Zack Wheeler,Carmen Mlodzinski,NotApplyed,1
+2025-05-17,CLE,Cleveland Guardians,1,CIN,Cincinnati Reds,4,Luis Mey,Slade Cecconi,Emilio Pagán,1
+2025-05-17,HOU,Houston Astros,1,TEX,Texas Rangers,5,Tyler Mahle,Ronel Blanco,NotApplyed,1
+2025-05-17,STL,St. Louis Cardinals,1,KCR,Kansas City Royals,0,Miles Mikolas,Noah Cameron,Ryan Helsley,0
+2025-05-17,ATL,Atlanta Braves,6,BOS,Boston Red Sox,7,Aroldis Chapman,Pierce Johnson,NotApplyed,1
+2025-05-17,MIN,Minnesota Twins,7,MIL,Milwaukee Brewers,0,Pablo López,Tobias Myers,NotApplyed,0
+2025-05-17,COL,Colorado Rockies,14,ARI,Arizona Diamondbacks,12,Jake Bird,Ryan Thompson,Seth Halvorsen,0
+2025-05-17,SEA,Seattle Mariners,4,SDP,San Diego Padres,1,Gabe Speier,Adrián Morejón,Andrés Muñoz,0
+2025-05-17,OAK,Athletics,0,SFG,San Francisco Giants,1,Camilo Doval,Mason Miller,NotApplyed,1
+2025-05-17,LAA,Los Angeles Angels,11,LAD,Los Angeles Dodgers,9,Reid Detmers,Kirby Yates,Kenley Jansen,0
+2025-05-19,CLE,Cleveland Guardians,5,MIN,Minnesota Twins,6,Jhoan Duran,Cade Smith,NotApplyed,1
+2025-05-19,CHC,Chicago Cubs,7,MIA,Miami Marlins,8,Valente Bellozo,Daniel Palencia,NotApplyed,1
+2025-05-19,CIN,Cincinnati Reds,7,PIT,Pittsburgh Pirates,1,Nick Lodolo,Mitch Keller,NotApplyed,0
+2025-05-19,NYM,New York Mets,1,BOS,Boston Red Sox,3,Justin Wilson,Kodai Senga,Aroldis Chapman,1
+2025-05-19,HOU,Houston Astros,4,TBR,Tampa Bay Rays,3,Bryan King,Manuel Rodríguez,Josh Hader,0
+2025-05-19,SEA,Seattle Mariners,5,CHW,Chicago White Sox,1,Luis Castillo,Davis Martin,Andrés Muñoz,0
+2025-05-19,BAL,Baltimore Orioles,4,MIL,Milwaukee Brewers,5,Abner Uribe,Yennier Cano,Trevor Megill,1
+2025-05-19,DET,Detroit Tigers,4,STL,St. Louis Cardinals,11,Sonny Gray,Sean Guenther,NotApplyed,1
+2025-05-19,PHI,Philadelphia Phillies,9,COL,Colorado Rockies,3,Joe Ross,Seth Halvorsen,NotApplyed,0
+2025-05-19,KCR,Kansas City Royals,3,SFG,San Francisco Giants,1,Kris Bubic,Tyler Rogers,Carlos Estévez,0
+2025-05-19,LAA,Los Angeles Angels,4,OAK,Athletics,3,José Soriano,J.T. Ginn,Kenley Jansen,0
+2025-05-19,ARI,Arizona Diamondbacks,9,LAD,Los Angeles Dodgers,5,Brandon Pfaadt,Jack Dreyer,Shelby Miller,0
+2025-05-21,CIN,Cincinnati Reds,1,PIT,Pittsburgh Pirates,3,Andrew Heaney,Brady Singer,Dennis Santana,1
+2025-05-21,CHC,Chicago Cubs,2,MIA,Miami Marlins,1,Brad Keller,Anthony Bender,Daniel Palencia,0
+2025-05-21,BAL,Baltimore Orioles,8,MIL,Milwaukee Brewers,4,Bryan Baker,Tyler Alexander,NotApplyed,0
+2025-05-21,HOU,Houston Astros,4,TBR,Tampa Bay Rays,8,Taj Bradley,Hunter Brown,NotApplyed,1
+2025-05-21,DET,Detroit Tigers,5,STL,St. Louis Cardinals,1,Chase Lee,Andre Pallante,NotApplyed,0
+2025-05-21,SEA,Seattle Mariners,6,CHW,Chicago White Sox,5,Casey Legumina,Mike Vasil,Andrés Muñoz,0
+2025-05-21,KCR,Kansas City Royals,8,SFG,San Francisco Giants,4,Jonathan Bowlan,Logan Webb,NotApplyed,0
+2025-05-21,CLE,Cleveland Guardians,5,MIN,Minnesota Twins,1,Gavin Williams,Chris Paddack,NotApplyed,0
+2025-05-21,NYM,New York Mets,5,BOS,Boston Red Sox,1,Huascar Brazobán,Liam Hendriks,NotApplyed,0
+2025-05-21,TEX,Texas Rangers,3,NYY,New York Yankees,4,Luke Weaver,Luke Jackson,NotApplyed,1
+2025-05-21,SDP,San Diego Padres,0,TOR,Toronto Blue Jays,14,Kevin Gausman,Randy Vásquez,NotApplyed,1
+2025-05-21,PHI,Philadelphia Phillies,9,COL,Colorado Rockies,5,Taijuan Walker,Carson Palmquist,NotApplyed,0
+2025-05-21,LAA,Los Angeles Angels,10,OAK,Athletics,5,Héctor Neris,JP Sears,NotApplyed,0
+2025-05-21,ARI,Arizona Diamondbacks,1,LAD,Los Angeles Dodgers,3,Dustin May,Corbin Burnes,Tanner Scott,1
+2025-05-22,TEX,Texas Rangers,0,NYY,New York Yankees,1,Carlos Rodón,Nathan Eovaldi,Luke Weaver,1
+2025-05-22,SDP,San Diego Padres,6,TOR,Toronto Blue Jays,7,Braydon Fisher,Jeremiah Estrada,NotApplyed,1
+2025-05-22,PHI,Philadelphia Phillies,2,COL,Colorado Rockies,0,Ranger Suárez,Germán Márquez,Jordan Romano,0
+2025-05-22,LAA,Los Angeles Angels,10,OAK,Athletics,5,Hunter Strickland,Grant Holman,NotApplyed,0
+2025-05-22,CLE,Cleveland Guardians,7,DET,Detroit Tigers,0,Tanner Bibee,Jack Flaherty,NotApplyed,0
+2025-05-22,MIL,Milwaukee Brewers,8,PIT,Pittsburgh Pirates,5,Carlos Rodriguez,Mike Burrows,Trevor Megill,0
+2025-05-22,ATL,Atlanta Braves,7,WSN,Washington Nationals,8,Jackson Rutledge,Dylan Lee,NotApplyed,1
+2025-05-22,SEA,Seattle Mariners,2,HOU,Houston Astros,9,Shawn Dubin,George Kirby,NotApplyed,1
+2025-05-23,BAL,Baltimore Orioles,5,BOS,Boston Red Sox,19,Garrett Whitlock,Seranthony Domínguez,NotApplyed,1
+2025-05-23,CHC,Chicago Cubs,13,CIN,Cincinnati Reds,6,Chris Flexen,Tony Santillan,NotApplyed,0
+2025-05-23,MIL,Milwaukee Brewers,5,PIT,Pittsburgh Pirates,6,Ryan Borucki,Abner Uribe,NotApplyed,1
+2025-05-23,SFG,San Francisco Giants,4,WSN,Washington Nationals,0,Landen Roupp,MacKenzie Gore,NotApplyed,0
+2025-05-23,TOR,Toronto Blue Jays,1,TBR,Tampa Bay Rays,3,Drew Rasmussen,Eric Lauer,Pete Fairbanks,1
+2025-05-23,CLE,Cleveland Guardians,3,DET,Detroit Tigers,1,Slade Cecconi,Jackson Jobe,Emmanuel Clase,0
+2025-05-23,LAD,Los Angeles Dodgers,7,NYM,New York Mets,5,Luis García,Huascar Brazobán,NotApplyed,0
+2025-05-23,SDP,San Diego Padres,2,ATL,Atlanta Braves,1,Jason Adam,Raisel Iglesias,Robert Suarez,0
+2025-05-23,TEX,Texas Rangers,1,CHW,Chicago White Sox,4,Sean Burke,Tyler Mahle,Steven Wilson,1
+2025-05-23,SEA,Seattle Mariners,5,HOU,Houston Astros,3,Emerson Hancock,Bryan Abreu,Andrés Muñoz,0
+2025-05-23,KCR,Kansas City Royals,1,MIN,Minnesota Twins,3,Cole Sands,Lucas Erceg,NotApplyed,1
+2025-05-23,ARI,Arizona Diamondbacks,3,STL,St. Louis Cardinals,4,Miles Mikolas,Zac Gallen,Ryan Helsley,1
+2025-05-23,NYY,New York Yankees,2,COL,Colorado Rockies,3,Tanner Gordon,Clarke Schmidt,Zach Agnos,1
+2025-05-23,MIA,Miami Marlins,4,LAA,Los Angeles Angels,7,Yusei Kikuchi,Sandy Alcantara,Kenley Jansen,1
+2025-05-23,PHI,Philadelphia Phillies,4,OAK,Athletics,3,Zack Wheeler,Jacob Lopez,Tanner Banks,0
+2025-05-24,BAL,Baltimore Orioles,5,BOS,Boston Red Sox,6,Greg Weissert,Gregory Soto,NotApplyed,1
+2025-05-24,KCR,Kansas City Royals,4,MIN,Minnesota Twins,5,Jhoan Duran,Daniel Lynch IV,NotApplyed,1
+2025-05-24,ARI,Arizona Diamondbacks,5,STL,St. Louis Cardinals,6,Ryan Helsley,Justin Martinez,NotApplyed,1
+2025-05-24,MIL,Milwaukee Brewers,1,PIT,Pittsburgh Pirates,2,Chase Shugart,Tyler Alexander,David Bednar,1
+2025-05-24,SFG,San Francisco Giants,0,WSN,Washington Nationals,3,Jake Irvin,Kyle Harrison,Jorge López,1
+2025-05-24,SDP,San Diego Padres,1,ATL,Atlanta Braves,7,Grant Holmes,Sean Reynolds,NotApplyed,1
+2025-05-24,TEX,Texas Rangers,5,CHW,Chicago White Sox,10,Mike Vasil,Hoby Milner,NotApplyed,1
+2025-05-24,CHC,Chicago Cubs,4,CIN,Cincinnati Reds,6,Andrew Abbott,Colin Rea,Emilio Pagán,1
+2025-05-24,NYY,New York Yankees,13,COL,Colorado Rockies,1,Max Fried,Kyle Freeland,NotApplyed,0
+2025-05-24,SEA,Seattle Mariners,1,HOU,Houston Astros,2,Framber Valdez,Bryan Woo,Josh Hader,1
+2025-05-24,BAL,Baltimore Orioles,2,BOS,Boston Red Sox,1,Andrew Kittredge,Brennan Bernardino,Seranthony Domínguez,0
+2025-05-24,TOR,Toronto Blue Jays,1,TBR,Tampa Bay Rays,3,Shane Baz,José Berríos,Pete Fairbanks,1
+2025-05-24,CLE,Cleveland Guardians,7,DET,Detroit Tigers,5,Tim Herrin,Brenan Hanifee,NotApplyed,0
+2025-05-24,LAD,Los Angeles Dodgers,2,NYM,New York Mets,5,David Peterson,Tony Gonsolin,Edwin Díaz,1
+2025-05-24,PHI,Philadelphia Phillies,9,OAK,Athletics,6,Orion Kerkering,Mitch Spence,Max Lazar,0
+2025-05-24,MIA,Miami Marlins,6,LAA,Los Angeles Angels,2,Ronny Henriquez,José Soriano,Janson Junk,0
+2025-06-01,STL,St. Louis Cardinals,1,TEX,Texas Rangers,8,Jacob deGrom,Erick Fedde,NotApplyed,1
+2025-06-01,BOS,Boston Red Sox,3,ATL,Atlanta Braves,1,Garrett Crochet,Bryce Elder,Aroldis Chapman,0
+2025-06-01,CHW,Chicago White Sox,2,BAL,Baltimore Orioles,3,Charlie Morton,Adrian Houser,Bryan Baker,1
+2025-06-01,MIL,Milwaukee Brewers,5,PHI,Philadelphia Phillies,2,Nick Mears,Orion Kerkering,Trevor Megill,0
+2025-06-01,OAK,Athletics,4,TOR,Toronto Blue Jays,8,Erik Swanson,Justin Sterner,NotApplyed,1
+2025-06-01,LAA,Los Angeles Angels,2,CLE,Cleveland Guardians,4,Gavin Williams,Jack Kochanowicz,Emmanuel Clase,1
+2025-06-01,SFG,San Francisco Giants,4,MIA,Miami Marlins,2,Hayden Birdsong,Ryan Weathers,Camilo Doval,0
+2025-06-01,COL,Colorado Rockies,3,NYM,New York Mets,5,Clay Holmes,Carson Palmquist,Edwin Díaz,1
+2025-06-01,TBR,Tampa Bay Rays,0,HOU,Houston Astros,1,Hunter Brown,Taj Bradley,Josh Hader,1
+2025-06-01,DET,Detroit Tigers,1,KCR,Kansas City Royals,0,Chase Lee,Kris Bubic,Will Vest,0
+2025-06-01,CIN,Cincinnati Reds,3,CHC,Chicago Cubs,7,Jameson Taillon,Nick Martinez,NotApplyed,1
+2025-06-01,WSN,Washington Nationals,1,ARI,Arizona Diamondbacks,3,Cristian Mena,Mitchell Parker,Justin Martinez,1
+2025-06-01,MIN,Minnesota Twins,1,SEA,Seattle Mariners,2,Andrés Muñoz,Griffin Jax,NotApplyed,1
+2025-06-01,PIT,Pittsburgh Pirates,4,SDP,San Diego Padres,6,Adrián Morejón,Tanner Rainey,Robert Suarez,1
+2025-06-01,NYY,New York Yankees,7,LAD,Los Angeles Dodgers,3,Ryan Yarbrough,Yoshinobu Yamamoto,NotApplyed,0
+2025-06-02,COL,Colorado Rockies,6,MIA,Miami Marlins,4,Germán Márquez,Max Meyer,Zach Agnos,0
+2025-06-02,LAA,Los Angeles Angels,7,BOS,Boston Red Sox,6,Ryan Zeferjahn,Richard Fitts,Kenley Jansen,0
+2025-06-02,MIL,Milwaukee Brewers,3,CIN,Cincinnati Reds,2,Aaron Civale,Brady Singer,Trevor Megill,0
+2025-06-02,DET,Detroit Tigers,13,CHW,Chicago White Sox,1,Jack Flaherty,Jonathan Cannon,NotApplyed,0
+2025-06-02,SDP,San Diego Padres,1,SFG,San Francisco Giants,0,Robert Suarez,Ryan Walker,NotApplyed,0
+2025-06-02,MIN,Minnesota Twins,10,OAK,Athletics,4,Joe Ryan,Luis Severino,NotApplyed,0
+2025-06-02,NYM,New York Mets,4,LAD,Los Angeles Dodgers,3,Edwin Díaz,Tanner Scott,José Buttó,0
+2025-06-03,COL,Colorado Rockies,3,MIA,Miami Marlins,2,Victor Vodnik,Anthony Bender,Seth Halvorsen,0
+2025-06-03,HOU,Houston Astros,3,PIT,Pittsburgh Pirates,0,Lance McCullers Jr.,Paul Skenes,Josh Hader,0
+2025-06-03,CHC,Chicago Cubs,8,WSN,Washington Nationals,3,Cade Horton,Trevor Williams,NotApplyed,0
+2025-06-03,CLE,Cleveland Guardians,2,NYY,New York Yankees,3,Carlos Rodón,Tanner Bibee,Devin Williams,1
+2025-06-03,PHI,Philadelphia Phillies,8,TOR,Toronto Blue Jays,3,Cristopher Sánchez,Bowden Francis,NotApplyed,0
+2025-06-03,LAA,Los Angeles Angels,4,BOS,Boston Red Sox,3,Kenley Jansen,Zack Kelly,Reid Detmers,0
+2025-06-03,MIL,Milwaukee Brewers,2,CIN,Cincinnati Reds,4,Graham Ashcraft,Freddy Peralta,Emilio Pagán,1
+2025-06-03,ARI,Arizona Diamondbacks,8,ATL,Atlanta Braves,3,Zac Gallen,Spencer Strider,NotApplyed,0
+2025-06-03,TEX,Texas Rangers,1,TBR,Tampa Bay Rays,5,Drew Rasmussen,Tyler Mahle,NotApplyed,1
+2025-06-03,DET,Detroit Tigers,1,CHW,Chicago White Sox,8,Shane Smith,Brant Hurter,NotApplyed,1
+2025-06-03,KCR,Kansas City Royals,10,STL,St. Louis Cardinals,7,Steven Cruz,Steven Matz,Carlos Estévez,0
+2025-06-03,BAL,Baltimore Orioles,5,SEA,Seattle Mariners,1,Tomoyuki Sugano,George Kirby,NotApplyed,0
+2025-06-03,SDP,San Diego Padres,3,SFG,San Francisco Giants,2,Yuki Matsui,Spencer Bivens,Jeremiah Estrada,0
+2025-06-03,MIN,Minnesota Twins,10,OAK,Athletics,3,Pablo López,Jacob Lopez,NotApplyed,0
+2025-06-03,NYM,New York Mets,5,LAD,Los Angeles Dodgers,6,Tanner Scott,José Buttó,NotApplyed,1
+2025-06-07,CHC,Chicago Cubs,6,DET,Detroit Tigers,1,Jameson Taillon,Tyler Holton,NotApplyed,0
+2025-06-07,TOR,Toronto Blue Jays,5,MIN,Minnesota Twins,4,Chad Green,Griffin Jax,Jeff Hoffman,0
+2025-06-07,LAD,Los Angeles Dodgers,1,STL,St. Louis Cardinals,2,Ryan Helsley,Ben Casparius,NotApplyed,1
+2025-06-07,PHI,Philadelphia Phillies,1,PIT,Pittsburgh Pirates,2,Isaac Mattson,Ranger Suárez,David Bednar,1
+2025-06-07,ATL,Atlanta Braves,2,SFG,San Francisco Giants,3,Tyler Rogers,Pierce Johnson,NotApplyed,1
+2025-06-07,TEX,Texas Rangers,5,WSN,Washington Nationals,0,Jacob deGrom,Mitchell Parker,NotApplyed,0
+2025-06-07,KCR,Kansas City Royals,1,CHW,Chicago White Sox,4,Adrian Houser,Michael Wacha,Dan Altavilla,1
+2025-06-07,ARI,Arizona Diamondbacks,1,CIN,Cincinnati Reds,13,Nick Martinez,Ryne Nelson,NotApplyed,1
+2025-06-07,HOU,Houston Astros,5,CLE,Cleveland Guardians,3,Josh Hader,Hunter Gaddis,Bennett Sousa,0
+2025-06-07,MIA,Miami Marlins,11,TBR,Tampa Bay Rays,10,Cade Gibson,Garrett Cleavinger,NotApplyed,0
+2025-06-07,SDP,San Diego Padres,3,MIL,Milwaukee Brewers,4,Trevor Megill,David Morgan,NotApplyed,1
+2025-06-07,BOS,Boston Red Sox,10,NYY,New York Yankees,7,Garrett Crochet,Ryan Yarbrough,Aroldis Chapman,0
+2025-06-07,SEA,Seattle Mariners,6,LAA,Los Angeles Angels,8,Connor Brogdon,Luis Castillo,Kenley Jansen,1
+2025-06-07,NYM,New York Mets,8,COL,Colorado Rockies,1,Clay Holmes,Germán Márquez,NotApplyed,0
+2025-06-07,BAL,Baltimore Orioles,7,OAK,Athletics,4,Keegan Akin,Luis Severino,Félix Bautista,0
+2025-06-08,MIA,Miami Marlins,2,TBR,Tampa Bay Rays,3,Edwin Uceta,Valente Bellozo,NotApplyed,1
+2025-06-08,SDP,San Diego Padres,1,MIL,Milwaukee Brewers,0,Yuki Matsui,Rob Zastryzny,Robert Suarez,0
+2025-06-08,PHI,Philadelphia Phillies,1,PIT,Pittsburgh Pirates,2,Braxton Ashcraft,Cristopher Sánchez,NotApplyed,1
+2025-06-08,TEX,Texas Rangers,4,WSN,Washington Nationals,2,Jacob Webb,Trevor Williams,Robert Garcia,0
+2025-06-08,ARI,Arizona Diamondbacks,2,CIN,Cincinnati Reds,4,Taylor Rogers,Zac Gallen,Tony Santillan,1
+2025-06-08,HOU,Houston Astros,2,CLE,Cleveland Guardians,4,Cade Smith,Steven Okert,Emmanuel Clase,1
+2025-06-08,CHC,Chicago Cubs,0,DET,Detroit Tigers,4,Jack Flaherty,Cade Horton,NotApplyed,1
+2025-06-08,KCR,Kansas City Royals,7,CHW,Chicago White Sox,5,Michael Lorenzen,Tyler Alexander,Carlos Estévez,0
+2025-06-08,TOR,Toronto Blue Jays,3,MIN,Minnesota Twins,6,Joe Ryan,Bowden Francis,Jhoan Duran,1
+2025-06-08,LAD,Los Angeles Dodgers,7,STL,St. Louis Cardinals,3,Clayton Kershaw,Michael McGreevy,NotApplyed,0
+2025-06-08,NYM,New York Mets,13,COL,Colorado Rockies,5,Tylor Megill,Chase Dollander,Paul Blackburn,0
+2025-06-08,BAL,Baltimore Orioles,1,OAK,Athletics,5,Sean Newcomb,Tomoyuki Sugano,NotApplyed,1
+2025-06-08,ATL,Atlanta Braves,3,SFG,San Francisco Giants,4,Landen Roupp,Spencer Strider,Camilo Doval,1
+2025-06-08,SEA,Seattle Mariners,3,LAA,Los Angeles Angels,2,George Kirby,Tyler Anderson,Andrés Muñoz,0
+2025-06-08,BOS,Boston Red Sox,11,NYY,New York Yankees,7,Hunter Dobbins,Carlos Rodón,Aroldis Chapman,0
+2025-06-09,CIN,Cincinnati Reds,7,CLE,Cleveland Guardians,4,Wade Miley,Luis Ortiz,Emilio Pagán,0
+2025-06-09,MIA,Miami Marlins,3,PIT,Pittsburgh Pirates,10,Caleb Ferguson,Eury Pérez,NotApplyed,1
+2025-06-09,CHC,Chicago Cubs,3,PHI,Philadelphia Phillies,4,Carlos Hernández,Daniel Palencia,NotApplyed,1
+2025-06-09,TBR,Tampa Bay Rays,10,BOS,Boston Red Sox,8,Ian Seymour,Zack Kelly,NotApplyed,0
+2025-06-09,ATL,Atlanta Braves,7,MIL,Milwaukee Brewers,1,Chris Sale,Aaron Civale,NotApplyed,0
+2025-06-09,TOR,Toronto Blue Jays,5,STL,St. Louis Cardinals,4,Yariel Rodríguez,Phil Maton,Jeff Hoffman,0
+2025-06-09,OAK,Athletics,4,LAA,Los Angeles Angels,7,Yusei Kikuchi,Jeffrey Springs,NotApplyed,1
+2025-06-09,SEA,Seattle Mariners,4,ARI,Arizona Diamondbacks,8,Jalen Beeks,Carlos Vargas,NotApplyed,1
+2025-06-09,LAD,Los Angeles Dodgers,8,SDP,San Diego Padres,7,Kirby Yates,Wandy Peralta,Tanner Scott,0
+2025-06-12,TEX,Texas Rangers,16,MIN,Minnesota Twins,3,Patrick Corbin,Bailey Ober,NotApplyed,0
+2025-06-12,WSN,Washington Nationals,3,NYM,New York Mets,4,Kodai Senga,Michael Soroka,Edwin Díaz,1
+2025-06-12,SFG,San Francisco Giants,7,COL,Colorado Rockies,8,Seth Halvorsen,Randy Rodríguez,NotApplyed,1
+2025-06-12,DET,Detroit Tigers,4,BAL,Baltimore Orioles,1,Tarik Skubal,Dean Kremer,Will Vest,0
+2025-06-12,NYY,New York Yankees,1,KCR,Kansas City Royals,0,Mark Leiter Jr.,Lucas Erceg,Devin Williams,0
+2025-06-12,STL,St. Louis Cardinals,0,MIL,Milwaukee Brewers,6,Jacob Misiorowski,Sonny Gray,Aaron Ashby,1
+2025-06-12,PIT,Pittsburgh Pirates,2,CHC,Chicago Cubs,3,Jameson Taillon,Andrew Heaney,Ryan Pressly,1
+2025-06-12,CHW,Chicago White Sox,3,HOU,Houston Astros,4,Framber Valdez,Davis Martin,Josh Hader,1
+2025-06-13,PIT,Pittsburgh Pirates,2,CHC,Chicago Cubs,1,Dennis Santana,Drew Pomeranz,David Bednar,0
+2025-06-13,TOR,Toronto Blue Jays,0,PHI,Philadelphia Phillies,8,Ranger Suárez,Kevin Gausman,NotApplyed,1
+2025-06-13,MIA,Miami Marlins,11,WSN,Washington Nationals,9,Tyler Phillips,Mitchell Parker,Calvin Faucher,0
+2025-06-13,LAA,Los Angeles Angels,0,BAL,Baltimore Orioles,2,Charlie Morton,Jack Kochanowicz,Félix Bautista,1
+2025-06-13,NYY,New York Yankees,1,BOS,Boston Red Sox,2,Garrett Whitlock,Tim Hill,NotApplyed,1
+2025-06-13,CIN,Cincinnati Reds,5,DET,Detroit Tigers,11,Keider Montero,Nick Martinez,NotApplyed,1
+2025-06-13,TBR,Tampa Bay Rays,7,NYM,New York Mets,5,Eric Orze,Max Kranick,Pete Fairbanks,0
+2025-06-13,COL,Colorado Rockies,4,ATL,Atlanta Braves,12,Enyel De Los Santos,Victor Vodnik,NotApplyed,1
+2025-06-13,CHW,Chicago White Sox,1,TEX,Texas Rangers,3,Jacob Webb,Adrian Houser,Robert Garcia,1
+2025-06-13,MIN,Minnesota Twins,3,HOU,Houston Astros,10,Colton Gordon,Chris Paddack,NotApplyed,1
+2025-06-13,OAK,Athletics,6,KCR,Kansas City Royals,4,Luis Severino,Michael Wacha,NotApplyed,0
+2025-06-13,STL,St. Louis Cardinals,2,MIL,Milwaukee Brewers,3,Freddy Peralta,Erick Fedde,Trevor Megill,1
+2025-06-13,SDP,San Diego Padres,1,ARI,Arizona Diamondbacks,5,Ryne Nelson,Stephen Kolek,NotApplyed,1
+2025-06-13,SFG,San Francisco Giants,6,LAD,Los Angeles Dodgers,2,Logan Webb,Yoshinobu Yamamoto,NotApplyed,0
+2025-06-13,CLE,Cleveland Guardians,2,SEA,Seattle Mariners,7,Carlos Vargas,Tim Herrin,NotApplyed,1
+2025-06-14,MIA,Miami Marlins,4,WSN,Washington Nationals,3,Janson Junk,Trevor Williams,Calvin Faucher,0
+2025-06-14,CIN,Cincinnati Reds,11,DET,Detroit Tigers,1,Brady Singer,Jack Flaherty,NotApplyed,0
+2025-06-14,PIT,Pittsburgh Pirates,1,CHC,Chicago Cubs,2,Matthew Boyd,Ryan Borucki,Daniel Palencia,1
+2025-06-14,LAA,Los Angeles Angels,5,BAL,Baltimore Orioles,6,Keegan Akin,Tyler Anderson,Félix Bautista,1
+2025-06-14,TOR,Toronto Blue Jays,2,PHI,Philadelphia Phillies,3,Orion Kerkering,Chad Green,Matt Strahm,1
+2025-06-14,CHW,Chicago White Sox,4,TEX,Texas Rangers,5,Jacob Latz,Tyler Alexander,NotApplyed,1
+2025-06-14,COL,Colorado Rockies,1,ATL,Atlanta Braves,4,Spencer Strider,Chase Dollander,NotApplyed,1
+2025-06-14,MIN,Minnesota Twins,2,HOU,Houston Astros,3,Josh Hader,Jhoan Duran,NotApplyed,1
+2025-06-14,OAK,Athletics,4,KCR,Kansas City Royals,0,Jacob Lopez,Michael Lorenzen,NotApplyed,0
+2025-06-14,STL,St. Louis Cardinals,8,MIL,Milwaukee Brewers,5,Kyle Leahy,Jose Quintana,NotApplyed,0
+2025-06-14,TBR,Tampa Bay Rays,8,NYM,New York Mets,4,Drew Rasmussen,Tylor Megill,NotApplyed,0
+2025-06-14,SDP,San Diego Padres,7,ARI,Arizona Diamondbacks,8,Kevin Ginkel,Robert Suarez,NotApplyed,1
+2025-06-14,NYY,New York Yankees,3,BOS,Boston Red Sox,4,Hunter Dobbins,Carlos Rodón,Greg Weissert,1
+2025-06-14,CLE,Cleveland Guardians,3,SEA,Seattle Mariners,4,Jackson Kowar,Emmanuel Clase,NotApplyed,1
+2025-06-14,SFG,San Francisco Giants,5,LAD,Los Angeles Dodgers,11,Clayton Kershaw,Landen Roupp,NotApplyed,1
+2025-06-18,BOS,Boston Red Sox,3,SEA,Seattle Mariners,1,Garrett Crochet,Luis Castillo,Greg Weissert,0
+2025-06-18,PHI,Philadelphia Phillies,4,MIA,Miami Marlins,2,Ranger Suárez,Adam Mazur,Matt Strahm,0
+2025-06-18,COL,Colorado Rockies,3,WSN,Washington Nationals,1,Germán Márquez,Mitchell Parker,Seth Halvorsen,0
+2025-06-18,LAA,Los Angeles Angels,3,NYY,New York Yankees,2,Héctor Neris,Fernando Cruz,Kenley Jansen,0
+2025-06-18,ARI,Arizona Diamondbacks,1,TOR,Toronto Blue Jays,8,Eric Lauer,Eduardo Rodríguez,NotApplyed,1
+2025-06-18,MIN,Minnesota Twins,2,CIN,Cincinnati Reds,4,Nick Lodolo,Bailey Ober,NotApplyed,1
+2025-06-18,NYM,New York Mets,0,ATL,Atlanta Braves,5,Chris Sale,Paul Blackburn,NotApplyed,1
+2025-06-18,BAL,Baltimore Orioles,8,TBR,Tampa Bay Rays,12,Mason Montgomery,Andrew Kittredge,NotApplyed,1
+2025-06-18,KCR,Kansas City Royals,6,TEX,Texas Rangers,3,Kris Bubic,Patrick Corbin,Carlos Estévez,0
+2025-06-18,CLE,Cleveland Guardians,4,SFG,San Francisco Giants,2,Logan Allen,Justin Verlander,Emmanuel Clase,0
+2025-06-18,HOU,Houston Astros,11,OAK,Athletics,4,Framber Valdez,Luis Severino,NotApplyed,0
+2025-06-18,SDP,San Diego Padres,3,LAD,Los Angeles Dodgers,4,Justin Wrobleski,Robert Suarez,NotApplyed,1
+2025-06-22,BAL,Baltimore Orioles,2,NYY,New York Yankees,4,Fernando Cruz,Bryan Baker,Devin Williams,1
+2025-06-22,DET,Detroit Tigers,9,TBR,Tampa Bay Rays,3,Tyler Holton,Garrett Cleavinger,NotApplyed,0
+2025-06-22,TEX,Texas Rangers,3,PIT,Pittsburgh Pirates,8,Bailey Falter,Jack Leiter,NotApplyed,1
+2025-06-22,CHW,Chicago White Sox,4,TOR,Toronto Blue Jays,2,Jordan Leasure,Brendon Little,Grant Taylor,0
+2025-06-22,ATL,Atlanta Braves,3,MIA,Miami Marlins,5,Sandy Alcantara,Bryce Elder,Ronny Henriquez,1
+2025-06-22,MIL,Milwaukee Brewers,9,MIN,Minnesota Twins,8,Rob Zastryzny,David Festa,Trevor Megill,0
+2025-06-22,CIN,Cincinnati Reds,4,STL,St. Louis Cardinals,1,Andrew Abbott,Miles Mikolas,Emilio Pagán,0
+2025-06-22,SEA,Seattle Mariners,14,CHC,Chicago Cubs,6,Logan Gilbert,Colin Rea,NotApplyed,0
+2025-06-22,ARI,Arizona Diamondbacks,2,COL,Colorado Rockies,4,Antonio Senzatela,Brandon Pfaadt,Seth Halvorsen,1
+2025-06-22,CLE,Cleveland Guardians,3,OAK,Athletics,0,Slade Cecconi,JP Sears,Emmanuel Clase,0
+2025-06-22,BOS,Boston Red Sox,5,SFG,San Francisco Giants,9,Erik Miller,Greg Weissert,NotApplyed,1
+2025-06-22,HOU,Houston Astros,8,LAA,Los Angeles Angels,7,Ryan Gusto,Hunter Strickland,Josh Hader,0
+2025-06-22,WSN,Washington Nationals,7,LAD,Los Angeles Dodgers,13,Ben Casparius,Jose A. Ferrer,NotApplyed,1
+2025-06-22,KCR,Kansas City Royals,2,SDP,San Diego Padres,3,Robert Suarez,Daniel Lynch IV,NotApplyed,1
+2025-06-22,NYM,New York Mets,1,PHI,Philadelphia Phillies,7,Jesús Luzardo,David Peterson,NotApplyed,1
+2025-06-28,OAK,Athletics,7,NYY,New York Yankees,0,JP Sears,Clarke Schmidt,Jack Perkins,0
+2025-06-28,MIN,Minnesota Twins,5,DET,Detroit Tigers,10,Casey Mize,Bailey Ober,NotApplyed,1
+2025-06-28,TBR,Tampa Bay Rays,11,BAL,Baltimore Orioles,3,Zack Littell,Zach Eflin,NotApplyed,0
+2025-06-28,NYM,New York Mets,2,PIT,Pittsburgh Pirates,9,Braxton Ashcraft,Paul Blackburn,NotApplyed,1
+2025-06-28,SEA,Seattle Mariners,2,TEX,Texas Rangers,3,Shawn Armstrong,Andrés Muñoz,NotApplyed,1
+2025-06-28,MIA,Miami Marlins,8,ARI,Arizona Diamondbacks,7,Anthony Bender,Juan Morillo,NotApplyed,0
+2025-06-28,TOR,Toronto Blue Jays,1,BOS,Boston Red Sox,15,Lucas Giolito,Chris Bassitt,NotApplyed,1
+2025-06-28,SFG,San Francisco Giants,0,CHW,Chicago White Sox,1,Adrian Houser,Robbie Ray,Grant Taylor,1
+2025-06-28,SDP,San Diego Padres,6,CIN,Cincinnati Reds,4,Bryan Hoeing,Lyon Richardson,Robert Suarez,0
+2025-06-28,STL,St. Louis Cardinals,9,CLE,Cleveland Guardians,6,Matt Svanson,Matt Festa,Ryan Helsley,0
+2025-06-28,LAD,Los Angeles Dodgers,5,KCR,Kansas City Royals,9,Seth Lugo,Ben Casparius,NotApplyed,1
+2025-06-28,COL,Colorado Rockies,0,MIL,Milwaukee Brewers,5,Quinn Priester,Antonio Senzatela,NotApplyed,1
+2025-06-28,PHI,Philadelphia Phillies,1,ATL,Atlanta Braves,6,Spencer Schwellenbach,Jesús Luzardo,NotApplyed,1
+2025-06-28,CHC,Chicago Cubs,12,HOU,Houston Astros,3,Colin Rea,Lance McCullers Jr.,NotApplyed,0
+2025-06-28,WSN,Washington Nationals,2,LAA,Los Angeles Angels,8,Ryan Zeferjahn,Zach Brzykcy,NotApplyed,1
+2025-06-29,STL,St. Louis Cardinals,7,CLE,Cleveland Guardians,0,Matthew Liberatore,Logan Allen,NotApplyed,0
+2025-06-29,PHI,Philadelphia Phillies,2,ATL,Atlanta Braves,1,Ranger Suárez,Spencer Strider,Matt Strahm,0
+2025-06-29,TBR,Tampa Bay Rays,1,BAL,Baltimore Orioles,5,Dean Kremer,Taj Bradley,NotApplyed,1
+2025-06-29,TOR,Toronto Blue Jays,5,BOS,Boston Red Sox,3,Yariel Rodríguez,Walker Buehler,Jeff Hoffman,0
+2025-06-29,OAK,Athletics,5,NYY,New York Yankees,12,Marcus Stroman,Luis Severino,NotApplyed,1
+2025-06-29,NYM,New York Mets,1,PIT,Pittsburgh Pirates,12,Carmen Mlodzinski,Frankie Montas,NotApplyed,1
+2025-06-29,SDP,San Diego Padres,2,CIN,Cincinnati Reds,3,Emilio Pagán,Robert Suarez,NotApplyed,1
+2025-06-29,SFG,San Francisco Giants,2,CHW,Chicago White Sox,5,Tyler Gilbert,Erik Miller,Mike Vasil,1
+2025-06-29,CHC,Chicago Cubs,0,HOU,Houston Astros,2,Framber Valdez,Jameson Taillon,Josh Hader,1
+2025-06-29,LAD,Los Angeles Dodgers,5,KCR,Kansas City Royals,1,Justin Wrobleski,Kris Bubic,NotApplyed,0
+2025-06-29,COL,Colorado Rockies,4,MIL,Milwaukee Brewers,3,Victor Vodnik,Grant Anderson,Tyler Kinley,0
+2025-06-29,SEA,Seattle Mariners,6,TEX,Texas Rangers,4,Trent Thornton,Cole Winn,NotApplyed,0
+2025-06-29,WSN,Washington Nationals,7,LAA,Los Angeles Angels,4,Kyle Finnegan,Connor Brogdon,NotApplyed,0
+2025-06-29,MIA,Miami Marlins,6,ARI,Arizona Diamondbacks,4,Lake Bachar,Jalen Beeks,Ronny Henriquez,0
+2025-06-29,MIN,Minnesota Twins,0,DET,Detroit Tigers,3,Tarik Skubal,Chris Paddack,Will Vest,1
+2025-06-30,SDP,San Diego Padres,0,PHI,Philadelphia Phillies,4,Zack Wheeler,Matt Waldron,NotApplyed,1
+2025-06-30,STL,St. Louis Cardinals,0,PIT,Pittsburgh Pirates,7,Andrew Heaney,Erick Fedde,NotApplyed,1
+2025-06-30,NYY,New York Yankees,4,TOR,Toronto Blue Jays,5,Brendon Little,Mark Leiter Jr.,Jeff Hoffman,1
+2025-06-30,CIN,Cincinnati Reds,6,BOS,Boston Red Sox,13,Garrett Crochet,Chase Burns,NotApplyed,1
+2025-06-30,OAK,Athletics,6,TBR,Tampa Bay Rays,4,Sean Newcomb,Pete Fairbanks,Mason Miller,0
+2025-06-30,BAL,Baltimore Orioles,10,TEX,Texas Rangers,6,Keegan Akin,Hoby Milner,NotApplyed,0
+2025-06-30,SFG,San Francisco Giants,2,ARI,Arizona Diamondbacks,4,John Curtiss,Logan Webb,Shelby Miller,1
+2025-06-30,KCR,Kansas City Royals,2,SEA,Seattle Mariners,6,George Kirby,Michael Wacha,NotApplyed,1
+2025-07-03,MIN,Minnesota Twins,1,MIA,Miami Marlins,4,Eury Pérez,David Festa,Ronny Henriquez,1
+2025-07-03,HOU,Houston Astros,6,COL,Colorado Rockies,7,Juan Mejia,Jordan Weems,Seth Halvorsen,1
+2025-07-03,DET,Detroit Tigers,7,WSN,Washington Nationals,11,Jake Irvin,Dietrich Enns,NotApplyed,1
+2025-07-03,NYY,New York Yankees,5,TOR,Toronto Blue Jays,8,Chris Bassitt,Clayton Beeter,Jeff Hoffman,1
+2025-07-03,MIL,Milwaukee Brewers,2,NYM,New York Mets,3,David Peterson,Jose Quintana,Edwin Díaz,1
+2025-07-03,LAA,Los Angeles Angels,5,ATL,Atlanta Braves,1,José Soriano,Bryce Elder,NotApplyed,0
+2025-07-03,CLE,Cleveland Guardians,0,CHC,Chicago Cubs,1,Chris Flexen,Emmanuel Clase,NotApplyed,1
+2025-07-03,SFG,San Francisco Giants,7,ARI,Arizona Diamondbacks,2,Robbie Ray,Brandon Pfaadt,NotApplyed,0
+2025-07-03,CHW,Chicago White Sox,2,LAD,Los Angeles Dodgers,6,Dustin May,Aaron Civale,NotApplyed,1
+2025-07-03,KCR,Kansas City Royals,3,SEA,Seattle Mariners,2,Seth Lugo,Casey Legumina,Carlos Estévez,0
+2025-07-07,TBR,Tampa Bay Rays,1,DET,Detroit Tigers,5,Keider Montero,Shane Baz,NotApplyed,1
+2025-07-07,COL,Colorado Rockies,3,BOS,Boston Red Sox,9,Richard Fitts,Austin Gomber,NotApplyed,1
+2025-07-07,MIA,Miami Marlins,5,CIN,Cincinnati Reds,1,Janson Junk,Brady Singer,Anthony Bender,0
+2025-07-07,TOR,Toronto Blue Jays,8,CHW,Chicago White Sox,4,José Berríos,Sean Burke,NotApplyed,0
+2025-07-07,PIT,Pittsburgh Pirates,3,KCR,Kansas City Royals,9,Noah Cameron,Andrew Heaney,NotApplyed,1
+2025-07-07,LAD,Los Angeles Dodgers,1,MIL,Milwaukee Brewers,9,Freddy Peralta,Yoshinobu Yamamoto,NotApplyed,1
+2025-07-07,CLE,Cleveland Guardians,7,HOU,Houston Astros,5,Matt Festa,Colton Gordon,Emmanuel Clase,0
+2025-07-07,TEX,Texas Rangers,5,LAA,Los Angeles Angels,6,Kenley Jansen,Chris Martin,NotApplyed,1
+2025-07-07,ARI,Arizona Diamondbacks,6,SDP,San Diego Padres,3,Zac Gallen,Yu Darvish,Kevin Ginkel,0
+2025-07-07,PHI,Philadelphia Phillies,1,SFG,San Francisco Giants,3,Tyler Rogers,Orion Kerkering,Camilo Doval,1
+2025-07-10,NYM,New York Mets,1,BAL,Baltimore Orioles,3,Grant Wolfram,Ryne Stanek,Félix Bautista,1
+2025-07-10,CHC,Chicago Cubs,8,MIN,Minnesota Twins,1,Colin Rea,Chris Paddack,NotApplyed,0
+2025-07-10,NYM,New York Mets,3,BAL,Baltimore Orioles,7,Tomoyuki Sugano,Justin Hagenman,NotApplyed,1
+2025-07-10,MIA,Miami Marlins,0,CIN,Cincinnati Reds,6,Nick Lodolo,Cal Quantrill,NotApplyed,1
+2025-07-10,SEA,Seattle Mariners,5,NYY,New York Yankees,6,Devin Williams,Gabe Speier,NotApplyed,1
+2025-07-10,TBR,Tampa Bay Rays,3,BOS,Boston Red Sox,4,Chris Murphy,Bryan Baker,Aroldis Chapman,1
+2025-07-10,WSN,Washington Nationals,1,STL,St. Louis Cardinals,8,Miles Mikolas,Michael Soroka,NotApplyed,1
+2025-07-10,ATL,Atlanta Braves,4,OAK,Athletics,5,Justin Sterner,Aaron Bummer,NotApplyed,1
+2025-07-10,TEX,Texas Rangers,11,LAA,Los Angeles Angels,4,Patrick Corbin,Jack Kochanowicz,NotApplyed,0
+2025-07-10,ARI,Arizona Diamondbacks,3,SDP,San Diego Padres,4,Adrián Morejón,Eduardo Rodríguez,Robert Suarez,1
+2025-07-13,MIA,Miami Marlins,11,BAL,Baltimore Orioles,1,Eury Pérez,Brandon Young,NotApplyed,0
+2025-07-13,TBR,Tampa Bay Rays,1,BOS,Boston Red Sox,4,Brayan Bello,Ryan Pepiot,Aroldis Chapman,1
+2025-07-13,CHC,Chicago Cubs,4,NYY,New York Yankees,1,Shota Imanaga,Will Warren,Daniel Palencia,0
+2025-07-13,COL,Colorado Rockies,2,CIN,Cincinnati Reds,4,Nick Martinez,Austin Gomber,Emilio Pagán,1
+2025-07-13,SEA,Seattle Mariners,8,DET,Detroit Tigers,4,Matt Brash,Tommy Kahnle,NotApplyed,0
+2025-07-13,CLE,Cleveland Guardians,6,CHW,Chicago White Sox,5,Emmanuel Clase,Brandon Eisert,NotApplyed,0
+2025-07-13,TEX,Texas Rangers,5,HOU,Houston Astros,1,Nathan Eovaldi,Hunter Brown,NotApplyed,0
+2025-07-13,NYM,New York Mets,2,KCR,Kansas City Royals,3,Carlos Estévez,Sean Manaea,NotApplyed,1
+2025-07-13,WSN,Washington Nationals,1,MIL,Milwaukee Brewers,8,Freddy Peralta,Jake Irvin,NotApplyed,1
+2025-07-13,PIT,Pittsburgh Pirates,2,MIN,Minnesota Twins,1,Dennis Santana,Jhoan Duran,David Bednar,0
+2025-07-13,ATL,Atlanta Braves,4,STL,St. Louis Cardinals,5,Gordon Graceffo,Jesse Chavez,Ryan Helsley,1
+2025-07-13,TOR,Toronto Blue Jays,3,OAK,Athletics,6,Jeffrey Springs,José Berríos,Mason Miller,1
+2025-07-13,LAD,Los Angeles Dodgers,5,SFG,San Francisco Giants,2,Ben Casparius,Spencer Bivens,NotApplyed,0
+2025-07-13,ARI,Arizona Diamondbacks,5,LAA,Los Angeles Angels,1,Merrill Kelly,José Soriano,NotApplyed,0
+2025-07-13,PHI,Philadelphia Phillies,2,SDP,San Diego Padres,1,Cristopher Sánchez,Adrián Morejón,Matt Strahm,0
+2025-07-20,SFG,San Francisco Giants,6,TOR,Toronto Blue Jays,8,José Berríos,Robbie Ray,Yariel Rodríguez,1
+2025-07-20,BAL,Baltimore Orioles,5,TBR,Tampa Bay Rays,3,Trevor Rogers,Ryan Pepiot,Félix Bautista,0
+2025-07-20,NYY,New York Yankees,4,ATL,Atlanta Braves,2,Marcus Stroman,Grant Holmes,Devin Williams,0
+2025-07-20,LAA,Los Angeles Angels,8,PHI,Philadelphia Phillies,2,José Soriano,Ranger Suárez,NotApplyed,0
+2025-07-20,CHW,Chicago White Sox,7,PIT,Pittsburgh Pirates,2,Aaron Civale,Andrew Heaney,NotApplyed,0
+2025-07-20,SDP,San Diego Padres,8,WSN,Washington Nationals,1,Nick Pivetta,MacKenzie Gore,NotApplyed,0
+2025-07-20,OAK,Athletics,2,CLE,Cleveland Guardians,8,Gavin Williams,Jeffrey Springs,NotApplyed,1
+2025-07-20,KCR,Kansas City Royals,7,MIA,Miami Marlins,4,Kris Bubic,Janson Junk,Carlos Estévez,0
+2025-07-20,CIN,Cincinnati Reds,2,NYM,New York Mets,3,Edwin Díaz,Brent Suter,Ryne Stanek,1
+2025-07-20,BOS,Boston Red Sox,6,CHC,Chicago Cubs,1,Garrett Crochet,Ryan Pressly,NotApplyed,0
+2025-07-20,MIN,Minnesota Twins,7,COL,Colorado Rockies,1,Joe Ryan,Germán Márquez,NotApplyed,0
+2025-07-20,STL,St. Louis Cardinals,3,ARI,Arizona Diamondbacks,5,Merrill Kelly,Miles Mikolas,Anthony DeSclafani,1
+2025-07-20,MIL,Milwaukee Brewers,6,LAD,Los Angeles Dodgers,5,Jose Quintana,Lou Trivino,Abner Uribe,0
+2025-07-20,HOU,Houston Astros,11,SEA,Seattle Mariners,3,Kaleb Ort,Bryan Woo,NotApplyed,0
+2025-07-20,DET,Detroit Tigers,2,TEX,Texas Rangers,1,Tyler Holton,Chris Martin,Will Vest,0
+2025-07-25,MIA,Miami Marlins,5,MIL,Milwaukee Brewers,1,Josh Simpson,Aaron Ashby,NotApplyed,0
+2025-07-25,ARI,Arizona Diamondbacks,1,PIT,Pittsburgh Pirates,0,Anthony DeSclafani,Braxton Ashcraft,Kevin Ginkel,0
+2025-07-25,COL,Colorado Rockies,6,BAL,Baltimore Orioles,5,Jake Bird,Andrew Kittredge,Seth Halvorsen,0
+2025-07-25,PHI,Philadelphia Phillies,12,NYY,New York Yankees,5,Tanner Banks,Tim Hill,NotApplyed,0
+2025-07-25,LAD,Los Angeles Dodgers,5,BOS,Boston Red Sox,2,Emmet Sheehan,Brayan Bello,Ben Casparius,0
+2025-07-25,TBR,Tampa Bay Rays,2,CIN,Cincinnati Reds,7,Nick Martinez,Zack Littell,NotApplyed,1
+2025-07-25,TOR,Toronto Blue Jays,6,DET,Detroit Tigers,2,José Berríos,Keider Montero,NotApplyed,0
+2025-07-25,SDP,San Diego Padres,0,STL,St. Louis Cardinals,3,Miles Mikolas,Nick Pivetta,Ryan Helsley,1
+2025-07-25,CHC,Chicago Cubs,5,CHW,Chicago White Sox,12,Adrian Houser,Shota Imanaga,NotApplyed,1
+2025-07-25,ATL,Atlanta Braves,3,TEX,Texas Rangers,8,Nathan Eovaldi,Joey Wentz,NotApplyed,1
+2025-07-25,OAK,Athletics,15,HOU,Houston Astros,3,Jeffrey Springs,Ryan Gusto,NotApplyed,0
+2025-07-25,WSN,Washington Nationals,0,MIN,Minnesota Twins,1,Zebby Matthews,MacKenzie Gore,Jhoan Duran,1
+2025-07-25,SEA,Seattle Mariners,2,LAA,Los Angeles Angels,3,Ryan Zeferjahn,Casey Legumina,NotApplyed,1
+2025-07-25,NYM,New York Mets,8,SFG,San Francisco Giants,1,Clay Holmes,Logan Webb,NotApplyed,0
+2025-07-26,PHI,Philadelphia Phillies,9,NYY,New York Yankees,4,Ranger Suárez,Marcus Stroman,NotApplyed,0
+2025-07-26,CLE,Cleveland Guardians,3,KCR,Kansas City Royals,5,Steven Cruz,Emmanuel Clase,NotApplyed,1
+2025-07-26,TOR,Toronto Blue Jays,6,DET,Detroit Tigers,1,Braydon Fisher,Will Vest,NotApplyed,0
+2025-07-26,TBR,Tampa Bay Rays,2,CIN,Cincinnati Reds,6,Graham Ashcraft,Bryan Baker,NotApplyed,1
+2025-07-26,ARI,Arizona Diamondbacks,0,PIT,Pittsburgh Pirates,2,Andrew Heaney,Merrill Kelly,David Bednar,1
+2025-07-26,COL,Colorado Rockies,0,BAL,Baltimore Orioles,18,Trevor Rogers,Antonio Senzatela,NotApplyed,1
+2025-07-26,ATL,Atlanta Braves,5,TEX,Texas Rangers,6,Shawn Armstrong,Enyel De Los Santos,NotApplyed,1
+2025-07-26,CHC,Chicago Cubs,6,CHW,Chicago White Sox,1,Cade Horton,Jordan Leasure,NotApplyed,0
+2025-07-26,OAK,Athletics,5,HOU,Houston Astros,1,Justin Sterner,Hunter Brown,NotApplyed,0
+2025-07-26,MIA,Miami Marlins,7,MIL,Milwaukee Brewers,4,Janson Junk,Jose Quintana,Tyler Phillips,0
+2025-07-26,WSN,Washington Nationals,9,MIN,Minnesota Twins,3,Mitchell Parker,Joe Ryan,NotApplyed,0
+2025-07-26,LAD,Los Angeles Dodgers,2,BOS,Boston Red Sox,4,Garrett Crochet,Clayton Kershaw,Aroldis Chapman,1
+2025-07-26,CLE,Cleveland Guardians,6,KCR,Kansas City Royals,4,Tanner Bibee,Kris Bubic,Emmanuel Clase,0
+2025-07-26,SDP,San Diego Padres,3,STL,St. Louis Cardinals,1,Jeremiah Estrada,Matthew Liberatore,Robert Suarez,0
+2025-07-26,NYM,New York Mets,2,SFG,San Francisco Giants,1,David Peterson,Robbie Ray,Edwin Díaz,0
+2025-07-26,SEA,Seattle Mariners,7,LAA,Los Angeles Angels,2,George Kirby,José Fermin,NotApplyed,0
+2025-08-02,ATL,Atlanta Braves,4,CIN,Cincinnati Reds,2,Hurston Waldrep,Brent Suter,Raisel Iglesias,0
+2025-08-02,LAD,Los Angeles Dodgers,0,TBR,Tampa Bay Rays,4,Drew Rasmussen,Blake Snell,NotApplyed,1
+2025-08-02,BAL,Baltimore Orioles,4,CHC,Chicago Cubs,3,Grant Wolfram,Caleb Thielbar,Keegan Akin,0
+2025-08-02,KCR,Kansas City Royals,2,TOR,Toronto Blue Jays,4,Max Scherzer,Noah Cameron,Jeff Hoffman,1
+2025-08-02,PIT,Pittsburgh Pirates,5,COL,Colorado Rockies,8,Jaden Hill,Braxton Ashcraft,NotApplyed,1
+2025-08-02,DET,Detroit Tigers,7,PHI,Philadelphia Phillies,5,Tarik Skubal,Zack Wheeler,Kyle Finnegan,0
+2025-08-02,MIL,Milwaukee Brewers,8,WSN,Washington Nationals,2,Brandon Woodruff,Jake Irvin,NotApplyed,0
+2025-08-02,HOU,Houston Astros,3,BOS,Boston Red Sox,7,Justin Wilson,Colton Gordon,Aroldis Chapman,1
+2025-08-02,MIN,Minnesota Twins,4,CLE,Cleveland Guardians,5,Nic Enright,Pierson Ohl,Hunter Gaddis,1
+2025-08-02,NYY,New York Yankees,0,MIA,Miami Marlins,2,Eury Pérez,Cam Schlittler,Calvin Faucher,1
+2025-08-02,SFG,San Francisco Giants,6,NYM,New York Mets,12,Reed Garrett,Kai-Wei Teng,NotApplyed,1
+2025-08-02,TEX,Texas Rangers,6,SEA,Seattle Mariners,4,Luis Curvelo,Casey Legumina,NotApplyed,0
+2025-08-02,ARI,Arizona Diamondbacks,7,OAK,Athletics,2,Zac Gallen,J.T. Ginn,NotApplyed,0
+2025-08-02,CHW,Chicago White Sox,1,LAA,Los Angeles Angels,0,Aaron Civale,Kyle Hendricks,Jordan Leasure,0
+2025-08-02,STL,St. Louis Cardinals,8,SDP,San Diego Padres,5,Michael McGreevy,Randy Vásquez,JoJo Romero,0
+2025-08-03,HOU,Houston Astros,1,BOS,Boston Red Sox,6,Lucas Giolito,Framber Valdez,NotApplyed,1
+2025-08-03,LAD,Los Angeles Dodgers,3,TBR,Tampa Bay Rays,0,Yoshinobu Yamamoto,Mason Englert,Ben Casparius,0
+2025-08-03,MIL,Milwaukee Brewers,14,WSN,Washington Nationals,3,Aaron Ashby,Brad Lord,NotApplyed,0
+2025-08-03,KCR,Kansas City Royals,7,TOR,Toronto Blue Jays,4,Hunter Harvey,Seranthony Domínguez,NotApplyed,0
+2025-08-03,MIN,Minnesota Twins,5,CLE,Cleveland Guardians,4,Kody Funderburk,Joey Cantillo,Erasmo Ramírez,0
+2025-08-03,NYY,New York Yankees,3,MIA,Miami Marlins,7,Edward Cabrera,Luis Gil,NotApplyed,1
+2025-08-03,SFG,San Francisco Giants,12,NYM,New York Mets,4,Carson Whisenhunt,Frankie Montas,NotApplyed,0
+2025-08-03,BAL,Baltimore Orioles,3,CHC,Chicago Cubs,5,Daniel Palencia,Keegan Akin,NotApplyed,1
+2025-08-03,PIT,Pittsburgh Pirates,9,COL,Colorado Rockies,5,Mitch Keller,Bradley Blalock,NotApplyed,0
+2025-08-03,ARI,Arizona Diamondbacks,6,OAK,Athletics,4,Eduardo Rodríguez,Jack Perkins,Kyle Nelson,0
+2025-08-03,CHW,Chicago White Sox,5,LAA,Los Angeles Angels,8,Kenley Jansen,Tyler Alexander,NotApplyed,1
+2025-08-03,STL,St. Louis Cardinals,3,SDP,San Diego Padres,7,Dylan Cease,Andre Pallante,Robert Suarez,1
+2025-08-03,TEX,Texas Rangers,4,SEA,Seattle Mariners,5,Logan Evans,Jacob deGrom,Andrés Muñoz,1
+2025-08-03,DET,Detroit Tigers,0,PHI,Philadelphia Phillies,2,Cristopher Sánchez,Charlie Morton,Jhoan Duran,1
+2025-08-06,BAL,Baltimore Orioles,5,PHI,Philadelphia Phillies,1,Trevor Rogers,Ranger Suárez,NotApplyed,0
+2025-08-06,SFG,San Francisco Giants,4,PIT,Pittsburgh Pirates,2,Ryan Walker,Dennis Santana,Randy Rodríguez,0
+2025-08-06,MIN,Minnesota Twins,9,DET,Detroit Tigers,4,Thomas Hatch,Jack Flaherty,NotApplyed,0
+2025-08-06,CLE,Cleveland Guardians,4,NYM,New York Mets,1,Gavin Williams,David Peterson,Hunter Gaddis,0
+2025-08-06,CIN,Cincinnati Reds,1,CHC,Chicago Cubs,6,Cade Horton,Andrew Abbott,NotApplyed,1
+2025-08-06,NYY,New York Yankees,3,TEX,Texas Rangers,2,Mark Leiter Jr.,Robert Garcia,David Bednar,0
+2025-08-06,TOR,Toronto Blue Jays,20,COL,Colorado Rockies,1,Kevin Gausman,Kyle Freeland,NotApplyed,0
+2025-08-06,TBR,Tampa Bay Rays,5,LAA,Los Angeles Angels,4,Garrett Cleavinger,Ryan Zeferjahn,Pete Fairbanks,0
+2025-08-06,STL,St. Louis Cardinals,5,LAD,Los Angeles Dodgers,3,JoJo Romero,Alex Vesia,Riley O'Brien,0
+2025-08-06,HOU,Houston Astros,4,MIA,Miami Marlins,6,Janson Junk,Spencer Arrighetti,Lake Bachar,1
+2025-08-06,OAK,Athletics,1,WSN,Washington Nationals,2,Jose A. Ferrer,Michael Kelly,NotApplyed,1
+2025-08-06,KCR,Kansas City Royals,7,BOS,Boston Red Sox,3,Michael Wacha,Dustin May,NotApplyed,0
+2025-08-06,MIL,Milwaukee Brewers,5,ATL,Atlanta Braves,4,Jose Quintana,Spencer Strider,Trevor Megill,0
+2025-08-06,SDP,San Diego Padres,3,ARI,Arizona Diamondbacks,2,Adrián Morejón,Kyle Backhus,Mason Miller,0
+2025-08-06,CHW,Chicago White Sox,6,SEA,Seattle Mariners,8,George Kirby,Jonathan Cannon,Andrés Muñoz,1
+2025-08-08,CIN,Cincinnati Reds,2,PIT,Pittsburgh Pirates,3,Kyle Nicolas,Tony Santillan,Dennis Santana,1
+2025-08-08,OAK,Athletics,2,BAL,Baltimore Orioles,3,Tomoyuki Sugano,J.T. Ginn,Keegan Akin,1
+2025-08-08,HOU,Houston Astros,5,NYY,New York Yankees,3,Josh Hader,Devin Williams,NotApplyed,0
+2025-08-08,LAA,Los Angeles Angels,5,DET,Detroit Tigers,6,Troy Melton,Reid Detmers,Kyle Finnegan,1
+2025-08-08,MIA,Miami Marlins,5,ATL,Atlanta Braves,1,Edward Cabrera,Bryce Elder,NotApplyed,0
+2025-08-08,CLE,Cleveland Guardians,9,CHW,Chicago White Sox,5,Tanner Bibee,Aaron Civale,NotApplyed,0
+2025-08-08,PHI,Philadelphia Phillies,9,TEX,Texas Rangers,1,Cristopher Sánchez,Merrill Kelly,NotApplyed,0
+2025-08-08,NYM,New York Mets,2,MIL,Milwaukee Brewers,3,Brandon Woodruff,Kodai Senga,Trevor Megill,1
+2025-08-08,KCR,Kansas City Royals,4,MIN,Minnesota Twins,9,Joe Ryan,Seth Lugo,NotApplyed,1
+2025-08-08,CHC,Chicago Cubs,0,STL,St. Louis Cardinals,5,Michael McGreevy,Matthew Boyd,NotApplyed,1
+2025-08-08,COL,Colorado Rockies,1,ARI,Arizona Diamondbacks,6,Zac Gallen,Austin Gomber,NotApplyed,1
+2025-08-08,BOS,Boston Red Sox,10,SDP,San Diego Padres,2,Walker Buehler,Nick Pivetta,NotApplyed,0
+2025-08-08,TBR,Tampa Bay Rays,2,SEA,Seattle Mariners,3,Carlos Vargas,Griffin Jax,Matt Brash,1
+2025-08-08,TOR,Toronto Blue Jays,1,LAD,Los Angeles Dodgers,5,Clayton Kershaw,Max Scherzer,NotApplyed,1
+2025-08-08,WSN,Washington Nationals,0,SFG,San Francisco Giants,5,Kai-Wei Teng,Jake Irvin,NotApplyed,1
+2025-08-09,MIA,Miami Marlins,1,ATL,Atlanta Braves,7,Hurston Waldrep,Ryan Gusto,NotApplyed,1
+2025-08-09,HOU,Houston Astros,4,NYY,New York Yankees,5,David Bednar,Bryan King,NotApplyed,1
+2025-08-09,WSN,Washington Nationals,4,SFG,San Francisco Giants,2,Brad Lord,Carson Whisenhunt,Jose A. Ferrer,0
+2025-08-09,LAA,Los Angeles Angels,7,DET,Detroit Tigers,4,Yusei Kikuchi,Charlie Morton,Kenley Jansen,0
+2025-08-09,CIN,Cincinnati Reds,2,PIT,Pittsburgh Pirates,1,Nick Martinez,Carmen Mlodzinski,Emilio Pagán,0
+2025-08-09,OAK,Athletics,11,BAL,Baltimore Orioles,3,Jack Perkins,Brandon Young,NotApplyed,0
+2025-08-09,CLE,Cleveland Guardians,3,CHW,Chicago White Sox,1,Joey Cantillo,Sean Burke,Cade Smith,0
+2025-08-09,NYM,New York Mets,4,MIL,Milwaukee Brewers,7,Jared Koenig,Ryne Stanek,Trevor Megill,1
+2025-08-09,KCR,Kansas City Royals,2,MIN,Minnesota Twins,0,Noah Cameron,Bailey Ober,Carlos Estévez,0
+2025-08-09,MIA,Miami Marlins,6,ATL,Atlanta Braves,8,Erick Fedde,Sandy Alcantara,Raisel Iglesias,1
+2025-08-09,CHC,Chicago Cubs,9,STL,St. Louis Cardinals,1,Colin Rea,Andre Pallante,NotApplyed,0
+2025-08-09,PHI,Philadelphia Phillies,3,TEX,Texas Rangers,2,Jesús Luzardo,Jacob deGrom,Jhoan Duran,0
+2025-08-09,COL,Colorado Rockies,5,ARI,Arizona Diamondbacks,6,Andrew Hoffmann,Jimmy Herget,NotApplyed,1
+2025-08-09,BOS,Boston Red Sox,4,SDP,San Diego Padres,5,Jason Adam,Garrett Whitlock,NotApplyed,1
+2025-08-09,TOR,Toronto Blue Jays,1,LAD,Los Angeles Dodgers,9,Blake Snell,Chris Bassitt,NotApplyed,1
+2025-08-09,TBR,Tampa Bay Rays,4,SEA,Seattle Mariners,7,Logan Evans,Joe Boyle,Andrés Muñoz,1
+2025-08-12,SEA,Seattle Mariners,1,BAL,Baltimore Orioles,0,George Kirby,Dean Kremer,Andrés Muñoz,0
+2025-08-12,PHI,Philadelphia Phillies,1,CIN,Cincinnati Reds,6,Brady Singer,Ranger Suárez,NotApplyed,1
+2025-08-12,MIA,Miami Marlins,3,CLE,Cleveland Guardians,4,Cade Smith,Calvin Faucher,NotApplyed,1
+2025-08-12,MIN,Minnesota Twins,1,NYY,New York Yankees,9,Carlos Rodón,Travis Adams,NotApplyed,1
+2025-08-12,CHC,Chicago Cubs,1,TOR,Toronto Blue Jays,5,José Berríos,Javier Assad,NotApplyed,1
+2025-08-12,ATL,Atlanta Braves,5,NYM,New York Mets,13,Gregory Soto,Spencer Strider,Justin Hagenman,1
+2025-08-12,DET,Detroit Tigers,6,CHW,Chicago White Sox,9,Yoendrys Gómez,Jack Flaherty,Jordan Leasure,1
+2025-08-12,WSN,Washington Nationals,5,KCR,Kansas City Royals,8,Michael Wacha,Mitchell Parker,Lucas Erceg,1
+2025-08-12,PIT,Pittsburgh Pirates,0,MIL,Milwaukee Brewers,14,Freddy Peralta,Paul Skenes,NotApplyed,1
+2025-08-12,COL,Colorado Rockies,3,STL,St. Louis Cardinals,0,Kyle Freeland,Matthew Liberatore,Victor Vodnik,0
+2025-08-12,ARI,Arizona Diamondbacks,3,TEX,Texas Rangers,2,Jalen Beeks,Danny Coulombe,Juan Morillo,0
+2025-08-12,BOS,Boston Red Sox,14,HOU,Houston Astros,1,Dustin May,Spencer Arrighetti,NotApplyed,0
+2025-08-12,LAD,Los Angeles Dodgers,6,LAA,Los Angeles Angels,7,Connor Brogdon,Ben Casparius,NotApplyed,1
+2025-08-12,SDP,San Diego Padres,5,SFG,San Francisco Giants,1,Jason Adam,Robbie Ray,NotApplyed,0
+2025-08-12,TBR,Tampa Bay Rays,0,OAK,Athletics,6,Jacob Lopez,Shane Baz,NotApplyed,1
+2025-08-14,SEA,Seattle Mariners,3,BAL,Baltimore Orioles,5,Tomoyuki Sugano,Logan Evans,Dietrich Enns,1
+2025-08-14,CHC,Chicago Cubs,1,TOR,Toronto Blue Jays,2,Max Scherzer,Matthew Boyd,Jeff Hoffman,1
+2025-08-14,MIA,Miami Marlins,4,CLE,Cleveland Guardians,9,Tanner Bibee,Edward Cabrera,Cade Smith,1
+2025-08-14,PHI,Philadelphia Phillies,2,WSN,Washington Nationals,3,Shinnosuke Ogasawara,Jesús Luzardo,Cole Henry,1
+2025-08-14,ATL,Atlanta Braves,4,NYM,New York Mets,3,Bryce Elder,Ryan Helsley,Raisel Iglesias,0
+2025-08-14,DET,Detroit Tigers,4,MIN,Minnesota Twins,3,Rafael Montero,Erasmo Ramírez,NotApplyed,0
+2025-08-14,ARI,Arizona Diamondbacks,8,COL,Colorado Rockies,2,Eduardo Rodríguez,Bradley Blalock,NotApplyed,0
+2025-08-16,PIT,Pittsburgh Pirates,1,CHC,Chicago Cubs,3,Andrew Kittredge,Evan Sisk,Brad Keller,1
+2025-08-16,TEX,Texas Rangers,2,TOR,Toronto Blue Jays,14,Eric Lauer,Patrick Corbin,NotApplyed,1
+2025-08-16,PHI,Philadelphia Phillies,0,WSN,Washington Nationals,2,Cade Cavalli,Taijuan Walker,Jose A. Ferrer,1
+2025-08-16,MIA,Miami Marlins,5,BOS,Boston Red Sox,7,Brayan Bello,Cal Quantrill,Aroldis Chapman,1
+2025-08-16,SEA,Seattle Mariners,1,NYM,New York Mets,3,Nolan McLean,Bryan Woo,Edwin Díaz,1
+2025-08-16,MIL,Milwaukee Brewers,6,CIN,Cincinnati Reds,5,Trevor Megill,Joe La Sorsa,Nick Mears,0
+2025-08-16,ATL,Atlanta Braves,10,CLE,Cleveland Guardians,1,Joey Wentz,Slade Cecconi,Hunter Stratton,0
+2025-08-16,BAL,Baltimore Orioles,4,HOU,Houston Astros,5,Enyel De Los Santos,Keegan Akin,NotApplyed,1
+2025-08-16,CHW,Chicago White Sox,2,KCR,Kansas City Royals,6,Daniel Lynch IV,Sean Burke,NotApplyed,1
+2025-08-16,DET,Detroit Tigers,8,MIN,Minnesota Twins,5,Casey Mize,Brooks Kriske,Kyle Finnegan,0
+2025-08-16,NYY,New York Yankees,12,STL,St. Louis Cardinals,8,Max Fried,Sonny Gray,David Bednar,0
+2025-08-16,ARI,Arizona Diamondbacks,7,COL,Colorado Rockies,10,Ryan Rolison,Andrew Hoffmann,Victor Vodnik,1
+2025-08-16,TBR,Tampa Bay Rays,2,SFG,San Francisco Giants,1,Edwin Uceta,José Buttó,Pete Fairbanks,0
+2025-08-16,SDP,San Diego Padres,0,LAD,Los Angeles Dodgers,6,Blake Snell,Dylan Cease,NotApplyed,1
+2025-08-16,LAA,Los Angeles Angels,2,OAK,Athletics,7,Luis Morales,Tyler Anderson,Sean Newcomb,1
+2025-08-22,COL,Colorado Rockies,0,PIT,Pittsburgh Pirates,9,Braxton Ashcraft,Antonio Senzatela,Bubba Chandler,1
+2025-08-22,WSN,Washington Nationals,5,PHI,Philadelphia Phillies,4,PJ Poulin,Jhoan Duran,NotApplyed,0
+2025-08-22,HOU,Houston Astros,10,BAL,Baltimore Orioles,7,Steven Okert,Cade Povich,Bryan Abreu,0
+2025-08-22,BOS,Boston Red Sox,1,NYY,New York Yankees,0,Brayan Bello,Mark Leiter Jr.,Aroldis Chapman,0
+2025-08-22,KCR,Kansas City Royals,5,DET,Detroit Tigers,7,Kyle Finnegan,Bailey Falter,NotApplyed,1
+2025-08-22,TOR,Toronto Blue Jays,5,MIA,Miami Marlins,2,Shane Bieber,Ryan Gusto,Jeff Hoffman,0
+2025-08-22,NYM,New York Mets,12,ATL,Atlanta Braves,7,Nolan McLean,Joey Wentz,NotApplyed,0
+2025-08-22,STL,St. Louis Cardinals,6,TBR,Tampa Bay Rays,10,Adrian Houser,Miles Mikolas,NotApplyed,1
+2025-08-22,MIN,Minnesota Twins,9,CHW,Chicago White Sox,7,Kody Funderburk,Brandon Eisert,Justin Topa,0
+2025-08-22,CLE,Cleveland Guardians,3,TEX,Texas Rangers,4,Robert Garcia,Cade Smith,NotApplyed,1
+2025-08-22,SFG,San Francisco Giants,4,MIL,Milwaukee Brewers,5,Trevor Megill,Randy Rodríguez,NotApplyed,1
+2025-08-22,CHC,Chicago Cubs,3,LAA,Los Angeles Angels,2,Brad Keller,Kenley Jansen,Daniel Palencia,0
+2025-08-22,CIN,Cincinnati Reds,5,ARI,Arizona Diamondbacks,6,Jalen Beeks,Scott Barlow,NotApplyed,1
+2025-08-22,LAD,Los Angeles Dodgers,1,SDP,San Diego Padres,2,Yu Darvish,Blake Snell,Robert Suarez,1
+2025-08-22,OAK,Athletics,2,SEA,Seattle Mariners,3,Bryan Woo,Elvis Alvarado,Andrés Muñoz,1
+2025-08-24,COL,Colorado Rockies,0,PIT,Pittsburgh Pirates,4,Paul Skenes,McCade Brown,NotApplyed,1
+2025-08-24,STL,St. Louis Cardinals,2,TBR,Tampa Bay Rays,7,Ryan Pepiot,Matthew Liberatore,NotApplyed,1
+2025-08-24,NYM,New York Mets,3,ATL,Atlanta Braves,4,Tyler Kinley,Gregory Soto,Raisel Iglesias,1
+2025-08-24,HOU,Houston Astros,2,BAL,Baltimore Orioles,3,Trevor Rogers,Spencer Arrighetti,Keegan Akin,1
+2025-08-24,WSN,Washington Nationals,2,PHI,Philadelphia Phillies,3,Ranger Suárez,Jake Irvin,Orion Kerkering,1
+2025-08-24,KCR,Kansas City Royals,10,DET,Detroit Tigers,8,John Schreiber,Jack Flaherty,Carlos Estévez,0
+2025-08-24,TOR,Toronto Blue Jays,3,MIA,Miami Marlins,5,Eury Pérez,Kevin Gausman,Tyler Phillips,1
+2025-08-24,MIN,Minnesota Twins,0,CHW,Chicago White Sox,8,Brandon Eisert,Taj Bradley,NotApplyed,1
+2025-08-24,SFG,San Francisco Giants,4,MIL,Milwaukee Brewers,3,José Buttó,Trevor Megill,Ryan Walker,0
+2025-08-24,CLE,Cleveland Guardians,0,TEX,Texas Rangers,5,Merrill Kelly,Gavin Williams,NotApplyed,1
+2025-08-24,CHC,Chicago Cubs,4,LAA,Los Angeles Angels,3,Jameson Taillon,Kyle Hendricks,Daniel Palencia,0
+2025-08-24,CIN,Cincinnati Reds,6,ARI,Arizona Diamondbacks,1,Graham Ashcraft,Kyle Backhus,NotApplyed,0
+2025-08-24,LAD,Los Angeles Dodgers,8,SDP,San Diego Padres,2,Yoshinobu Yamamoto,Jeremiah Estrada,NotApplyed,0
+2025-08-24,OAK,Athletics,4,SEA,Seattle Mariners,11,Logan Gilbert,Jacob Lopez,NotApplyed,1
+2025-08-24,BOS,Boston Red Sox,2,NYY,New York Yankees,7,Carlos Rodón,Dustin May,NotApplyed,1
+2025-09-02,TOR,Toronto Blue Jays,12,CIN,Cincinnati Reds,9,Louis Varland,Scott Barlow,Jeff Hoffman,0
+2025-09-02,NYM,New York Mets,12,DET,Detroit Tigers,5,Nolan McLean,Sawyer Gipson-Long,NotApplyed,0
+2025-09-02,LAD,Los Angeles Dodgers,7,PIT,Pittsburgh Pirates,9,Bubba Chandler,Edgardo Henriquez,Dennis Santana,1
+2025-09-02,CLE,Cleveland Guardians,7,BOS,Boston Red Sox,11,Justin Slaten,Hunter Gaddis,NotApplyed,1
+2025-09-02,MIA,Miami Marlins,2,WSN,Washington Nationals,5,Cade Cavalli,Adam Mazur,Jose A. Ferrer,1
+2025-09-02,SEA,Seattle Mariners,5,TBR,Tampa Bay Rays,6,Kevin Kelly,Gabe Speier,Garrett Cleavinger,1
+2025-09-02,ATL,Atlanta Braves,3,CHC,Chicago Cubs,4,Shota Imanaga,Joey Wentz,Daniel Palencia,1
+2025-09-02,LAA,Los Angeles Angels,5,KCR,Kansas City Royals,1,Mitch Farris,Michael Lorenzen,NotApplyed,0
+2025-09-02,CHW,Chicago White Sox,12,MIN,Minnesota Twins,3,Davis Martin,Thomas Hatch,NotApplyed,0
+2025-09-02,OAK,Athletics,1,STL,St. Louis Cardinals,2,Miles Mikolas,Michael Kelly,JoJo Romero,1
+2025-09-02,NYY,New York Yankees,7,HOU,Houston Astros,1,Max Fried,Framber Valdez,NotApplyed,0
+2025-09-02,SFG,San Francisco Giants,7,COL,Colorado Rockies,4,Logan Webb,Kyle Freeland,Ryan Walker,0
+2025-09-02,TEX,Texas Rangers,3,ARI,Arizona Diamondbacks,5,Jalen Beeks,Hoby Milner,Taylor Rashi,1
+2025-09-02,BAL,Baltimore Orioles,6,SDP,San Diego Padres,2,Tyler Wells,Yu Darvish,NotApplyed,0
+2025-09-03,MIA,Miami Marlins,5,WSN,Washington Nationals,10,Jackson Rutledge,Eury Pérez,NotApplyed,1
+2025-09-03,NYM,New York Mets,2,DET,Detroit Tigers,6,Casey Mize,Clay Holmes,NotApplyed,1
+2025-09-03,TEX,Texas Rangers,0,ARI,Arizona Diamondbacks,2,Zac Gallen,Jack Leiter,Jake Woodford,1
+2025-09-03,BAL,Baltimore Orioles,7,SDP,San Diego Padres,5,Cade Povich,Nestor Cortes,Yennier Cano,0
+2025-09-03,TOR,Toronto Blue Jays,13,CIN,Cincinnati Reds,9,Shane Bieber,Nick Martinez,NotApplyed,0
+2025-09-03,LAD,Los Angeles Dodgers,0,PIT,Pittsburgh Pirates,3,Mike Burrows,Emmet Sheehan,Dennis Santana,1
+2025-09-03,CLE,Cleveland Guardians,8,BOS,Boston Red Sox,1,Joey Cantillo,Brennan Bernardino,NotApplyed,0
+2025-09-03,SEA,Seattle Mariners,4,TBR,Tampa Bay Rays,9,Adrian Houser,George Kirby,NotApplyed,1
+2025-09-03,ATL,Atlanta Braves,5,CHC,Chicago Cubs,1,Bryce Elder,Ben Brown,NotApplyed,0
+2025-09-03,LAA,Los Angeles Angels,4,KCR,Kansas City Royals,3,Robert Stephenson,Lucas Erceg,Reid Detmers,0
+2025-09-03,PHI,Philadelphia Phillies,3,MIL,Milwaukee Brewers,6,Jose Quintana,Aaron Nola,Jared Koenig,1
+2025-09-03,CHW,Chicago White Sox,4,MIN,Minnesota Twins,3,Grant Taylor,Justin Topa,Jordan Leasure,0
+2025-09-03,OAK,Athletics,1,STL,St. Louis Cardinals,5,Matthew Liberatore,Jeffrey Springs,JoJo Romero,1
+2025-09-03,NYY,New York Yankees,7,HOU,Houston Astros,8,Bryan King,Devin Williams,NotApplyed,1
+2025-09-03,SFG,San Francisco Giants,10,COL,Colorado Rockies,8,Joel Peguero,Luis Peralta,Ryan Walker,0
+2025-09-04,PHI,Philadelphia Phillies,2,MIL,Milwaukee Brewers,0,Ranger Suárez,Tobias Myers,Jhoan Duran,0
+2025-09-04,LAD,Los Angeles Dodgers,3,PIT,Pittsburgh Pirates,5,Paul Skenes,Blake Snell,Colin Holderman,1
+2025-09-04,CLE,Cleveland Guardians,2,TBR,Tampa Bay Rays,4,Ryan Pepiot,Logan Allen,NotApplyed,1
+2025-09-04,NYY,New York Yankees,8,HOU,Houston Astros,4,Carlos Rodón,Cristian Javier,NotApplyed,0
+2025-09-04,LAA,Los Angeles Angels,3,KCR,Kansas City Royals,4,Lucas Erceg,Ryan Zeferjahn,Carlos Estévez,1
+2025-09-04,CHW,Chicago White Sox,11,MIN,Minnesota Twins,8,Wikelman González,Travis Adams,NotApplyed,0
+2025-09-07,SEA,Seattle Mariners,18,ATL,Atlanta Braves,2,Luis Castillo,Joey Wentz,NotApplyed,0
+2025-09-07,CLE,Cleveland Guardians,2,TBR,Tampa Bay Rays,1,Parker Messick,Garrett Cleavinger,Cade Smith,0
+2025-09-07,LAD,Los Angeles Dodgers,5,BAL,Baltimore Orioles,2,Clayton Kershaw,Tomoyuki Sugano,Jack Dreyer,0
+2025-09-07,TOR,Toronto Blue Jays,3,NYY,New York Yankees,4,Max Fried,Max Scherzer,David Bednar,1
+2025-09-07,MIL,Milwaukee Brewers,10,PIT,Pittsburgh Pirates,2,Jacob Misiorowski,Bubba Chandler,NotApplyed,0
+2025-09-07,NYM,New York Mets,2,CIN,Cincinnati Reds,3,Hunter Greene,Brandon Sproat,Tony Santillan,1
+2025-09-07,CHW,Chicago White Sox,6,DET,Detroit Tigers,4,Grant Taylor,Tommy Kahnle,Mike Vasil,0
+2025-09-07,PHI,Philadelphia Phillies,4,MIA,Miami Marlins,5,Ronny Henriquez,Taijuan Walker,Lake Bachar,1
+2025-09-07,MIN,Minnesota Twins,5,KCR,Kansas City Royals,1,Bailey Ober,Michael Lorenzen,Génesis Cabrera,0
+2025-09-07,SFG,San Francisco Giants,3,STL,St. Louis Cardinals,4,Sonny Gray,Kai-Wei Teng,Riley O'Brien,1
+2025-09-07,WSN,Washington Nationals,6,CHC,Chicago Cubs,3,Mason Thompson,Daniel Palencia,Jose A. Ferrer,0
+2025-09-07,HOU,Houston Astros,2,TEX,Texas Rangers,4,Phil Maton,Framber Valdez,Shawn Armstrong,1
+2025-09-07,SDP,San Diego Padres,8,COL,Colorado Rockies,1,Dylan Cease,Tanner Gordon,NotApplyed,0
+2025-09-07,OAK,Athletics,3,LAA,Los Angeles Angels,4,Reid Detmers,Osvaldo Bido,Kenley Jansen,1
+2025-09-07,BOS,Boston Red Sox,7,ARI,Arizona Diamondbacks,4,Garrett Whitlock,Taylor Rashi,Aroldis Chapman,0
+2025-09-08,KCR,Kansas City Royals,2,CLE,Cleveland Guardians,10,Slade Cecconi,Ryan Bergert,NotApplyed,1
+2025-09-08,WSN,Washington Nationals,15,MIA,Miami Marlins,7,Cade Cavalli,Janson Junk,NotApplyed,0
+2025-09-08,NYM,New York Mets,0,PHI,Philadelphia Phillies,1,Aaron Nola,Nolan McLean,Jhoan Duran,1
+2025-09-08,CHC,Chicago Cubs,1,ATL,Atlanta Braves,4,Bryce Elder,Shota Imanaga,Raisel Iglesias,1
+2025-09-08,MIL,Milwaukee Brewers,0,TEX,Texas Rangers,5,Jacob Latz,Jose Quintana,NotApplyed,1
+2025-09-08,MIN,Minnesota Twins,12,LAA,Los Angeles Angels,3,Simeon Woods Richardson,Caden Dana,NotApplyed,0
+2025-09-08,CIN,Cincinnati Reds,3,SDP,San Diego Padres,4,Wandy Peralta,Nick Martinez,NotApplyed,1
+2025-09-08,STL,St. Louis Cardinals,2,SEA,Seattle Mariners,4,Bryan Woo,Gordon Graceffo,Andrés Muñoz,1
+2025-09-08,ARI,Arizona Diamondbacks,5,SFG,San Francisco Giants,11,Logan Webb,Brandyn Garcia,NotApplyed,1
+2025-09-08,BOS,Boston Red Sox,7,OAK,Athletics,0,Garrett Crochet,Luis Morales,NotApplyed,0
+2025-09-08,COL,Colorado Rockies,1,LAD,Los Angeles Dodgers,3,Tyler Glasnow,Angel Chivilli,Tanner Scott,1
+2025-09-10,MIL,Milwaukee Brewers,3,TEX,Texas Rangers,6,Merrill Kelly,Freddy Peralta,Phil Maton,1
+2025-09-10,BOS,Boston Red Sox,4,OAK,Athletics,5,Hogan Harris,Aroldis Chapman,NotApplyed,1
+2025-09-10,ARI,Arizona Diamondbacks,5,SFG,San Francisco Giants,3,Eduardo Rodríguez,Carson Seymour,NotApplyed,0
+2025-09-10,MIN,Minnesota Twins,3,LAA,Los Angeles Angels,4,Robert Stephenson,Cole Sands,Kenley Jansen,1
+2025-09-10,PIT,Pittsburgh Pirates,1,BAL,Baltimore Orioles,2,Albert Suárez,Kyle Nicolas,NotApplyed,1
+2025-09-10,KCR,Kansas City Royals,4,CLE,Cleveland Guardians,3,Luinder Avila,Tim Herrin,Carlos Estévez,0
+2025-09-10,WSN,Washington Nationals,3,MIA,Miami Marlins,8,Lake Bachar,Jake Irvin,NotApplyed,1
+2025-09-10,NYM,New York Mets,3,PHI,Philadelphia Phillies,11,Cristopher Sánchez,Clay Holmes,NotApplyed,1
+2025-09-10,DET,Detroit Tigers,11,NYY,New York Yankees,1,Jack Flaherty,Carlos Rodón,NotApplyed,0
+2025-09-10,HOU,Houston Astros,3,TOR,Toronto Blue Jays,2,Enyel De Los Santos,Jeff Hoffman,Bryan Abreu,0
+2025-09-10,CHC,Chicago Cubs,3,ATL,Atlanta Braves,2,Taylor Rogers,Chris Sale,Andrew Kittredge,0
+2025-09-10,TBR,Tampa Bay Rays,5,CHW,Chicago White Sox,6,Jordan Leasure,Mason Montgomery,Tyler Gilbert,1
+2025-09-10,CIN,Cincinnati Reds,2,SDP,San Diego Padres,1,Andrew Abbott,Adrián Morejón,Tony Santillan,0
+2025-09-10,STL,St. Louis Cardinals,2,SEA,Seattle Mariners,4,Emerson Hancock,Ryan Fernandez,NotApplyed,1
+2025-09-10,COL,Colorado Rockies,0,LAD,Los Angeles Dodgers,9,Blake Snell,Kyle Freeland,NotApplyed,1
+2025-09-13,TBR,Tampa Bay Rays,5,CHC,Chicago Cubs,4,Bryan Baker,Brad Keller,Pete Fairbanks,0
+2025-09-13,BAL,Baltimore Orioles,4,TOR,Toronto Blue Jays,5,Braydon Fisher,Yennier Cano,NotApplyed,1
+2025-09-13,PIT,Pittsburgh Pirates,5,WSN,Washington Nationals,1,Carmen Mlodzinski,Cole Henry,NotApplyed,0
+2025-09-13,NYY,New York Yankees,5,BOS,Boston Red Sox,3,Max Fried,Brayan Bello,David Bednar,0
+2025-09-13,DET,Detroit Tigers,4,MIA,Miami Marlins,6,Josh Simpson,Rafael Montero,NotApplyed,1
+2025-09-13,TEX,Texas Rangers,3,NYM,New York Mets,2,Phil Maton,Edwin Díaz,Shawn Armstrong,0
+2025-09-13,KCR,Kansas City Royals,6,PHI,Philadelphia Phillies,8,Taijuan Walker,Angel Zerpa,Jhoan Duran,1
+2025-09-13,CHW,Chicago White Sox,1,CLE,Cleveland Guardians,3,Parker Messick,Davis Martin,Cade Smith,1
+2025-09-13,ARI,Arizona Diamondbacks,5,MIN,Minnesota Twins,2,John Curtiss,Cole Sands,NotApplyed,0
+2025-09-13,HOU,Houston Astros,6,ATL,Atlanta Braves,2,Hunter Brown,Bryce Elder,NotApplyed,0
+2025-09-13,STL,St. Louis Cardinals,8,MIL,Milwaukee Brewers,9,Abner Uribe,Kyle Leahy,NotApplyed,1
+2025-09-13,COL,Colorado Rockies,3,SDP,San Diego Padres,11,Dylan Cease,Bradley Blalock,NotApplyed,1
+2025-09-13,LAD,Los Angeles Dodgers,13,SFG,San Francisco Giants,7,Edgardo Henriquez,Logan Webb,NotApplyed,0
+2025-09-13,LAA,Los Angeles Angels,3,SEA,Seattle Mariners,5,Bryan Woo,Mitch Farris,Matt Brash,1
+2025-09-13,CIN,Cincinnati Reds,5,OAK,Athletics,11,Brady Basso,Nick Martinez,NotApplyed,1
+2025-09-16,ATL,Atlanta Braves,6,WSN,Washington Nationals,3,José Suarez,Jake Irvin,Raisel Iglesias,0
+2025-09-16,CLE,Cleveland Guardians,7,DET,Detroit Tigers,5,Cade Smith,Will Vest,NotApplyed,0
+2025-09-16,CHC,Chicago Cubs,4,PIT,Pittsburgh Pirates,1,Cade Horton,Paul Skenes,Brad Keller,0
+2025-09-16,OAK,Athletics,2,BOS,Boston Red Sox,1,Mitch Spence,Greg Weissert,Hogan Harris,0
+2025-09-16,ATL,Atlanta Braves,5,WSN,Washington Nationals,0,Tyler Kinley,Mason Thompson,NotApplyed,0
+2025-09-16,SDP,San Diego Padres,3,NYM,New York Mets,8,Sean Manaea,Michael King,NotApplyed,1
+2025-09-16,TOR,Toronto Blue Jays,6,TBR,Tampa Bay Rays,5,Eric Lauer,Ryan Pepiot,Jeff Hoffman,0
+2025-09-16,BAL,Baltimore Orioles,8,CHW,Chicago White Sox,7,Dean Kremer,Shane Smith,Keegan Akin,0
+2025-09-16,SEA,Seattle Mariners,12,KCR,Kansas City Royals,5,Logan Gilbert,Michael Wacha,NotApplyed,0
+2025-09-16,LAA,Los Angeles Angels,2,MIL,Milwaukee Brewers,9,Freddy Peralta,Caden Dana,NotApplyed,1
+2025-09-16,NYY,New York Yankees,10,MIN,Minnesota Twins,9,Mark Leiter Jr.,Zebby Matthews,David Bednar,0
+2025-09-16,CIN,Cincinnati Reds,0,STL,St. Louis Cardinals,3,Michael McGreevy,Andrew Abbott,Riley O'Brien,1
+2025-09-16,TEX,Texas Rangers,5,HOU,Houston Astros,6,Colton Gordon,Merrill Kelly,Bryan Abreu,1
+2025-09-16,MIA,Miami Marlins,6,COL,Colorado Rockies,5,Eury Pérez,Kyle Freeland,Ronny Henriquez,0
+2025-09-16,SFG,San Francisco Giants,5,ARI,Arizona Diamondbacks,6,Andrew Saalfrank,Ryan Walker,NotApplyed,1
+2025-09-16,PHI,Philadelphia Phillies,9,LAD,Los Angeles Dodgers,6,Tanner Banks,Blake Treinen,Jhoan Duran,0
+2025-09-19,CHC,Chicago Cubs,4,CIN,Cincinnati Reds,7,Connor Phillips,Porter Hodge,Emilio Pagán,1
+2025-09-19,ATL,Atlanta Braves,10,DET,Detroit Tigers,1,Bryce Elder,Charlie Morton,NotApplyed,0
+2025-09-19,OAK,Athletics,4,PIT,Pittsburgh Pirates,3,Luis Severino,Mitch Keller,Michael Kelly,0
+2025-09-19,NYY,New York Yankees,2,BAL,Baltimore Orioles,4,Trevor Rogers,Will Warren,Keegan Akin,1
+2025-09-19,WSN,Washington Nationals,6,NYM,New York Mets,12,Brooks Raley,Andrew Alvarez,NotApplyed,1
+2025-09-19,BOS,Boston Red Sox,11,TBR,Tampa Bay Rays,7,Garrett Crochet,Garrett Cleavinger,NotApplyed,0
+2025-09-19,SDP,San Diego Padres,3,CHW,Chicago White Sox,4,Davis Martin,Dylan Cease,Grant Taylor,1
+2025-09-19,TOR,Toronto Blue Jays,1,KCR,Kansas City Royals,20,Michael Lorenzen,Max Scherzer,NotApplyed,1
+2025-09-19,MIA,Miami Marlins,6,TEX,Texas Rangers,4,George Soriano,Patrick Corbin,NotApplyed,0
+2025-09-19,LAA,Los Angeles Angels,6,COL,Colorado Rockies,7,Bradley Blalock,Mitch Farris,Victor Vodnik,1
+2025-09-19,SEA,Seattle Mariners,4,HOU,Houston Astros,0,Bryan Woo,Hunter Brown,NotApplyed,0
+2025-09-19,CLE,Cleveland Guardians,6,MIN,Minnesota Twins,2,Jakob Junis,Cole Sands,NotApplyed,0
+2025-09-19,MIL,Milwaukee Brewers,1,STL,St. Louis Cardinals,7,Sonny Gray,Jacob Misiorowski,NotApplyed,1
+2025-09-19,PHI,Philadelphia Phillies,8,ARI,Arizona Diamondbacks,2,Walker Buehler,Jalen Beeks,NotApplyed,0
+2025-09-19,SFG,San Francisco Giants,3,LAD,Los Angeles Dodgers,6,Edgardo Henriquez,Robbie Ray,Tanner Scott,1
+2025-09-22,WSN,Washington Nationals,5,ATL,Atlanta Braves,11,Chris Sale,MacKenzie Gore,José Suarez,1
+2025-09-22,MIL,Milwaukee Brewers,4,SDP,San Diego Padres,5,Bradgley Rodriguez,Grant Anderson,NotApplyed,1
+2025-09-22,STL,St. Louis Cardinals,6,SFG,San Francisco Giants,5,Michael McGreevy,Justin Verlander,JoJo Romero,0
+2025-09-24,WSN,Washington Nationals,4,ATL,Atlanta Braves,3,Mitchell Parker,Bryce Elder,Jose A. Ferrer,0
+2025-09-24,MIL,Milwaukee Brewers,3,SDP,San Diego Padres,1,Aaron Ashby,Adrián Morejón,Abner Uribe,0
+2025-09-24,TBR,Tampa Bay Rays,6,BAL,Baltimore Orioles,2,Edwin Uceta,Tyler Wells,NotApplyed,0
+2025-09-24,PIT,Pittsburgh Pirates,4,CIN,Cincinnati Reds,3,Yohan Ramírez,Nick Martinez,NotApplyed,0
+2025-09-24,DET,Detroit Tigers,1,CLE,Cleveland Guardians,5,Tanner Bibee,Jack Flaherty,NotApplyed,1
+2025-09-24,MIA,Miami Marlins,1,PHI,Philadelphia Phillies,11,Jesús Luzardo,Ryan Weathers,NotApplyed,1
+2025-09-24,CHW,Chicago White Sox,1,NYY,New York Yankees,8,Max Fried,Jonathan Cannon,NotApplyed,1
+2025-09-24,BOS,Boston Red Sox,7,TOR,Toronto Blue Jays,1,Garrett Crochet,Max Scherzer,NotApplyed,0
+2025-09-24,NYM,New York Mets,3,CHC,Chicago Cubs,10,Matthew Boyd,Jonah Tong,Aaron Civale,1
+2025-09-24,MIN,Minnesota Twins,2,TEX,Texas Rangers,4,Robert Garcia,Travis Adams,Phil Maton,1
+2025-09-24,KCR,Kansas City Royals,2,LAA,Los Angeles Angels,3,Yusei Kikuchi,Stephen Kolek,Kenley Jansen,1
+2025-09-24,LAD,Los Angeles Dodgers,5,ARI,Arizona Diamondbacks,4,Blake Treinen,Brandyn Garcia,Justin Wrobleski,0
+2025-09-24,COL,Colorado Rockies,2,SEA,Seattle Mariners,9,Luis Castillo,Tanner Gordon,NotApplyed,1
+2025-09-24,STL,St. Louis Cardinals,3,SFG,San Francisco Giants,4,José Buttó,Riley O'Brien,Tristan Beck,1
+2025-09-24,HOU,Houston Astros,0,OAK,Athletics,6,Luis Severino,Hunter Brown,NotApplyed,1
+2025-09-26,STL,St. Louis Cardinals,1,CHC,Chicago Cubs,12,Colin Rea,Miles Mikolas,NotApplyed,1
+2025-09-26,MIN,Minnesota Twins,1,PHI,Philadelphia Phillies,3,Aaron Nola,Joe Ryan,Jhoan Duran,1
+2025-09-26,CHW,Chicago White Sox,10,WSN,Washington Nationals,9,Fraser Ellard,Jose A. Ferrer,Grant Taylor,0
+2025-09-26,BAL,Baltimore Orioles,4,NYY,New York Yankees,8,Will Warren,Trevor Rogers,NotApplyed,1
+2025-09-26,TBR,Tampa Bay Rays,2,TOR,Toronto Blue Jays,4,Shane Bieber,Adrian Houser,Jeff Hoffman,1
+2025-09-26,DET,Detroit Tigers,3,BOS,Boston Red Sox,4,Aroldis Chapman,Tommy Kahnle,NotApplyed,1
+2025-09-26,TEX,Texas Rangers,7,CLE,Cleveland Guardians,3,Jack Leiter,Slade Cecconi,NotApplyed,0
+2025-09-26,NYM,New York Mets,2,MIA,Miami Marlins,6,Sandy Alcantara,Brandon Sproat,Tyler Phillips,1
+2025-09-26,PIT,Pittsburgh Pirates,9,ATL,Atlanta Braves,3,Yohan Ramírez,Joey Wentz,NotApplyed,0
+2025-09-26,CIN,Cincinnati Reds,3,MIL,Milwaukee Brewers,1,Connor Phillips,Quinn Priester,Emilio Pagán,0
+2025-09-26,HOU,Houston Astros,3,LAA,Los Angeles Angels,4,Brock Burke,Bryan King,Kenley Jansen,1
+2025-09-26,ARI,Arizona Diamondbacks,4,SDP,San Diego Padres,7,Yu Darvish,Zac Gallen,Mason Miller,1
+2025-09-26,LAD,Los Angeles Dodgers,3,SEA,Seattle Mariners,2,Justin Wrobleski,George Kirby,Tanner Scott,0
+2025-09-26,KCR,Kansas City Royals,3,OAK,Athletics,4,Justin Sterner,Luinder Avila,NotApplyed,1
+2025-09-26,COL,Colorado Rockies,3,SFG,San Francisco Giants,6,Trevor McDonald,Germán Márquez,Ryan Walker,1
+2025-09-27,BAL,Baltimore Orioles,1,NYY,New York Yankees,6,Cam Schlittler,Tomoyuki Sugano,NotApplyed,1
+2025-09-27,STL,St. Louis Cardinals,3,CHC,Chicago Cubs,7,Jameson Taillon,Michael McGreevy,NotApplyed,1
+2025-09-27,TBR,Tampa Bay Rays,1,TOR,Toronto Blue Jays,5,Trey Yesavage,Joe Boyle,NotApplyed,1
+2025-09-27,COL,Colorado Rockies,3,SFG,San Francisco Giants,4,Justin Verlander,Kyle Freeland,Spencer Bivens,1
+2025-09-27,CHW,Chicago White Sox,5,WSN,Washington Nationals,6,Julian Fernández,Brandon Eisert,Jose A. Ferrer,1
+2025-09-27,DET,Detroit Tigers,2,BOS,Boston Red Sox,1,Tyler Holton,Connelly Early,Will Vest,0
+2025-09-27,NYM,New York Mets,5,MIA,Miami Marlins,0,Clay Holmes,Eury Pérez,NotApplyed,0
+2025-09-27,MIN,Minnesota Twins,5,PHI,Philadelphia Phillies,0,Mick Abel,Ranger Suárez,NotApplyed,0
+2025-09-27,PIT,Pittsburgh Pirates,3,ATL,Atlanta Braves,1,Bubba Chandler,Spencer Strider,Dennis Santana,0
+2025-09-27,TEX,Texas Rangers,2,CLE,Cleveland Guardians,3,Cade Smith,Robert Garcia,NotApplyed,1
+2025-09-27,CIN,Cincinnati Reds,7,MIL,Milwaukee Brewers,4,Andrew Abbott,Robert Gasser,Emilio Pagán,0
+2025-09-27,ARI,Arizona Diamondbacks,1,SDP,San Diego Padres,5,Yuki Matsui,Eduardo Rodríguez,NotApplyed,1
+2025-09-27,HOU,Houston Astros,6,LAA,Los Angeles Angels,1,J.P. France,Caden Dana,NotApplyed,0
+2025-09-27,LAD,Los Angeles Dodgers,5,SEA,Seattle Mariners,3,Alex Vesia,Andrés Muñoz,Edgardo Henriquez,0
+2025-09-27,KCR,Kansas City Royals,4,OAK,Athletics,2,Michael Wacha,Luis Morales,Carlos Estévez,0
+2025-09-28,KCR,Kansas City Royals,9,OAK,Athletics,2,Daniel Lynch IV,Brady Basso,NotApplyed,0
+2025-09-28,DET,Detroit Tigers,3,BOS,Boston Red Sox,4,José De León,Chris Paddack,Greg Weissert,1
+2025-09-28,BAL,Baltimore Orioles,2,NYY,New York Yankees,3,Devin Williams,Rico Garcia,David Bednar,1
+2025-09-28,MIN,Minnesota Twins,1,PHI,Philadelphia Phillies,2,Orion Kerkering,Cody Laweryson,NotApplyed,1
+2025-09-28,COL,Colorado Rockies,0,SFG,San Francisco Giants,4,Logan Webb,McCade Brown,Spencer Bivens,1
+2025-09-28,CHW,Chicago White Sox,8,WSN,Washington Nationals,0,Shane Smith,Brad Lord,NotApplyed,0
+2025-09-28,HOU,Houston Astros,6,LAA,Los Angeles Angels,2,Colton Gordon,Sam Aldegheri,NotApplyed,0
+2025-09-28,TBR,Tampa Bay Rays,4,TOR,Toronto Blue Jays,13,Mason Fluharty,Ian Seymour,NotApplyed,1
+2025-09-28,TEX,Texas Rangers,8,CLE,Cleveland Guardians,9,Zak Kent,Jose Corniell,NotApplyed,1
+2025-09-28,NYM,New York Mets,0,MIA,Miami Marlins,4,Edward Cabrera,Brooks Raley,NotApplyed,1
+2025-09-28,CIN,Cincinnati Reds,2,MIL,Milwaukee Brewers,4,Trevor Megill,Brady Singer,Abner Uribe,1
+2025-09-28,ARI,Arizona Diamondbacks,4,SDP,San Diego Padres,12,JP Sears,Brandon Pfaadt,NotApplyed,1
+2025-09-28,LAD,Los Angeles Dodgers,6,SEA,Seattle Mariners,1,Clayton Kershaw,Bryce Miller,Landon Knack,0
+2025-09-28,PIT,Pittsburgh Pirates,1,ATL,Atlanta Braves,4,Chris Sale,Johan Oviedo,Raisel Iglesias,1
+2025-09-28,STL,St. Louis Cardinals,0,CHC,Chicago Cubs,2,Javier Assad,John King,Jordan Wicks,1
