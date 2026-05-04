@@ -387,6 +387,13 @@ def predecir_juego(
 
         detalles_json = json.dumps(detalles)
 
+        # Calidad de los datos: Si faltan lanzadores, es una predicción de menor calidad.
+        has_pitchers = bool(home_pitcher) and bool(away_pitcher)
+        
+        tipo_final = "AUTOMATICO" if modo_auto else "MANUAL"
+        if not hacer_scraping or not has_pitchers:
+            tipo_final += "_FALLBACK"
+
         db_data = {
             "fecha": row_data["fecha"],
             "home_team": home_team,
@@ -397,13 +404,19 @@ def predecir_juego(
             "prob_away": prob_away_pct,
             "prediccion": ganador_code,
             "confianza": conf_label,
-            "tipo": "AUTOMATICO" if modo_auto else "MANUAL",
+            "tipo": tipo_final,
             "detalles": detalles_json,
         }
 
         resultado_data = {**db_data, "detalles": detalles}
 
+        # REGLA DE INTEGRIDAD: No guardar en DB si no hay lanzadores o si es fallback crítico,
+        # a menos que el usuario lo pida explícitamente.
         if guardar_db:
+            if not has_pitchers and modo_auto:
+                print(f"⚠️ Saltando guardado en DB para {away_team} @ {home_team} por falta de lanzadores (evitando contaminación).")
+                return resultado_data
+
             stage_start = time.perf_counter()
             with sqlite3.connect(DB_PATH) as conn:
                 conn.execute("""CREATE TABLE IF NOT EXISTS predicciones_historico
@@ -429,6 +442,7 @@ def predecir_juego(
                     "predicciones_historico", conn, if_exists="append", index=False
                 )
             _debug_stage("db_write", stage_start)
+
 
         if debug:
             _debug_stage("total", total_start)
