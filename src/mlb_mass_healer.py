@@ -23,7 +23,7 @@ def get_gaps():
     
     # Buscar fechas con resultados reales pero sin predicciones (o muy pocas)
     query = """
-    SELECT r.fecha, COUNT(DISTINCT r.game_id) as total_juegos, COUNT(DISTINCT p.game_id) as total_preds
+    SELECT r.fecha, COUNT(DISTINCT r.home_team) as total_juegos, COUNT(DISTINCT p.home_team) as total_preds
     FROM historico_real r
     LEFT JOIN predicciones_historico p ON r.fecha = p.fecha AND r.home_team = p.home_team
     WHERE r.fecha >= ? AND r.fecha <= ?
