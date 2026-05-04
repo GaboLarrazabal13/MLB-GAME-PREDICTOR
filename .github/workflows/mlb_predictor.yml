@@ -495,7 +495,7 @@ jobs:
       - name: Verificar y sanar huecos recientes (Auto-Heal)
         if: steps.scrape.outcome == 'success'
         run: |
-          cd src
+          cd src/mantenimiento
           # El mass healer buscará huecos en la temporada y los arreglará
           python mlb_mass_healer.py
 
@@ -725,6 +725,11 @@ jobs:
         run: |
           cd src
           python mlb_update_real_results.py
+
+      - name: Verificar y sanar huecos recientes tras actualización
+        run: |
+          cd src/mantenimiento
+          python mlb_mass_healer.py
       
       - name: Commit y push de resultados
         run: |
