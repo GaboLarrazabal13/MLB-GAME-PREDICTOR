@@ -1017,18 +1017,10 @@ async def comparar_predicciones_resultados(fecha: str):
                     # Si el backfill falla, mantenemos respuesta vacía sin romper el endpoint.
                     pass
 
-        # Si hay resultados reales pero faltan predicciones, intentar completar predicciones
-        # usando los datos ya almacenados para esa fecha.
-        if not df.empty and "prediccion" in df.columns:
-            faltantes = int(df["prediccion"].isna().sum())
-            if faltantes > 0:
-                try:
-                    generadas = _backfill_predicciones_fecha(fecha)
-                    if generadas > 0:
-                        with sqlite3.connect(DB_PATH) as conn:
-                            df = pd.read_sql(query, conn, params=[fecha])
-                except Exception:
-                    pass
+        # NOTA: El backfill automático de predicciones fue deshabilitado porque generaba
+        # predicciones de baja calidad (sin scraping) que sobreescribían las buenas.
+        # Las predicciones deben venir del pipeline diario, no generarse on-demand aquí.
+        # Si faltan predicciones para un día pasado, usar el sistema de mantenimiento (mlb_maintenance_cli.py).
 
         if df.empty:
             # No hay resultados reales: devolver predicciones solas si existen
@@ -1078,10 +1070,12 @@ async def comparar_predicciones_resultados(fecha: str):
                 },
             }
 
-        # Calcular estadísticas
+        # Calcular estadísticas — solo sobre partidos con predicción válida
         total = len(df)
-        aciertos = df["acierto"].fillna(0).sum() if "acierto" in df.columns else 0
-        accuracy = (aciertos / total * 100) if total > 0 else 0.0
+        df_con_pred = df.dropna(subset=["prediccion"]) if "prediccion" in df.columns else df
+        total_con_pred = len(df_con_pred)
+        aciertos = int(df_con_pred["acierto"].fillna(0).sum()) if "acierto" in df_con_pred.columns else 0
+        accuracy = (aciertos / total_con_pred * 100) if total_con_pred > 0 else 0.0
 
         # Evitar NaN en la respuesta JSON (FastAPI falla al serializarlos).
         df_json = df.astype(object).where(pd.notna(df), None)
@@ -1102,7 +1096,8 @@ async def comparar_predicciones_resultados(fecha: str):
             "fecha": fecha,
             "partidos": partidos,
             "estadisticas": {
-                "total": int(total),
+                "total": int(total_con_pred),    # partidos con predicción válida
+                "total_juegos": int(total),       # total de juegos del día
                 "aciertos": int(aciertos),
                 "accuracy": round(accuracy, 2),
                 "por_confianza": por_confianza,
