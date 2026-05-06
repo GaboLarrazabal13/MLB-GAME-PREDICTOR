@@ -483,7 +483,7 @@ jobs:
         id: scrape
         run: |
           cd src
-          RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
+          RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' SCRAPER_BETWEEN_GAMES_SECONDS=3 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=15 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=10 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
         continue-on-error: true
 
       - name: Generar predicciones si hay datos nuevos
@@ -622,6 +622,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          ref: ${{ github.ref_name }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -647,6 +648,8 @@ jobs:
       - name: Validar y recuperar juegos con anomalias
         id: post_validate
         continue-on-error: true
+        env:
+          TARGET_DATE: ${{ github.event.inputs.target_date }}
         run: |
           cd src
           POST_SCRAPE_MAX_ATTEMPTS=3 POST_SCRAPE_WAIT_SECONDS=300 python post_scrape_pitcher_recovery.py
@@ -697,6 +700,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          ref: ${{ github.ref_name }}
       
       - name: Setup Python
         uses: actions/setup-python@v5
