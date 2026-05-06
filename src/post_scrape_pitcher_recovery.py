@@ -82,6 +82,9 @@ def evaluar_estado_fechas(conn: sqlite3.Connection) -> dict[str, Any]:
     valid_dates = {today_et, yesterday_et}
     stale_games = (bool(max_games) and max_games not in valid_dates) or today_missing
     
+    if stale_games:
+        print(f"[post-scrape] Motivo stale: max_games({max_games}) no en {valid_dates} o today_missing({today_missing})")
+    
     desync_pred_gt_games = bool(max_preds) and (
         (not max_games) or (max_preds > max_games)
     )
@@ -371,9 +374,15 @@ def main() -> int:
                 )
                 requiere_refuerzo_fecha = True
 
-            if requiere_refuerzo_fecha:
-                continue
+        if requiere_refuerzo_fecha:
+            print(f"[post-scrape] Intento {intento}/{max_intentos}: Reforzando scraping de fecha...")
+            ejecutar_refuerzo_scrape()
+            if intento < max_intentos:
+                print(f"[post-scrape] Esperando {wait_seconds}s tras refuerzo de fecha...")
+                time.sleep(wait_seconds)
+            continue
 
+        with sqlite3.connect(DB_PATH) as conn:
             fecha_objetivo = obtener_fecha_objetivo(conn)
             if not fecha_objetivo:
                 print("[post-scrape] No hay historico_partidos para validar. Finaliza en exito.")
@@ -446,16 +455,9 @@ def main() -> int:
                 )
                 return 0
 
-        if requiere_refuerzo_fecha:
-            ejecutar_refuerzo_scrape()
-            if intento < max_intentos:
-                print(
-                    f"[post-scrape] Esperando {wait_seconds}s tras refuerzo de fecha..."
-                )
-                time.sleep(wait_seconds)
-            continue
-
+        # Si llegamos aquí y no hay pendientes pero el bucle sigue, es por anomalías de pitcher/stats
         if intento < max_intentos:
+            print("[post-scrape] Intentando refuerzo de scraping para corregir anomalias de pitchers/stats...")
             ejecutar_refuerzo_scrape()
             print(f"[post-scrape] Esperando {wait_seconds}s antes del siguiente intento...")
             time.sleep(wait_seconds)

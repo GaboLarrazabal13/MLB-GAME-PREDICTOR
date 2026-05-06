@@ -853,14 +853,15 @@ def ejecutar_pipeline_diario():
                     tuple(row),
                 )
 
-            conn.execute(
-                """INSERT INTO sync_control (dataset, source, fecha, updated_at)
-                           VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                           ON CONFLICT(dataset, source)
-                           DO UPDATE SET fecha = excluded.fecha,
-                                         updated_at = CURRENT_TIMESTAMP""",
-                ("games_today", run_source, max(fechas_guardadas)),
-            )
+            if fechas_guardadas:
+                conn.execute(
+                    """INSERT INTO sync_control (dataset, source, fecha, updated_at)
+                               VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                               ON CONFLICT(dataset, source)
+                               DO UPDATE SET fecha = excluded.fecha,
+                                             updated_at = CURRENT_TIMESTAMP""",
+                    ("games_today", run_source, max(fechas_guardadas)),
+                )
 
             conn.commit()
 
