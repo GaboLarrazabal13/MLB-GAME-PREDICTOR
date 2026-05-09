@@ -607,6 +607,24 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                         features_usadas = detalles.get("features_usadas") or {}
                         year_usado = detalles.get("year_usado", request.year)
 
+                        # Si stats_detalladas no tiene el objeto tendencias (predicciones
+                        # generadas antes del cambio), construirlo desde features_usadas
+                        if "tendencias" not in stats_detalladas and features_usadas:
+                            stats_detalladas["tendencias"] = {
+                                "home": {
+                                    "win_rate": float(features_usadas.get("home_win_rate_10", 0.5)),
+                                    "racha": int(features_usadas.get("home_racha", 0)),
+                                    "runs_avg": float(features_usadas.get("home_runs_avg", 0)),
+                                    "runs_diff": float(features_usadas.get("home_runs_diff", 0)),
+                                },
+                                "away": {
+                                    "win_rate": float(features_usadas.get("away_win_rate_10", 0.5)),
+                                    "racha": int(features_usadas.get("away_racha", 0)),
+                                    "runs_avg": float(features_usadas.get("away_runs_avg", 0)),
+                                    "runs_diff": float(features_usadas.get("away_runs_diff", 0)),
+                                },
+                            }
+
                         prob_max = max(prob_home_decimal, prob_away_decimal)
                         if prob_max >= 0.65:
                             confianza_decimal = 0.85
@@ -660,6 +678,23 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
         }
         features_usadas = detalles.get("features_usadas") or {}
         year_usado = detalles.get("year_usado", request.year)
+
+        # Construir tendencias desde features_usadas si no vienen en stats_detalladas
+        if "tendencias" not in stats_detalladas and features_usadas:
+            stats_detalladas["tendencias"] = {
+                "home": {
+                    "win_rate": float(features_usadas.get("home_win_rate_10", 0.5)),
+                    "racha": int(features_usadas.get("home_racha", 0)),
+                    "runs_avg": float(features_usadas.get("home_runs_avg", 0)),
+                    "runs_diff": float(features_usadas.get("home_runs_diff", 0)),
+                },
+                "away": {
+                    "win_rate": float(features_usadas.get("away_win_rate_10", 0.5)),
+                    "racha": int(features_usadas.get("away_racha", 0)),
+                    "runs_avg": float(features_usadas.get("away_runs_avg", 0)),
+                    "runs_diff": float(features_usadas.get("away_runs_diff", 0)),
+                },
+            }
 
         # CORRECCIÓN: Calcular confianza correctamente (es una probabilidad 0-1, no porcentaje)
         prob_home_decimal = (
