@@ -1444,66 +1444,102 @@ if pagina == "⚾ Predicción Manual":
                                     unsafe_allow_html=True,
                                 )
 
-                        # --- NUEVA SECCIÓN DE TENDENCIAS ---
-                        # Intentar obtener de stats_detalladas (nuevo formato) o de features_usadas (legacy)
-                        stats_det = resultado.get("stats_detalladas", {})
-                        tendencias = stats_det.get("tendencias", {})
-                        
-                        if tendencias or features:
+                        # --- SECCIÓN DE TENDENCIAS Y MOMENTUM ---
+                        stats_det_t = resultado.get("stats_detalladas", {})
+                        tendencias = stats_det_t.get("tendencias", {}) if stats_det_t else {}
+
+                        # Extraer datos: prioridad tendencias (nuevo) → features (legacy)
+                        if tendencias:
+                            t_h = tendencias.get("home", {})
+                            t_a = tendencias.get("away", {})
+                            win_rate_h = float(t_h.get("win_rate", 0.5)) * 100
+                            racha_h = int(t_h.get("racha", 0))
+                            runs_avg_h = float(t_h.get("runs_avg", 0))
+                            runs_diff_h = float(t_h.get("runs_diff", 0))
+                            win_rate_a = float(t_a.get("win_rate", 0.5)) * 100
+                            racha_a = int(t_a.get("racha", 0))
+                            runs_avg_a = float(t_a.get("runs_avg", 0))
+                            runs_diff_a = float(t_a.get("runs_diff", 0))
+                        elif features:
+                            win_rate_h = float(features.get("home_win_rate_10", 0.5)) * 100
+                            racha_h = int(features.get("home_racha", 0))
+                            runs_avg_h = float(features.get("home_runs_avg", 0))
+                            runs_diff_h = float(features.get("home_runs_diff", 0))
+                            win_rate_a = float(features.get("away_win_rate_10", 0.5)) * 100
+                            racha_a = int(features.get("away_racha", 0))
+                            runs_avg_a = float(features.get("away_runs_avg", 0))
+                            runs_diff_a = float(features.get("away_runs_diff", 0))
+                        else:
+                            tendencias = None  # No hay datos disponibles
+
+                        if tendencias is not None or features:
+                            def _racha_badge(racha):
+                                if racha > 0:
+                                    return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
+                                elif racha < 0:
+                                    return f'<span style="background:#8b1a1a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">❄️ {abs(racha)}P</span>'
+                                return '<span style="background:#555;color:#fff;padding:2px 10px;border-radius:12px">—</span>'
+
+                            def _diff_color(val):
+                                return "#1a6b3a" if val >= 0 else "#8b1a1a"
+
                             st.markdown("---")
-                            st.markdown("### 📈 Tendencias y Momentum (Últimos 10 Juegos)")
-                            
-                            col_t1, col_t2 = st.columns(2)
-                            
-                            with col_t1:
-                                st.markdown(get_team_logo_html(home_team, 40) + f" **{home_team}**", unsafe_allow_html=True)
-                                sub1, sub2, sub3 = st.columns(3)
-                                
-                                if tendencias:
-                                    t_h = tendencias.get("home", {})
-                                    win_rate_h = t_h.get("win_rate", 0.5) * 100
-                                    racha_h = int(t_h.get("racha", 0))
-                                    runs_avg_h = t_h.get("runs_avg", 0)
-                                    runs_diff_h = t_h.get("runs_diff", 0)
-                                else:
-                                    win_rate_h = features.get('home_win_rate_10', 0.5) * 100
-                                    racha_h = int(features.get('home_racha', 0))
-                                    runs_avg_h = features.get('home_runs_avg', 0)
-                                    runs_diff_h = features.get('home_runs_diff', 0)
-                                
-                                racha_str_h = f"{racha_h} G" if racha_h > 0 else (f"{abs(racha_h)} P" if racha_h < 0 else "-")
-                                
-                                with sub1:
-                                    st.metric("Win Rate", f"{win_rate_h:.0f}%")
-                                with sub2:
-                                    st.metric("Racha", racha_str_h, delta=racha_h if racha_h != 0 else None)
-                                with sub3:
-                                    st.metric("Carreras/J", f"{runs_avg_h:.1f}", delta=f"{runs_diff_h:+.1f}")
-                                    
-                            with col_t2:
-                                st.markdown(get_team_logo_html(away_team, 40) + f" **{away_team}**", unsafe_allow_html=True)
-                                sub1, sub2, sub3 = st.columns(3)
-                                
-                                if tendencias:
-                                    t_a = tendencias.get("away", {})
-                                    win_rate_a = t_a.get("win_rate", 0.5) * 100
-                                    racha_a = int(t_a.get("racha", 0))
-                                    runs_avg_a = t_a.get("runs_avg", 0)
-                                    runs_diff_a = t_a.get("runs_diff", 0)
-                                else:
-                                    win_rate_a = features.get('away_win_rate_10', 0.5) * 100
-                                    racha_a = int(features.get('away_racha', 0))
-                                    runs_avg_a = features.get('away_runs_avg', 0)
-                                    runs_diff_a = features.get('away_runs_diff', 0)
-                                
-                                racha_str_a = f"{racha_a} G" if racha_a > 0 else (f"{abs(racha_a)} P" if racha_a < 0 else "-")
-                                
-                                with sub1:
-                                    st.metric("Win Rate", f"{win_rate_a:.0f}%")
-                                with sub2:
-                                    st.metric("Racha", racha_str_a, delta=racha_a if racha_a != 0 else None)
-                                with sub3:
-                                    st.metric("Carreras/J", f"{runs_avg_a:.1f}", delta=f"{runs_diff_a:+.1f}")
+                            st.markdown("### 📈 Tendencias y Momentum — Últimos 10 Juegos")
+                            st.markdown(
+                                f"""
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+                                    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+                                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                                            {get_team_logo_html(home_team, 32)}
+                                            <strong style="font-size:1.1rem">{home_team}</strong>
+                                        </div>
+                                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;text-align:center">
+                                            <div>
+                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
+                                                <div style="font-size:1.4rem;font-weight:700;color:{'#1a6b3a' if win_rate_h >= 50 else '#8b1a1a'}">{win_rate_h:.0f}%</div>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
+                                                <div>{_racha_badge(racha_h)}</div>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">CARR/J</div>
+                                                <div style="font-size:1.4rem;font-weight:700">{runs_avg_h:.1f}</div>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RUN DIFF</div>
+                                                <div style="font-size:1.4rem;font-weight:700;color:{_diff_color(runs_diff_h)}">{runs_diff_h:+.1f}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+                                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                                            {get_team_logo_html(away_team, 32)}
+                                            <strong style="font-size:1.1rem">{away_team}</strong>
+                                        </div>
+                                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;text-align:center">
+                                            <div>
+                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
+                                                <div style="font-size:1.4rem;font-weight:700;color:{'#1a6b3a' if win_rate_a >= 50 else '#8b1a1a'}">{win_rate_a:.0f}%</div>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
+                                                <div>{_racha_badge(racha_a)}</div>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">CARR/J</div>
+                                                <div style="font-size:1.4rem;font-weight:700">{runs_avg_a:.1f}</div>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RUN DIFF</div>
+                                                <div style="font-size:1.4rem;font-weight:700;color:{_diff_color(runs_diff_a)}">{runs_diff_a:+.1f}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
 
                         # FIX: Estadísticas detalladas - Validación completa
                         stats_det = resultado.get("stats_detalladas", {})
