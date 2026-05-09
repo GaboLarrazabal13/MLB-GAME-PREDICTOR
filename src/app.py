@@ -2359,9 +2359,12 @@ elif pagina == "📈 Dashboard's Interactivos":
                     
                     # Crear los buckets
                     def categorize_conf(val):
-                        if val < 55: return "Baja (< 55%)"
-                        elif val <= 65: return "Media (55% - 65%)"
-                        else: return "Alta (> 65%)"
+                        if val < 55:
+                            return "Baja (< 55%)"
+                        elif val <= 65:
+                            return "Media (55% - 65%)"
+                        else:
+                            return "Alta (> 65%)"
                         
                     df_conf['Nivel'] = df_conf['Conf_Pct'].apply(categorize_conf)
                     
