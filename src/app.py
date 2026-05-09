@@ -2221,6 +2221,14 @@ elif pagina == "📈 Dashboard's Interactivos":
             )
 
         if not df_dash.empty:
+            def _parse_conf(x):
+                try:
+                    val = float(str(x).replace('%', '').strip())
+                    return val if val > 1 else val * 100
+                except:
+                    return 0
+            df_dash['Confianza'] = df_dash['Confianza'].apply(_parse_conf)
+            
             df_dash['Fecha_Original'] = pd.to_datetime(df_dash['Fecha'])
             df_dash['Fecha'] = df_dash['Fecha_Original'].dt.date
             
@@ -2252,8 +2260,8 @@ elif pagina == "📈 Dashboard's Interactivos":
                 df_display = df_filtered.copy()
                 df_display['Juego'] = df_display['Away'] + " @ " + df_display['Home']
                 
-                # Normalizar la confianza (asegurar que está en porcentaje)
-                confianza_norm = df_display['Confianza'].apply(lambda x: x if x > 1 else x * 100)
+                # Confianza ya fue normalizada al cargar los datos
+                confianza_norm = df_display['Confianza']
                 df_display['Predicción'] = df_display['Prediccion'] + " (" + confianza_norm.round(1).astype(str) + "%)"
                 
                 df_final = df_display[['Fecha', 'Juego', 'Predicción', 'Resultado_Real', 'Estado']].copy()
@@ -2351,15 +2359,7 @@ elif pagina == "📈 Dashboard's Interactivos":
                     st.markdown("### 🎯 Aciertos por Nivel de Confianza")
                     
                     df_conf = df_filtered.copy()
-                    # Asegurar que confianza esté en porcentaje (0-100) y manejar strings
-                    def parse_confianza(x):
-                        try:
-                            val = float(str(x).replace('%', '').strip())
-                            return val if val > 1 else val * 100
-                        except:
-                            return 0
-                            
-                    df_conf['Conf_Pct'] = df_conf['Confianza'].apply(parse_confianza)
+                    df_conf['Conf_Pct'] = df_conf['Confianza']
                     
                     # Crear los buckets
                     def categorize_conf(val):
