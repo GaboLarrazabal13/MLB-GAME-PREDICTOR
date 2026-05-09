@@ -465,9 +465,7 @@ def ejecutar_scraper_manual():
             )
 
             if scrape_result.returncode != 0:
-                error_output = (
-                    scrape_result.stderr or scrape_result.stdout or ""
-                ).strip()
+                error_output = (scrape_result.stderr or scrape_result.stdout or "").strip()
                 if error_output:
                     return False, f"❌ El scraper falló: {error_output[-300:]}"
                 return False, "⚠️ El scraper no devolvió datos para hoy"
@@ -483,9 +481,7 @@ def ejecutar_scraper_manual():
             if predict_result.returncode == 0:
                 return True, "✅ Partidos y predicciones actualizados exitosamente"
 
-            error_output = (
-                predict_result.stderr or predict_result.stdout or ""
-            ).strip()
+            error_output = (predict_result.stderr or predict_result.stdout or "").strip()
             if error_output:
                 return False, f"❌ Las predicciones fallaron: {error_output[-300:]}"
             return (
@@ -500,9 +496,7 @@ def ejecutar_scraper_manual():
 
 def render_system_status_panel(api_ok, api_data):
     """Muestra el estado operativo dentro de la sección informativa."""
-    entorno = (
-        "Producción" if (os.getenv("API_URL") or st.secrets.get("API_URL")) else "Local"
-    )
+    entorno = "Producción" if (os.getenv("API_URL") or st.secrets.get("API_URL")) else "Local"
 
     col1, col2, col3 = st.columns(3)
 
@@ -549,9 +543,7 @@ def obtener_estadisticas_motor_total():
     """Devuelve métricas históricas del motor usando la base local."""
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            total_predicciones = conn.execute(
-                "SELECT COUNT(*) FROM predicciones_historico"
-            ).fetchone()[0]
+            total_predicciones = conn.execute("SELECT COUNT(*) FROM predicciones_historico").fetchone()[0]
 
             df_eval = pd.read_sql(
                 """
@@ -573,9 +565,7 @@ def obtener_estadisticas_motor_total():
 
         total_validados = int(len(df_eval))
         aciertos = int(df_eval["acierto"].sum()) if total_validados else 0
-        tasa_exito = (
-            round((aciertos / total_validados) * 100, 2) if total_validados else 0.0
-        )
+        tasa_exito = round((aciertos / total_validados) * 100, 2) if total_validados else 0.0
 
         return {
             "total_predicciones": int(total_predicciones),
@@ -659,30 +649,18 @@ def render_motor_lifetime_panel():
         st.markdown("<br>", unsafe_allow_html=True)
         col_g1, col_g2 = st.columns(2)
         with col_g1:
-            st.markdown(
-                "**Cobertura de validación** (partidos con resultado real vs. totales)"
-            )
+            st.markdown("**Cobertura de validación** (partidos con resultado real vs. totales)")
             cobertura = validados / total if total > 0 else 0
-            st.progress(
-                cobertura, text=f"{validados:,} de {total:,} ({cobertura * 100:.1f}%)"
-            )
+            st.progress(cobertura, text=f"{validados:,} de {total:,} ({cobertura * 100:.1f}%)")
         with col_g2:
             st.markdown("**Tasa de acierto** (predicciones correctas sobre validadas)")
             tasa_frac = aciertos / validados if validados > 0 else 0
-            color_text = (
-                "verde"
-                if tasa_frac >= 0.55
-                else ("amarillo" if tasa_frac >= 0.50 else "rojo")
-            )
+            color_text = "verde" if tasa_frac >= 0.55 else ("amarillo" if tasa_frac >= 0.50 else "rojo")
             _ = color_text  # solo para referencia semántica
-            st.progress(
-                tasa_frac, text=f"{aciertos:,} correctas de {validados:,} ({tasa:.1f}%)"
-            )
+            st.progress(tasa_frac, text=f"{aciertos:,} correctas de {validados:,} ({tasa:.1f}%)")
 
     if stats["error"]:
-        st.warning(
-            f"No se pudieron cargar estadísticas históricas del motor: {stats['error']}"
-        )
+        st.warning(f"No se pudieron cargar estadísticas históricas del motor: {stats['error']}")
 
 
 api_ok, api_data = verificar_api_salud()
@@ -790,9 +768,7 @@ def crear_gauge_confianza(confianza):
     return fig
 
 
-def obtener_prediccion_detallada_partido(
-    home_team, away_team, home_pitcher, away_pitcher, year, fecha=None
-):
+def obtener_prediccion_detallada_partido(home_team, away_team, home_pitcher, away_pitcher, year, fecha=None):
     """Obtiene la predicción detallada para un partido usando la API."""
     try:
         response = requests.post(
@@ -803,7 +779,7 @@ def obtener_prediccion_detallada_partido(
                 "home_pitcher": home_pitcher,
                 "away_pitcher": away_pitcher,
                 "year": year,
-                "fecha": fecha
+                "fecha": fecha,
             },
             timeout=120,
         )
@@ -822,9 +798,7 @@ def obtener_prediccion_detallada_partido(
         return False, str(e)
 
 
-def renderizar_analisis_detallado_partido(
-    resultado_detallado, home_team, away_team, home_pitcher, away_pitcher
-):
+def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_team, home_pitcher, away_pitcher):
     """Renderiza en UI el mismo análisis detallado usado en Predicción Manual."""
     if resultado_detallado.get("modo_degradado"):
         st.warning(
@@ -876,9 +850,7 @@ def renderizar_analisis_detallado_partido(
         )
 
     # Mostrar información sobre fallback de años si aplica
-    year_solicitado = resultado_detallado.get(
-        "year_solicitado", resultado_detallado.get("year_usado_home", 2026)
-    )
+    year_solicitado = resultado_detallado.get("year_solicitado", resultado_detallado.get("year_usado_home", 2026))
     year_home = resultado_detallado.get("year_usado_home", year_solicitado)
     year_away = resultado_detallado.get("year_usado_away", year_solicitado)
     razon_home = resultado_detallado.get("razon_fallback_home")
@@ -894,11 +866,7 @@ def renderizar_analisis_detallado_partido(
         # Mostrar info del lanzador local si tiene fallback
         if hubo_fallback_home:
             ip_home = resultado_detallado.get("ip_home", 0)
-            detalle_home = (
-                razon_home
-                if razon_home
-                else f"No había muestra suficiente/estable en {year_solicitado}"
-            )
+            detalle_home = razon_home if razon_home else f"No había muestra suficiente/estable en {year_solicitado}"
             st.info(
                 f"📌 **{home_team} - {home_pitcher}**: Se usaron estadísticas de la temporada "
                 f"**{year_home}** para mejorar la estabilidad del análisis. "
@@ -909,11 +877,7 @@ def renderizar_analisis_detallado_partido(
         # Mostrar info del lanzador visitante si tiene fallback
         if hubo_fallback_away:
             ip_away = resultado_detallado.get("ip_away", 0)
-            detalle_away = (
-                razon_away
-                if razon_away
-                else f"No había muestra suficiente/estable en {year_solicitado}"
-            )
+            detalle_away = razon_away if razon_away else f"No había muestra suficiente/estable en {year_solicitado}"
             st.info(
                 f"📌 **{away_team} - {away_pitcher}**: Se usaron estadísticas de la temporada "
                 f"**{year_away}** para mejorar la estabilidad del análisis. "
@@ -1024,7 +988,7 @@ def renderizar_analisis_detallado_partido(
 
     # Variables de trabajo
     data_ready = False
-    
+
     # Caso 1: Datos ya estructurados en 'tendencias'
     if tendencias_obj and isinstance(tendencias_obj, dict):
         try:
@@ -1032,13 +996,9 @@ def renderizar_analisis_detallado_partido(
             t_a = tendencias_obj.get("away", {})
             win_rate_h = float(t_h.get("win_rate", 0.5)) * 100
             racha_h = int(t_h.get("racha", 0))
-            runs_avg_h = float(t_h.get("runs_avg", 0))
-            runs_diff_h = float(t_h.get("runs_diff", 0))
-            
+
             win_rate_a = float(t_a.get("win_rate", 0.5)) * 100
             racha_a = int(t_a.get("racha", 0))
-            runs_avg_a = float(t_a.get("runs_avg", 0))
-            runs_diff_a = float(t_a.get("runs_diff", 0))
             data_ready = True
         except Exception:
             data_ready = False
@@ -1048,18 +1008,15 @@ def renderizar_analisis_detallado_partido(
         try:
             win_rate_h = float(features_t.get("home_win_rate_10", 0.5)) * 100
             racha_h = int(features_t.get("home_racha", 0))
-            runs_avg_h = float(features_t.get("home_runs_avg", 0))
-            runs_diff_h = float(features_t.get("home_runs_diff", 0))
-            
+
             win_rate_a = float(features_t.get("away_win_rate_10", 0.5)) * 100
             racha_a = int(features_t.get("away_racha", 0))
-            runs_avg_a = float(features_t.get("away_runs_avg", 0))
-            runs_diff_a = float(features_t.get("away_runs_diff", 0))
             data_ready = True
         except Exception:
             data_ready = False
 
     if data_ready:
+
         def _racha_badge(racha):
             if racha > 0:
                 return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
@@ -1086,7 +1043,7 @@ def renderizar_analisis_detallado_partido(
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
                         <div>
                             <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                            <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if win_rate_h >= 50 else '#ef4444'}">{win_rate_h:.0f}%</div>
+                            <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_h >= 50 else "#ef4444"}">{win_rate_h:.0f}%</div>
                         </div>
                         <div>
                             <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
@@ -1106,7 +1063,7 @@ def renderizar_analisis_detallado_partido(
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
                         <div>
                             <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                            <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if win_rate_a >= 50 else '#ef4444'}">{win_rate_a:.0f}%</div>
+                            <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_a >= 50 else "#ef4444"}">{win_rate_a:.0f}%</div>
                         </div>
                         <div>
                             <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
@@ -1159,7 +1116,7 @@ def renderizar_analisis_detallado_partido(
             if away_pitcher_stats and isinstance(away_pitcher_stats, dict):
                 nombre_real = away_pitcher_stats.get("nombre", away_pitcher)
                 st.markdown(
-                    get_team_logo_html(away_team, 40) + f" {away_team} - {nombre_real}",
+                    get_team_logo_html(away_team, 40) + f"{away_team} - {nombre_real}",
                     unsafe_allow_html=True,
                 )
                 s1, s2, s3 = st.columns(3)
@@ -1188,9 +1145,7 @@ def renderizar_analisis_detallado_partido(
                     if batter and isinstance(batter, dict):
                         nombre_batter = batter.get("nombre", "N/A")
                         if nombre_batter and nombre_batter != "N/A":
-                            with st.expander(
-                                f"#{i} - {nombre_batter}", expanded=(i == 1)
-                            ):
+                            with st.expander(f"#{i} - {nombre_batter}", expanded=(i == 1)):
                                 k1, k2, k3, k4 = st.columns(4)
                                 with k1:
                                     st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
@@ -1214,9 +1169,7 @@ def renderizar_analisis_detallado_partido(
                     if batter and isinstance(batter, dict):
                         nombre_batter = batter.get("nombre", "N/A")
                         if nombre_batter and nombre_batter != "N/A":
-                            with st.expander(
-                                f"#{i} - {nombre_batter}", expanded=(i == 1)
-                            ):
+                            with st.expander(f"#{i} - {nombre_batter}", expanded=(i == 1)):
                                 k1, k2, k3, k4 = st.columns(4)
                                 with k1:
                                     st.metric("OPS", f"{batter.get('OPS', 0):.3f}")
@@ -1291,15 +1244,11 @@ if pagina == "⚾ Predicción Manual":
 
     col1, col2 = st.columns(2)
 
-    team_options = [
-        f"{code} - {EQUIPOS_MLB[code]['nombre']}" for code in sorted(EQUIPOS_MLB.keys())
-    ]
+    team_options = [f"{code} - {EQUIPOS_MLB[code]['nombre']}" for code in sorted(EQUIPOS_MLB.keys())]
 
     with col1:
         st.markdown("#### Equipo Local")
-        home_sel = st.selectbox(
-            "Selecciona equipo local", team_options, key="home_sel_manual"
-        )
+        home_sel = st.selectbox("Selecciona equipo local", team_options, key="home_sel_manual")
         home_team = home_sel.split(" - ")[0]
         st.markdown(
             f'<div style="text-align: center; padding: 10px;">{get_team_logo_html(home_team, 100)}</div>',
@@ -1308,9 +1257,7 @@ if pagina == "⚾ Predicción Manual":
 
     with col2:
         st.markdown("#### Equipo Visitante")
-        away_sel = st.selectbox(
-            "Selecciona equipo visitante", team_options, key="away_sel_manual"
-        )
+        away_sel = st.selectbox("Selecciona equipo visitante", team_options, key="away_sel_manual")
         away_team = away_sel.split(" - ")[0]
         st.markdown(
             f'<div style="text-align: center; padding: 10px;">{get_team_logo_html(away_team, 100)}</div>',
@@ -1346,9 +1293,7 @@ if pagina == "⚾ Predicción Manual":
 
         with col2:
             st.markdown("<br>", unsafe_allow_html=True)
-            submit = st.form_submit_button(
-                "Realizar Predicción", use_container_width=True, type="primary"
-            )
+            submit = st.form_submit_button("Realizar Predicción", use_container_width=True, type="primary")
 
     if submit:
         if not home_pitcher or not away_pitcher:
@@ -1356,9 +1301,7 @@ if pagina == "⚾ Predicción Manual":
         elif home_team == away_team:
             st.error("Los equipos deben ser diferentes")
         else:
-            with st.spinner(
-                f"Analizando {home_team} vs {away_team}... Esto puede tardar varios segundos"
-            ):
+            with st.spinner(f"Analizando {home_team} vs {away_team}... Esto puede tardar varios segundos"):
                 try:
                     # Llamada a la API
                     response = requests.post(
@@ -1456,9 +1399,7 @@ if pagina == "⚾ Predicción Manual":
 
                         with col1:
                             st.plotly_chart(
-                                crear_grafico_probabilidades(
-                                    prob_home, prob_away, home_team, away_team
-                                ),
+                                crear_grafico_probabilidades(prob_home, prob_away, home_team, away_team),
                                 use_container_width=True,
                             )
 
@@ -1475,9 +1416,7 @@ if pagina == "⚾ Predicción Manual":
                         features = resultado.get("features_usadas", {})
 
                         if not features or not any("super_" in k for k in features):
-                            st.info(
-                                "ℹ️ Las Super Features no están disponibles en esta respuesta de la API"
-                            )
+                            st.info("ℹ️ Las Super Features no están disponibles en esta respuesta de la API")
                         else:
                             col1, col2, col3 = st.columns(3)
 
@@ -1557,7 +1496,7 @@ if pagina == "⚾ Predicción Manual":
 
                             # Variables de trabajo
                             data_ready = False
-                            
+
                             # Caso 1: Datos ya estructurados en 'tendencias'
                             if tendencias_obj and isinstance(tendencias_obj, dict):
                                 try:
@@ -1565,13 +1504,9 @@ if pagina == "⚾ Predicción Manual":
                                     t_a = tendencias_obj.get("away", {})
                                     win_rate_h = float(t_h.get("win_rate", 0.5)) * 100
                                     racha_h = int(t_h.get("racha", 0))
-                                    runs_avg_h = float(t_h.get("runs_avg", 0))
-                                    runs_diff_h = float(t_h.get("runs_diff", 0))
-                                    
+
                                     win_rate_a = float(t_a.get("win_rate", 0.5)) * 100
                                     racha_a = int(t_a.get("racha", 0))
-                                    runs_avg_a = float(t_a.get("runs_avg", 0))
-                                    runs_diff_a = float(t_a.get("runs_diff", 0))
                                     data_ready = True
                                 except Exception:
                                     data_ready = False
@@ -1583,7 +1518,7 @@ if pagina == "⚾ Predicción Manual":
                                     racha_h = int(features_t.get("home_racha", 0))
                                     runs_avg_h = float(features_t.get("home_runs_avg", 0))
                                     runs_diff_h = float(features_t.get("home_runs_diff", 0))
-                                    
+
                                     win_rate_a = float(features_t.get("away_win_rate_10", 0.5)) * 100
                                     racha_a = int(features_t.get("away_racha", 0))
                                     runs_avg_a = float(features_t.get("away_runs_avg", 0))
@@ -1593,6 +1528,7 @@ if pagina == "⚾ Predicción Manual":
                                     data_ready = False
 
                             if data_ready:
+
                                 def _racha_badge(racha):
                                     if racha > 0:
                                         return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
@@ -1619,7 +1555,7 @@ if pagina == "⚾ Predicción Manual":
                                             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
                                                 <div>
                                                     <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                                                    <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if win_rate_h >= 50 else '#ef4444'}">{win_rate_h:.0f}%</div>
+                                                    <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_h >= 50 else "#ef4444"}">{win_rate_h:.0f}%</div>
                                                 </div>
                                                 <div>
                                                     <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
@@ -1639,7 +1575,7 @@ if pagina == "⚾ Predicción Manual":
                                             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
                                                 <div>
                                                     <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                                                    <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if win_rate_a >= 50 else '#ef4444'}">{win_rate_a:.0f}%</div>
+                                                    <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_a >= 50 else "#ef4444"}">{win_rate_a:.0f}%</div>
                                                 </div>
                                                 <div>
                                                     <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
@@ -1674,16 +1610,11 @@ if pagina == "⚾ Predicción Manual":
 
                             with col1:
                                 home_pitcher_stats = stats_det.get("home_pitcher")
-                                if home_pitcher_stats and isinstance(
-                                    home_pitcher_stats, dict
-                                ):
-                                    pitcher_nombre_real = home_pitcher_stats.get(
-                                        "nombre", home_pitcher
-                                    )
+                                if home_pitcher_stats and isinstance(home_pitcher_stats, dict):
+                                    pitcher_nombre_real = home_pitcher_stats.get("nombre", home_pitcher)
 
                                     st.markdown(
-                                        get_team_logo_html(home_team, 40)
-                                        + f" {home_team} - {pitcher_nombre_real}",
+                                        get_team_logo_html(home_team, 40) + f" {home_team} - {pitcher_nombre_real}",
                                         unsafe_allow_html=True,
                                     )
 
@@ -1704,22 +1635,15 @@ if pagina == "⚾ Predicción Manual":
                                             f"{home_pitcher_stats.get('SO9', 0):.2f}",
                                         )
                                 else:
-                                    st.warning(
-                                        f"⚠️ No se encontraron estadísticas para {home_pitcher}"
-                                    )
+                                    st.warning(f"⚠️ No se encontraron estadísticas para {home_pitcher}")
 
                             with col2:
                                 away_pitcher_stats = stats_det.get("away_pitcher")
-                                if away_pitcher_stats and isinstance(
-                                    away_pitcher_stats, dict
-                                ):
-                                    pitcher_nombre_real = away_pitcher_stats.get(
-                                        "nombre", away_pitcher
-                                    )
+                                if away_pitcher_stats and isinstance(away_pitcher_stats, dict):
+                                    pitcher_nombre_real = away_pitcher_stats.get("nombre", away_pitcher)
 
                                     st.markdown(
-                                        get_team_logo_html(away_team, 40)
-                                        + f" {away_team} - {pitcher_nombre_real}",
+                                        get_team_logo_html(away_team, 40) + f" {away_team} - {pitcher_nombre_real}",
                                         unsafe_allow_html=True,
                                     )
 
@@ -1740,9 +1664,7 @@ if pagina == "⚾ Predicción Manual":
                                             f"{away_pitcher_stats.get('SO9', 0):.2f}",
                                         )
                                 else:
-                                    st.warning(
-                                        f" No se encontraron estadísticas para {away_pitcher}"
-                                    )
+                                    st.warning(f" No se encontraron estadísticas para {away_pitcher}")
 
                             st.markdown("---")
                             st.markdown("### Top 3 Bateadores")
@@ -1751,14 +1673,9 @@ if pagina == "⚾ Predicción Manual":
 
                             with col1:
                                 home_batters = stats_det.get("home_batters", [])
-                                if (
-                                    home_batters
-                                    and isinstance(home_batters, list)
-                                    and len(home_batters) > 0
-                                ):
+                                if home_batters and isinstance(home_batters, list) and len(home_batters) > 0:
                                     st.markdown(
-                                        get_team_logo_html(home_team, 40)
-                                        + f"- {home_team}",
+                                        get_team_logo_html(home_team, 40) + f"- {home_team}",
                                         unsafe_allow_html=True,
                                     )
                                     for i, batter in enumerate(home_batters[:3], 1):
@@ -1796,20 +1713,13 @@ if pagina == "⚾ Predicción Manual":
                                                             int(batter.get("RBI", 0)),
                                                         )
                                 else:
-                                    st.info(
-                                        f"ℹ️ No hay datos de bateadores disponibles para {home_team}"
-                                    )
+                                    st.info(f"ℹ️ No hay datos de bateadores disponibles para {home_team}")
 
                             with col2:
                                 away_batters = stats_det.get("away_batters", [])
-                                if (
-                                    away_batters
-                                    and isinstance(away_batters, list)
-                                    and len(away_batters) > 0
-                                ):
+                                if away_batters and isinstance(away_batters, list) and len(away_batters) > 0:
                                     st.markdown(
-                                        get_team_logo_html(away_team, 40)
-                                        + f"- {away_team}",
+                                        get_team_logo_html(away_team, 40) + f"- {away_team}",
                                         unsafe_allow_html=True,
                                     )
                                     for i, batter in enumerate(away_batters[:3], 1):
@@ -1847,9 +1757,7 @@ if pagina == "⚾ Predicción Manual":
                                                             int(batter.get("RBI", 0)),
                                                         )
                                 else:
-                                    st.info(
-                                        f"ℹ️ No hay datos de bateadores disponibles para {away_team}"
-                                    )
+                                    st.info(f"ℹ️ No hay datos de bateadores disponibles para {away_team}")
 
                         # Descargar reporte
                         st.markdown("---")
@@ -1862,12 +1770,8 @@ if pagina == "⚾ Predicción Manual":
                         )
                     else:
                         error = response.json()
-                        st.error(
-                            f"❌ Error: {error.get('detail', 'Error desconocido')}"
-                        )
-                        st.info(
-                            "💡 Verifica que los nombres de los lanzadores o el año de busqueda sean correctos."
-                        )
+                        st.error(f"❌ Error: {error.get('detail', 'Error desconocido')}")
+                        st.info("💡 Verifica que los nombres de los lanzadores o el año de busqueda sean correctos.")
 
                 except requests.exceptions.Timeout:
                     st.error("⏱️ Timeout: La predicción tardó más de 2 minutos")
@@ -1890,22 +1794,14 @@ elif pagina == "📅 Partidos de Hoy":
     )
 
     if not api_ok:
-        st.warning(
-            "La API no respondio al health check a tiempo. Intentando cargar datos igualmente..."
-        )
+        st.warning("La API no respondio al health check a tiempo. Intentando cargar datos igualmente...")
 
     try:
         response_partidos = requests.get(f"{API_URL}/games/today", timeout=30)
         response_predicciones = requests.get(f"{API_URL}/predictions/today", timeout=30)
 
-        partidos = (
-            response_partidos.json() if response_partidos.status_code == 200 else []
-        )
-        predicciones = (
-            response_predicciones.json()
-            if response_predicciones.status_code == 200
-            else []
-        )
+        partidos = response_partidos.json() if response_partidos.status_code == 200 else []
+        predicciones = response_predicciones.json() if response_predicciones.status_code == 200 else []
 
         # Combinar datos
         if partidos and predicciones:
@@ -1927,13 +1823,9 @@ elif pagina == "📅 Partidos de Hoy":
 
         if fechas_api:
             if len(fechas_api) == 1:
-                st.info(
-                    f"Fecha cargada por la API: {fechas_api[0]} | Fecha actual: {fecha_hoy}"
-                )
+                st.info(f"Fecha cargada por la API: {fechas_api[0]} | Fecha actual: {fecha_hoy}")
             else:
-                st.info(
-                    f"Fechas cargadas por la API: {', '.join(fechas_api)} | Fecha actual: {fecha_hoy}"
-                )
+                st.info(f"Fechas cargadas por la API: {', '.join(fechas_api)} | Fecha actual: {fecha_hoy}")
 
         partidos_hoy = [p for p in partidos if p.get("fecha") == fecha_hoy]
         fecha_mostrada = fecha_hoy
@@ -1944,8 +1836,11 @@ elif pagina == "📅 Partidos de Hoy":
             fecha_max = max(fechas_api)
             # Solo permitir fallback a 'ayer'
             from datetime import datetime
-            diff_dias = (datetime.strptime(fecha_hoy, "%Y-%m-%d").date() - datetime.strptime(fecha_max, "%Y-%m-%d").date()).days
-            
+
+            diff_dias = (
+                datetime.strptime(fecha_hoy, "%Y-%m-%d").date() - datetime.strptime(fecha_max, "%Y-%m-%d").date()
+            ).days
+
             if diff_dias == 1:
                 fecha_mostrada = fecha_max
                 partidos = [p for p in partidos if p.get("fecha") == fecha_mostrada]
@@ -1972,9 +1867,7 @@ elif pagina == "📅 Partidos de Hoy":
                 unsafe_allow_html=True,
             )
 
-            if st.button(
-                "Buscar Partidos Manualmente", type="primary", use_container_width=True
-            ):
+            if st.button("Buscar Partidos Manualmente", type="primary", use_container_width=True):
                 exito, mensaje = ejecutar_scraper_manual()
                 if exito:
                     st.success(mensaje)
@@ -1982,11 +1875,7 @@ elif pagina == "📅 Partidos de Hoy":
                 else:
                     st.warning(mensaje)
         else:
-            etiqueta_fecha = (
-                f"hoy ({fecha_mostrada}, ET)"
-                if fecha_mostrada == fecha_hoy
-                else f"{fecha_mostrada} (ET)"
-            )
+            etiqueta_fecha = f"hoy ({fecha_mostrada}, ET)" if fecha_mostrada == fecha_hoy else f"{fecha_mostrada} (ET)"
             st.success(f"Se encontraron {len(partidos)} partidos para {etiqueta_fecha}")
 
             if "detalles_partidos_hoy" not in st.session_state:
@@ -2072,10 +1961,7 @@ elif pagina == "📅 Partidos de Hoy":
                                     "No hay lanzadores definidos para este partido. No se puede generar el análisis detallado."
                                 )
                             else:
-                                if (
-                                    game_id
-                                    not in st.session_state.detalles_partidos_hoy
-                                ):
+                                if game_id not in st.session_state.detalles_partidos_hoy:
                                     if st.button(
                                         "Cargar análisis detallado",
                                         key=f"load_detail_{game_id}",
@@ -2084,25 +1970,19 @@ elif pagina == "📅 Partidos de Hoy":
                                         with st.spinner(
                                             f"Generando análisis detallado para {partido['away_team']} @ {partido['home_team']}..."
                                         ):
-                                            ok_detalle, payload = (
-                                                obtener_prediccion_detallada_partido(
-                                                    partido["home_team"],
-                                                    partido["away_team"],
-                                                    home_pitcher,
-                                                    away_pitcher,
-                                                    year_detalle,
-                                                    partido.get("fecha", fecha_hoy)
-                                                )
+                                            ok_detalle, payload = obtener_prediccion_detallada_partido(
+                                                partido["home_team"],
+                                                partido["away_team"],
+                                                home_pitcher,
+                                                away_pitcher,
+                                                year_detalle,
+                                                partido.get("fecha", fecha_hoy),
                                             )
                                         if ok_detalle:
-                                            st.session_state.detalles_partidos_hoy[
-                                                game_id
-                                            ] = payload
+                                            st.session_state.detalles_partidos_hoy[game_id] = payload
                                             st.rerun()
                                         else:
-                                            st.error(
-                                                f"No se pudo cargar el análisis detallado: {payload}"
-                                            )
+                                            st.error(f"No se pudo cargar el análisis detallado: {payload}")
                                             st.caption(
                                                 "Tip: si el error persiste, intenta borrar la caché de la app "
                                                 "con el menú ⋮ → Clear cache, o recarga la página."
@@ -2284,16 +2164,8 @@ elif pagina == "📊 Comparación & Historial":
                     prob_h_norm = normalizar_probabilidad(prob_h)
                     prob_a_norm = normalizar_probabilidad(prob_a)
                     prediccion_code = partido.get("prediccion", "")
-                    prediccion_nombre = (
-                        get_team_display_name(prediccion_code)
-                        if prediccion_code
-                        else "N/A"
-                    )
-                    pred_logo = (
-                        get_team_logo_html(prediccion_code, 22)
-                        if prediccion_code
-                        else ""
-                    )
+                    prediccion_nombre = get_team_display_name(prediccion_code) if prediccion_code else "N/A"
+                    pred_logo = get_team_logo_html(prediccion_code, 22) if prediccion_code else ""
 
                     ganador_real_code = _ht if partido["ganador_real"] == 1 else _at
                     ganador_real_nombre = get_team_display_name(ganador_real_code)
@@ -2359,11 +2231,7 @@ elif pagina == "📊 Comparación & Historial":
                         )
 
                     with col3:
-                        res_bg = (
-                            "rgba(34,197,94,0.08)"
-                            if acierto
-                            else "rgba(239,68,68,0.08)"
-                        )
+                        res_bg = "rgba(34,197,94,0.08)" if acierto else "rgba(239,68,68,0.08)"
                         res_color = "#16a34a" if acierto else "#dc2626"
                         res_text = "ACIERTO ✅" if acierto else "ERROR ❌"
                         st.markdown(
@@ -2435,142 +2303,164 @@ elif pagina == "📈 Dashboard's Interactivos":
 
         if not df_dash.empty:
             # Calcular confianza numérica como el máximo de las dos probabilidades
-            df_dash['Prob_Home'] = pd.to_numeric(df_dash['Prob_Home'], errors='coerce').fillna(0)
-            df_dash['Prob_Away'] = pd.to_numeric(df_dash['Prob_Away'], errors='coerce').fillna(0)
-            df_dash['Confianza'] = df_dash[['Prob_Home', 'Prob_Away']].max(axis=1)
-            
-            df_dash['Fecha_Original'] = pd.to_datetime(df_dash['Fecha'])
-            df_dash['Fecha'] = df_dash['Fecha_Original'].dt.date
-            
+            df_dash["Prob_Home"] = pd.to_numeric(df_dash["Prob_Home"], errors="coerce").fillna(0)
+            df_dash["Prob_Away"] = pd.to_numeric(df_dash["Prob_Away"], errors="coerce").fillna(0)
+            df_dash["Confianza"] = df_dash[["Prob_Home", "Prob_Away"]].max(axis=1)
+
+            df_dash["Fecha_Original"] = pd.to_datetime(df_dash["Fecha"])
+            df_dash["Fecha"] = df_dash["Fecha_Original"].dt.date
+
             st.markdown("### 📅 Filtro de Fechas")
-            min_date = df_dash['Fecha'].min()
-            max_date = df_dash['Fecha'].max()
-            
+            min_date = df_dash["Fecha"].min()
+            max_date = df_dash["Fecha"].max()
+
             # Por defecto mostramos los últimos 14 días
             default_start = max_date - timedelta(days=14) if max_date - min_date > timedelta(days=14) else min_date
-            
+
             col_filter1, col_filter2 = st.columns([1, 2])
             with col_filter1:
                 date_range = st.date_input(
-                    "Selecciona el rango:",
-                    value=(default_start, max_date),
-                    min_value=min_date,
-                    max_value=max_date
+                    "Selecciona el rango:", value=(default_start, max_date), min_value=min_date, max_value=max_date
                 )
-            
+
             if len(date_range) == 2:
                 start_date, end_date = date_range
-                mask = (df_dash['Fecha'] >= start_date) & (df_dash['Fecha'] <= end_date)
+                mask = (df_dash["Fecha"] >= start_date) & (df_dash["Fecha"] <= end_date)
                 df_filtered = df_dash.loc[mask].copy()
-                
+
                 st.markdown("---")
                 st.markdown("### 🏟️ Resultados por Partido")
-                
+
                 # Crear DataFrame formateado para mostrar al usuario
                 df_display = df_filtered.copy()
-                df_display['Juego'] = "🏟️ " + df_display['Away'] + " @ " + df_display['Home']
-                
+                df_display["Juego"] = "🏟️ " + df_display["Away"] + " @ " + df_display["Home"]
+
                 # Confianza ya fue normalizada al cargar los datos
-                confianza_norm = df_display['Confianza']
-                df_display['Predicción'] = "⚾ " + df_display['Prediccion'] + " | " + (confianza_norm * 100).round(1).astype(str) + "%"
-                
-                df_final = df_display[['Fecha', 'Juego', 'Predicción', 'Resultado_Real', 'Estado']].copy()
-                df_final.columns = ['Fecha', 'Encuentro', 'Predicción del Modelo', 'Ganador Real', 'Estado']
-                
+                confianza_norm = df_display["Confianza"]
+                df_display["Predicción"] = (
+                    "⚾ " + df_display["Prediccion"] + " | " + (confianza_norm * 100).round(1).astype(str) + "%"
+                )
+
+                df_final = df_display[["Fecha", "Juego", "Predicción", "Resultado_Real", "Estado"]].copy()
+                df_final.columns = ["Fecha", "Encuentro", "Predicción del Modelo", "Ganador Real", "Estado"]
+
                 # Estilo condicional para el dataframe
                 def color_estado(val):
-                    color = '#dcfce7' if '✅' in val else '#fee2e2'
-                    text_color = '#166534' if '✅' in val else '#991b1b'
-                    return f'background-color: {color}; color: {text_color}; font-weight: bold;'
-                
-                styled_df = df_final.style.map(color_estado, subset=['Estado'])
+                    color = "#dcfce7" if "✅" in val else "#fee2e2"
+                    text_color = "#166534" if "✅" in val else "#991b1b"
+                    return f"background-color: {color}; color: {text_color}; font-weight: bold;"
+
+                styled_df = df_final.style.map(color_estado, subset=["Estado"])
                 st.dataframe(styled_df, use_container_width=True, hide_index=True)
-                
+
                 st.markdown("---")
                 st.markdown("### 📈 Histórico de Tasa de Aciertos")
-                
+
                 col_agrup, _ = st.columns([1, 2])
                 with col_agrup:
                     agrupacion = st.radio("Agrupar métricas por:", ["Día", "Semana", "Mes"], horizontal=True)
-                
+
                 df_trend = df_filtered.copy()
-                
+
                 if agrupacion == "Día":
-                    df_grouped = df_trend.groupby('Fecha').agg(
-                        Total=('Acierto_Num', 'count'),
-                        Aciertos=('Acierto_Num', 'sum')
-                    ).reset_index()
-                    df_grouped['Tasa de Aciertos (%)'] = (df_grouped['Aciertos'] / df_grouped['Total']) * 100
-                    x_col = 'Fecha'
+                    df_grouped = (
+                        df_trend.groupby("Fecha")
+                        .agg(Total=("Acierto_Num", "count"), Aciertos=("Acierto_Num", "sum"))
+                        .reset_index()
+                    )
+                    df_grouped["Tasa de Aciertos (%)"] = (df_grouped["Aciertos"] / df_grouped["Total"]) * 100
+                    x_col = "Fecha"
                 elif agrupacion == "Semana":
-                    df_trend['Semana'] = df_trend['Fecha_Original'].dt.isocalendar().week
-                    df_grouped = df_trend.groupby('Semana').agg(
-                        Total=('Acierto_Num', 'count'),
-                        Aciertos=('Acierto_Num', 'sum')
-                    ).reset_index()
-                    df_grouped['Tasa de Aciertos (%)'] = (df_grouped['Aciertos'] / df_grouped['Total']) * 100
-                    df_grouped['Semana_Label'] = "Semana " + df_grouped['Semana'].astype(str)
-                    x_col = 'Semana_Label'
-                else: # Mes
-                    df_trend['Mes_Num'] = df_trend['Fecha_Original'].dt.month
-                    df_grouped = df_trend.groupby('Mes_Num').agg(
-                        Total=('Acierto_Num', 'count'),
-                        Aciertos=('Acierto_Num', 'sum')
-                    ).reset_index()
-                    df_grouped['Tasa de Aciertos (%)'] = (df_grouped['Aciertos'] / df_grouped['Total']) * 100
-                    meses = {1:'Enero', 2:'Febrero', 3:'Marzo', 4:'Abril', 5:'Mayo', 6:'Junio', 7:'Julio', 8:'Agosto', 9:'Septiembre', 10:'Octubre', 11:'Noviembre', 12:'Diciembre'}
-                    df_grouped['Mes_Label'] = df_grouped['Mes_Num'].map(meses)
-                    x_col = 'Mes_Label'
-                
+                    df_trend["Semana"] = df_trend["Fecha_Original"].dt.isocalendar().week
+                    df_grouped = (
+                        df_trend.groupby("Semana")
+                        .agg(Total=("Acierto_Num", "count"), Aciertos=("Acierto_Num", "sum"))
+                        .reset_index()
+                    )
+                    df_grouped["Tasa de Aciertos (%)"] = (df_grouped["Aciertos"] / df_grouped["Total"]) * 100
+                    df_grouped["Semana_Label"] = "Semana " + df_grouped["Semana"].astype(str)
+                    x_col = "Semana_Label"
+                else:  # Mes
+                    df_trend["Mes_Num"] = df_trend["Fecha_Original"].dt.month
+                    df_grouped = (
+                        df_trend.groupby("Mes_Num")
+                        .agg(Total=("Acierto_Num", "count"), Aciertos=("Acierto_Num", "sum"))
+                        .reset_index()
+                    )
+                    df_grouped["Tasa de Aciertos (%)"] = (df_grouped["Aciertos"] / df_grouped["Total"]) * 100
+                    meses = {
+                        1: "Enero",
+                        2: "Febrero",
+                        3: "Marzo",
+                        4: "Abril",
+                        5: "Mayo",
+                        6: "Junio",
+                        7: "Julio",
+                        8: "Agosto",
+                        9: "Septiembre",
+                        10: "Octubre",
+                        11: "Noviembre",
+                        12: "Diciembre",
+                    }
+                    df_grouped["Mes_Label"] = df_grouped["Mes_Num"].map(meses)
+                    x_col = "Mes_Label"
+
                 # Crear gráfico de línea
                 fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=df_grouped[x_col],
-                    y=df_grouped['Tasa de Aciertos (%)'],
-                    mode='lines+markers',
-                    name='Tasa de Aciertos',
-                    line=dict(color='#3b82f6', width=4, shape='spline'),
-                    marker=dict(size=12, color='#1e40af', line=dict(color='white', width=2)),
-                    fill='tozeroy',
-                    fillcolor='rgba(59, 130, 246, 0.1)',
-                    hovertemplate='<b>%{x}</b><br>Tasa de Aciertos: %{y:.1f}%<br>Partidos: %{customdata[0]}<extra></extra>',
-                    customdata=df_grouped[['Total']]
-                ))
-                
+                fig.add_trace(
+                    go.Scatter(
+                        x=df_grouped[x_col],
+                        y=df_grouped["Tasa de Aciertos (%)"],
+                        mode="lines+markers",
+                        name="Tasa de Aciertos",
+                        line=dict(color="#3b82f6", width=4, shape="spline"),
+                        marker=dict(size=12, color="#1e40af", line=dict(color="white", width=2)),
+                        fill="tozeroy",
+                        fillcolor="rgba(59, 130, 246, 0.1)",
+                        hovertemplate="<b>%{x}</b><br>Tasa de Aciertos: %{y:.1f}%<br>Partidos: %{customdata[0]}<extra></extra>",
+                        customdata=df_grouped[["Total"]],
+                    )
+                )
+
                 # Línea de referencia (50% de aciertos)
                 fig.add_hline(y=50, line_dash="dash", line_color="red", line_width=1, annotation_text="50% (Azar)")
-                
+
                 fig.update_layout(
                     title={
                         "text": f"Evolución de la Tasa de Aciertos (por {agrupacion.lower()})",
                         "font": {"size": 20, "weight": "bold"},
-                        "x": 0.5
+                        "x": 0.5,
                     },
                     xaxis_title=agrupacion,
                     yaxis_title="Tasa de Aciertos (%)",
-                    yaxis=dict(range=[max(0, df_grouped['Tasa de Aciertos (%)'].min() - 10), min(105, df_grouped['Tasa de Aciertos (%)'].max() + 10)]),
+                    yaxis=dict(
+                        range=[
+                            max(0, df_grouped["Tasa de Aciertos (%)"].min() - 10),
+                            min(105, df_grouped["Tasa de Aciertos (%)"].max() + 10),
+                        ]
+                    ),
                     hovermode="x unified",
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
                     xaxis=dict(gridcolor="rgba(0,0,0,0.05)", showgrid=True),
                     yaxis_gridcolor="rgba(0,0,0,0.05)",
                     height=450,
-                    margin=dict(l=20, r=20, t=60, b=20)
+                    margin=dict(l=20, r=20, t=60, b=20),
                 )
-                
+
                 st.plotly_chart(fig, use_container_width=True)
-                
+
                 # --- NUEVAS MÉTRICAS ---
                 st.markdown("---")
-                
+
                 col_m1, col_m2 = st.columns(2)
-                
+
                 with col_m1:
                     st.markdown("### 🎯 Aciertos por Nivel de Confianza")
-                    
+
                     df_conf = df_filtered.copy()
-                    df_conf['Conf_Pct'] = df_conf['Confianza']
-                    
+                    df_conf["Conf_Pct"] = df_conf["Confianza"]
+
                     # Crear los buckets
                     def categorize_conf(val):
                         if val < 55:
@@ -2579,100 +2469,108 @@ elif pagina == "📈 Dashboard's Interactivos":
                             return "Media (55% - 65%)"
                         else:
                             return "Alta (> 65%)"
-                        
-                    df_conf['Nivel'] = df_conf['Conf_Pct'].apply(categorize_conf)
-                    
-                    df_conf_grouped = df_conf.groupby('Nivel').agg(
-                        Total=('Acierto_Num', 'count'),
-                        Aciertos=('Acierto_Num', 'sum')
-                    ).reset_index()
-                    
-                    # Evitar division by zero
-                    df_conf_grouped['Tasa (%)'] = df_conf_grouped.apply(
-                        lambda row: (row['Aciertos'] / row['Total'] * 100) if row['Total'] > 0 else 0, axis=1
+
+                    df_conf["Nivel"] = df_conf["Conf_Pct"].apply(categorize_conf)
+
+                    df_conf_grouped = (
+                        df_conf.groupby("Nivel")
+                        .agg(Total=("Acierto_Num", "count"), Aciertos=("Acierto_Num", "sum"))
+                        .reset_index()
                     )
-                    
+
+                    # Evitar division by zero
+                    df_conf_grouped["Tasa (%)"] = df_conf_grouped.apply(
+                        lambda row: (row["Aciertos"] / row["Total"] * 100) if row["Total"] > 0 else 0, axis=1
+                    )
+
                     # Ordenar las categorías lógicamente
                     cat_order = {"Baja (< 55%)": 0, "Media (55% - 65%)": 1, "Alta (> 65%)": 2}
-                    df_conf_grouped['Order'] = df_conf_grouped['Nivel'].map(cat_order)
-                    df_conf_grouped = df_conf_grouped.sort_values('Order')
-                    
+                    df_conf_grouped["Order"] = df_conf_grouped["Nivel"].map(cat_order)
+                    df_conf_grouped = df_conf_grouped.sort_values("Order")
+
                     fig_conf = go.Figure()
-                    fig_conf.add_trace(go.Bar(
-                        x=df_conf_grouped['Nivel'],
-                        y=df_conf_grouped['Tasa (%)'],
-                        text=df_conf_grouped['Tasa (%)'].round(1).astype(str) + "%",
-                        textposition='auto',
-                        marker_color=['#94a3b8', '#fbbf24', '#10b981'],
-                        hovertemplate='<b>%{x}</b><br>Aciertos: %{customdata[0]} de %{customdata[1]}<extra></extra>',
-                        customdata=df_conf_grouped[['Aciertos', 'Total']]
-                    ))
-                    
+                    fig_conf.add_trace(
+                        go.Bar(
+                            x=df_conf_grouped["Nivel"],
+                            y=df_conf_grouped["Tasa (%)"],
+                            text=df_conf_grouped["Tasa (%)"].round(1).astype(str) + "%",
+                            textposition="auto",
+                            marker_color=["#94a3b8", "#fbbf24", "#10b981"],
+                            hovertemplate="<b>%{x}</b><br>Aciertos: %{customdata[0]} de %{customdata[1]}<extra></extra>",
+                            customdata=df_conf_grouped[["Aciertos", "Total"]],
+                        )
+                    )
+
                     fig_conf.update_layout(
                         yaxis_title="Tasa de Aciertos (%)",
                         yaxis=dict(range=[0, 115]),
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
                         margin=dict(l=20, r=20, t=30, b=20),
-                        height=350
+                        height=350,
                     )
                     st.plotly_chart(fig_conf, use_container_width=True)
-                
+
                 with col_m2:
                     st.markdown("### 🏟️ Precisión por Equipo")
-                    
+
                     # Analizar la tasa de acierto cada vez que juega un equipo
-                    df_home = df_filtered[['Home', 'Acierto_Num']].rename(columns={'Home': 'Equipo'})
-                    df_away = df_filtered[['Away', 'Acierto_Num']].rename(columns={'Away': 'Equipo'})
+                    df_home = df_filtered[["Home", "Acierto_Num"]].rename(columns={"Home": "Equipo"})
+                    df_away = df_filtered[["Away", "Acierto_Num"]].rename(columns={"Away": "Equipo"})
                     df_teams = pd.concat([df_home, df_away])
-                    
-                    df_team_acc = df_teams.groupby('Equipo').agg(
-                        Total=('Acierto_Num', 'count'),
-                        Aciertos=('Acierto_Num', 'sum')
-                    ).reset_index()
-                    
+
+                    df_team_acc = (
+                        df_teams.groupby("Equipo")
+                        .agg(Total=("Acierto_Num", "count"), Aciertos=("Acierto_Num", "sum"))
+                        .reset_index()
+                    )
+
                     # Filtrar equipos con al menos 2 juegos en el rango para no sesgar si hay muchos juegos
                     min_games = 2 if len(df_filtered) > 10 else 1
-                    df_team_acc = df_team_acc[df_team_acc['Total'] >= min_games]
-                    
-                    df_team_acc['Tasa (%)'] = (df_team_acc['Aciertos'] / df_team_acc['Total']) * 100
-                    
+                    df_team_acc = df_team_acc[df_team_acc["Total"] >= min_games]
+
+                    df_team_acc["Tasa (%)"] = (df_team_acc["Aciertos"] / df_team_acc["Total"]) * 100
+
                     # Seleccionar top 5 y peores 5
-                    df_team_acc = df_team_acc.sort_values('Tasa (%)', ascending=False)
-                    
+                    df_team_acc = df_team_acc.sort_values("Tasa (%)", ascending=False)
+
                     if len(df_team_acc) > 10:
                         top_teams = df_team_acc.head(5)
                         bottom_teams = df_team_acc.tail(5)
-                        df_show = pd.concat([top_teams, bottom_teams]).sort_values('Tasa (%)', ascending=True)
+                        df_show = pd.concat([top_teams, bottom_teams]).sort_values("Tasa (%)", ascending=True)
                     else:
-                        df_show = df_team_acc.sort_values('Tasa (%)', ascending=True)
-                        
-                    colors = ['#ef4444' if x < 50 else ('#10b981' if x >= 60 else '#3b82f6') for x in df_show['Tasa (%)']]
-                    
+                        df_show = df_team_acc.sort_values("Tasa (%)", ascending=True)
+
+                    colors = [
+                        "#ef4444" if x < 50 else ("#10b981" if x >= 60 else "#3b82f6") for x in df_show["Tasa (%)"]
+                    ]
+
                     fig_team = go.Figure()
-                    fig_team.add_trace(go.Bar(
-                        y=df_show['Equipo'],
-                        x=df_show['Tasa (%)'],
-                        orientation='h',
-                        text=df_show['Tasa (%)'].round(1).astype(str) + "% (" + df_show['Total'].astype(str) + "J)",
-                        textposition='auto',
-                        marker_color=colors,
-                        hovertemplate='<b>%{y}</b><br>Tasa: %{x:.1f}%<br>Partidos: %{customdata[0]}<extra></extra>',
-                        customdata=df_show[['Total']]
-                    ))
-                    
+                    fig_team.add_trace(
+                        go.Bar(
+                            y=df_show["Equipo"],
+                            x=df_show["Tasa (%)"],
+                            orientation="h",
+                            text=df_show["Tasa (%)"].round(1).astype(str) + "% (" + df_show["Total"].astype(str) + "J)",
+                            textposition="auto",
+                            marker_color=colors,
+                            hovertemplate="<b>%{y}</b><br>Tasa: %{x:.1f}%<br>Partidos: %{customdata[0]}<extra></extra>",
+                            customdata=df_show[["Total"]],
+                        )
+                    )
+
                     fig_team.update_layout(
                         xaxis_title="Tasa de Aciertos (%)",
                         xaxis=dict(range=[0, 115]),
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
                         margin=dict(l=20, r=20, t=30, b=20),
-                        height=350
+                        height=350,
                     )
                     st.plotly_chart(fig_team, use_container_width=True)
             else:
                 st.info("ℹ️ Por favor, selecciona un rango de fechas válido (fecha inicio y fecha fin).")
-                
+
         else:
             st.info("ℹ️ No hay datos históricos disponibles en la base de datos para mostrar los dashboards.")
     except Exception as e:
@@ -2690,9 +2588,7 @@ elif pagina == "🧠 Acerca del Modelo":
             use_container_width=True,
         )
 
-    st.markdown(
-        '<div class="main-title">MLB Predictor Pro V3.5</div>', unsafe_allow_html=True
-    )
+    st.markdown('<div class="main-title">MLB Predictor Pro V3.5</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="subtitle">Sistema Híbrido de Predicción con Machine Learning</div>',
         unsafe_allow_html=True,

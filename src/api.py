@@ -35,9 +35,7 @@ app = FastAPI(
 
 # CORS restringido por variable de entorno (coma separada).
 # Ejemplo: ALLOWED_ORIGINS="https://tu-frontend.com,https://www.tu-frontend.com"
-allowed_origins_env = os.getenv(
-    "ALLOWED_ORIGINS", "http://localhost:8501,http://127.0.0.1:8501"
-)
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:8501,http://127.0.0.1:8501")
 ALLOWED_ORIGINS = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
 
 app.add_middleware(
@@ -51,12 +49,8 @@ app.add_middleware(
 # Rate limiting básico por IP+ruta para evitar abuso.
 RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
 RATE_LIMIT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "180"))
-RATE_LIMIT_PREDICT_MAX_REQUESTS = int(
-    os.getenv("RATE_LIMIT_PREDICT_MAX_REQUESTS", "30")
-)
-DETAILED_ANALYSIS_TIMEOUT_SECONDS = int(
-    os.getenv("DETAILED_ANALYSIS_TIMEOUT_SECONDS", "120")
-)
+RATE_LIMIT_PREDICT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_PREDICT_MAX_REQUESTS", "30"))
+DETAILED_ANALYSIS_TIMEOUT_SECONDS = int(os.getenv("DETAILED_ANALYSIS_TIMEOUT_SECONDS", "120"))
 DETAILED_CACHE_TTL_SECONDS = int(os.getenv("DETAILED_CACHE_TTL_SECONDS", "3600"))
 _rate_limit_store: dict[str, deque[float]] = defaultdict(deque)
 _rate_limit_lock = Lock()
@@ -128,10 +122,7 @@ def _crear_payload_degradado_rapido(request: "PrediccionRequest", motivo: str | 
     if not home_code or not away_code:
         raise HTTPException(
             status_code=504,
-            detail=(
-                "El analisis detallado no pudo completarse y el modo rapido "
-                "no se pudo inicializar."
-            ),
+            detail=("El analisis detallado no pudo completarse y el modo rapido no se pudo inicializar."),
         )
 
     try:
@@ -148,31 +139,17 @@ def _crear_payload_degradado_rapido(request: "PrediccionRequest", motivo: str | 
     except Exception as exc:
         raise HTTPException(
             status_code=504,
-            detail=(
-                "El analisis detallado no pudo completarse y el modo rapido "
-                "tambien fallo."
-            ),
+            detail=("El analisis detallado no pudo completarse y el modo rapido tambien fallo."),
         ) from exc
 
     if not resultado:
         raise HTTPException(
             status_code=504,
-            detail=(
-                "El analisis detallado no pudo completarse y el modo rapido "
-                "no devolvio resultado."
-            ),
+            detail=("El analisis detallado no pudo completarse y el modo rapido no devolvio resultado."),
         )
 
-    prob_home_decimal = (
-        resultado["prob_home"] / 100.0
-        if resultado["prob_home"] > 1
-        else resultado["prob_home"]
-    )
-    prob_away_decimal = (
-        resultado["prob_away"] / 100.0
-        if resultado["prob_away"] > 1
-        else resultado["prob_away"]
-    )
+    prob_home_decimal = resultado["prob_home"] / 100.0 if resultado["prob_home"] > 1 else resultado["prob_home"]
+    prob_away_decimal = resultado["prob_away"] / 100.0 if resultado["prob_away"] > 1 else resultado["prob_away"]
 
     mensaje_base = (
         "Se devolvio analisis rapido porque el scraping detallado no estuvo "
@@ -214,11 +191,7 @@ async def rate_limit_middleware(request: Request, call_next):
         return await call_next(request)
 
     client_ip = _get_client_ip(request)
-    max_requests = (
-        RATE_LIMIT_PREDICT_MAX_REQUESTS
-        if path.startswith("/predict")
-        else RATE_LIMIT_MAX_REQUESTS
-    )
+    max_requests = RATE_LIMIT_PREDICT_MAX_REQUESTS if path.startswith("/predict") else RATE_LIMIT_MAX_REQUESTS
 
     now = time.time()
     key = f"{client_ip}:{path}"
@@ -358,15 +331,9 @@ def _obtener_estado_fechas(conn):
         compare_latest = None
 
     return {
-        "games_latest": _obtener_fecha_publicada(
-            conn, "games_today", "historico_partidos"
-        ),
-        "predictions_latest": _obtener_fecha_publicada(
-            conn, "predictions_today", "predicciones_historico"
-        ),
-        "results_latest": _obtener_fecha_publicada(
-            conn, "results_today", "historico_real"
-        ),
+        "games_latest": _obtener_fecha_publicada(conn, "games_today", "historico_partidos"),
+        "predictions_latest": _obtener_fecha_publicada(conn, "predictions_today", "predicciones_historico"),
+        "results_latest": _obtener_fecha_publicada(conn, "results_today", "historico_real"),
         "compare_latest": compare_latest,
     }
 
@@ -414,7 +381,7 @@ def _backfill_predicciones_fecha(fecha: str) -> int:
                 modo_auto=True,
                 fecha_partido=fecha,
                 hacer_scraping=False,  # solo features temporales para respuesta rápida
-                guardar_db=True,       # GUARDAR en DB para que la comparación sea persistente
+                guardar_db=True,  # GUARDAR en DB para que la comparación sea persistente
             )
             if res:
                 generadas += 1
@@ -422,9 +389,7 @@ def _backfill_predicciones_fecha(fecha: str) -> int:
             continue
 
     if generadas > 0:
-        run_source = (
-            os.getenv("RUN_SOURCE", "api_backfill").strip().lower() or "api_backfill"
-        )
+        run_source = os.getenv("RUN_SOURCE", "api_backfill").strip().lower() or "api_backfill"
         with sqlite3.connect(DB_PATH) as conn:
             conn.execute(
                 """
@@ -486,9 +451,7 @@ async def health_check():
 @app.get("/teams", response_model=list[dict[str, str]])
 async def listar_equipos():
     """Lista todos los equipos MLB disponibles"""
-    equipos = [
-        {"codigo": code, "nombre": name} for code, name in TEAM_CODE_TO_NAME.items()
-    ]
+    equipos = [{"codigo": code, "nombre": name} for code, name in TEAM_CODE_TO_NAME.items()]
     return sorted(equipos, key=lambda x: x["nombre"])
 
 
@@ -499,9 +462,7 @@ async def obtener_estado_fechas():
         with sqlite3.connect(DB_PATH) as conn:
             return _obtener_estado_fechas(conn)
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error obteniendo estado de fechas: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error obteniendo estado de fechas: {str(e)}") from e
 
 
 # ============================================================================
@@ -521,18 +482,14 @@ async def crear_prediccion_manual(request: PrediccionRequest):
         away_code = get_team_code(request.away_team)
 
         if not home_code:
-            raise HTTPException(
-                status_code=400, detail=f"Equipo local no válido: {request.home_team}"
-            )
+            raise HTTPException(status_code=400, detail=f"Equipo local no válido: {request.home_team}")
         if not away_code:
             raise HTTPException(
                 status_code=400,
                 detail=f"Equipo visitante no válido: {request.away_team}",
             )
         if home_code == away_code:
-            raise HTTPException(
-                status_code=400, detail="Los equipos no pueden ser iguales"
-            )
+            raise HTTPException(status_code=400, detail="Los equipos no pueden ser iguales")
 
         # Realizar predicción
         resultado = predecir_juego(
@@ -579,21 +536,18 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
         away_code = get_team_code(request.away_team)
 
         if not home_code:
-            raise HTTPException(
-                status_code=400, detail=f"Equipo local no válido: {request.home_team}"
-            )
+            raise HTTPException(status_code=400, detail=f"Equipo local no válido: {request.home_team}")
         if not away_code:
             raise HTTPException(
                 status_code=400,
                 detail=f"Equipo visitante no válido: {request.away_team}",
             )
         if home_code == away_code:
-            raise HTTPException(
-                status_code=400, detail="Los equipos no pueden ser iguales"
-            )
+            raise HTTPException(status_code=400, detail="Los equipos no pueden ser iguales")
 
         # Buscar en caché primero si tenemos fecha
         import json
+
         if request.fecha:
             with sqlite3.connect(DB_PATH) as conn:
                 try:
@@ -685,9 +639,7 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
         )
 
         if not resultado:
-            raise HTTPException(
-                status_code=500, detail="No se pudo completar la predicción"
-            )
+            raise HTTPException(status_code=500, detail="No se pudo completar la predicción")
 
         detalles = resultado.get("detalles") or {}
         stats_detalladas = detalles.get("stats_detalladas") or {
@@ -717,16 +669,8 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
             }
 
         # CORRECCIÓN: Calcular confianza correctamente (es una probabilidad 0-1, no porcentaje)
-        prob_home_decimal = (
-            resultado["prob_home"] / 100.0
-            if resultado["prob_home"] > 1
-            else resultado["prob_home"]
-        )
-        prob_away_decimal = (
-            resultado["prob_away"] / 100.0
-            if resultado["prob_away"] > 1
-            else resultado["prob_away"]
-        )
+        prob_home_decimal = resultado["prob_home"] / 100.0 if resultado["prob_home"] > 1 else resultado["prob_home"]
+        prob_away_decimal = resultado["prob_away"] / 100.0 if resultado["prob_away"] > 1 else resultado["prob_away"]
         confianza_decimal = max(prob_home_decimal, prob_away_decimal)
 
         # Construir respuesta detallada
@@ -792,9 +736,7 @@ async def debug_prediccion_detallada(request: PrediccionRequest):
     away_code = get_team_code(request.away_team)
 
     if not home_code:
-        raise HTTPException(
-            status_code=400, detail=f"Equipo local no válido: {request.home_team}"
-        )
+        raise HTTPException(status_code=400, detail=f"Equipo local no válido: {request.home_team}")
     if not away_code:
         raise HTTPException(
             status_code=400,
@@ -866,9 +808,7 @@ async def obtener_partidos_hoy():
     """Obtiene los partidos de la jornada mas reciente en la base de datos"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            fecha_objetivo = conn.execute(
-                "SELECT MAX(fecha) FROM historico_partidos"
-            ).fetchone()[0]
+            fecha_objetivo = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
 
             if not fecha_objetivo:
                 return []
@@ -897,9 +837,7 @@ async def obtener_partidos_hoy():
         ]
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error obteniendo partidos: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error obteniendo partidos: {str(e)}") from e
 
 
 @app.get("/predictions/today", response_model=list[dict])
@@ -907,9 +845,7 @@ async def obtener_predicciones_hoy():
     """Obtiene las predicciones de la jornada mas reciente en la base de datos"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            fecha_objetivo = conn.execute(
-                "SELECT MAX(fecha) FROM predicciones_historico"
-            ).fetchone()[0]
+            fecha_objetivo = conn.execute("SELECT MAX(fecha) FROM predicciones_historico").fetchone()[0]
 
             if not fecha_objetivo:
                 return []
@@ -932,16 +868,12 @@ async def obtener_predicciones_hoy():
         return df.to_dict("records")
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error obteniendo predicciones: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error obteniendo predicciones: {str(e)}") from e
 
 
 @app.get("/predictions/latest", response_model=list[dict])
 async def obtener_ultimas_predicciones(
-    limit: int = Query(
-        20, ge=1, le=100, description="Número de predicciones a retornar"
-    ),
+    limit: int = Query(20, ge=1, le=100, description="Número de predicciones a retornar"),
 ):
     """Obtiene las últimas N predicciones generadas"""
     try:
@@ -956,9 +888,7 @@ async def obtener_ultimas_predicciones(
         return df.to_dict("records")
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error obteniendo predicciones: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error obteniendo predicciones: {str(e)}") from e
 
 
 # ============================================================================
@@ -1000,9 +930,7 @@ async def obtener_ultimos_resultados(
         ]
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error obteniendo resultados: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error obteniendo resultados: {str(e)}") from e
 
 
 @app.get("/compare/{fecha}")
@@ -1013,9 +941,7 @@ async def comparar_predicciones_resultados(fecha: str):
         try:
             datetime.strptime(fecha, "%Y-%m-%d")
         except ValueError:
-            raise HTTPException(
-                status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD"
-            ) from None
+            raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD") from None
 
         query = """
                 SELECT
@@ -1139,11 +1065,7 @@ async def comparar_predicciones_resultados(fecha: str):
         if "confianza" in df_json.columns and "acierto" in df_json.columns:
             df_conf = df_json.dropna(subset=["confianza"]).copy()
             if not df_conf.empty:
-                por_confianza = (
-                    df_conf.groupby("confianza")["acierto"]
-                    .agg(["count", "sum", "mean"])
-                    .to_dict("index")
-                )
+                por_confianza = df_conf.groupby("confianza")["acierto"].agg(["count", "sum", "mean"]).to_dict("index")
 
         partidos = df_json.to_dict("records")
 
@@ -1151,8 +1073,8 @@ async def comparar_predicciones_resultados(fecha: str):
             "fecha": fecha,
             "partidos": partidos,
             "estadisticas": {
-                "total": int(total_con_pred),    # partidos con predicción válida
-                "total_juegos": int(total),       # total de juegos del día
+                "total": int(total_con_pred),  # partidos con predicción válida
+                "total_juegos": int(total),  # total de juegos del día
                 "aciertos": int(aciertos),
                 "accuracy": round(accuracy, 2),
                 "por_confianza": por_confianza,
@@ -1162,9 +1084,7 @@ async def comparar_predicciones_resultados(fecha: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error en comparación: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error en comparación: {str(e)}") from e
 
 
 # ============================================================================
@@ -1237,9 +1157,7 @@ async def obtener_estadisticas_accuracy(
         }
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error calculando accuracy: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error calculando accuracy: {str(e)}") from e
 
 
 @app.get("/stats/team/{team_code}")
@@ -1251,9 +1169,7 @@ async def obtener_estadisticas_equipo(
     try:
         # Validar equipo
         if not get_team_name(team_code):
-            raise HTTPException(
-                status_code=400, detail=f"Código de equipo no válido: {team_code}"
-            )
+            raise HTTPException(status_code=400, detail=f"Código de equipo no válido: {team_code}")
 
         with sqlite3.connect(DB_PATH) as conn:
             query = f"""
@@ -1281,9 +1197,7 @@ async def obtener_estadisticas_equipo(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error obteniendo stats del equipo: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error obteniendo stats del equipo: {str(e)}") from e
 
 
 # ============================================================================
