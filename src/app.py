@@ -1017,6 +1017,112 @@ def renderizar_analisis_detallado_partido(
                 unsafe_allow_html=True,
             )
 
+    # --- SECCIÓN DE TENDENCIAS Y MOMENTUM ---
+    stats_det_t = resultado_detallado.get("stats_detalladas", {})
+    tendencias_obj = stats_det_t.get("tendencias") if isinstance(stats_det_t, dict) else None
+    features_t = resultado_detallado.get("features_usadas", {})
+
+    # Variables de trabajo
+    data_ready = False
+    
+    # Caso 1: Datos ya estructurados en 'tendencias'
+    if tendencias_obj and isinstance(tendencias_obj, dict):
+        try:
+            t_h = tendencias_obj.get("home", {})
+            t_a = tendencias_obj.get("away", {})
+            win_rate_h = float(t_h.get("win_rate", 0.5)) * 100
+            racha_h = int(t_h.get("racha", 0))
+            runs_avg_h = float(t_h.get("runs_avg", 0))
+            runs_diff_h = float(t_h.get("runs_diff", 0))
+            
+            win_rate_a = float(t_a.get("win_rate", 0.5)) * 100
+            racha_a = int(t_a.get("racha", 0))
+            runs_avg_a = float(t_a.get("runs_avg", 0))
+            runs_diff_a = float(t_a.get("runs_diff", 0))
+            data_ready = True
+        except Exception:
+            data_ready = False
+
+    # Caso 2: Retrocompatibilidad con features_usadas
+    if not data_ready and features_t:
+        try:
+            win_rate_h = float(features_t.get("home_win_rate_10", 0.5)) * 100
+            racha_h = int(features_t.get("home_racha", 0))
+            runs_avg_h = float(features_t.get("home_runs_avg", 0))
+            runs_diff_h = float(features_t.get("home_runs_diff", 0))
+            
+            win_rate_a = float(features_t.get("away_win_rate_10", 0.5)) * 100
+            racha_a = int(features_t.get("away_racha", 0))
+            runs_avg_a = float(features_t.get("away_runs_avg", 0))
+            runs_diff_a = float(features_t.get("away_runs_diff", 0))
+            data_ready = True
+        except Exception:
+            data_ready = False
+
+    if data_ready:
+        def _racha_badge(racha):
+            if racha > 0:
+                return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
+            elif racha < 0:
+                return f'<span style="background:#8b1a1a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">❄️ {abs(racha)}P</span>'
+            return '<span style="background:#555;color:#fff;padding:2px 10px;border-radius:12px">—</span>'
+
+        # Cálculo de récord W-L basado en win_rate
+        w_h = int(round(win_rate_h / 10))
+        l_h = 10 - w_h
+        w_a = int(round(win_rate_a / 10))
+        l_a = 10 - w_a
+
+        st.markdown("---")
+        st.markdown("### 📈 Tendencias y Momentum — Últimos 10 Juegos")
+        st.markdown(
+            f"""
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+                <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                        {get_team_logo_html(home_team, 32)}
+                        <strong style="font-size:1.1rem">{home_team}</strong>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
+                        <div>
+                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
+                            <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if win_rate_h >= 50 else '#ef4444'}">{win_rate_h:.0f}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
+                            <div style="font-size:1.4rem;font-weight:700">{w_h}-{l_h}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
+                            <div>{_racha_badge(racha_h)}</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                        {get_team_logo_html(away_team, 32)}
+                        <strong style="font-size:1.1rem">{away_team}</strong>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
+                        <div>
+                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
+                            <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if win_rate_a >= 50 else '#ef4444'}">{win_rate_a:.0f}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
+                            <div style="font-size:1.4rem;font-weight:700">{w_a}-{l_a}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
+                            <div>{_racha_badge(racha_a)}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
     # Estadísticas detalladas
     stats_det = resultado_detallado.get("stats_detalladas", {})
     if stats_det and (
@@ -1444,102 +1550,111 @@ if pagina == "⚾ Predicción Manual":
                                     unsafe_allow_html=True,
                                 )
 
-                        # --- SECCIÓN DE TENDENCIAS Y MOMENTUM ---
-                        stats_det_t = resultado.get("stats_detalladas", {})
-                        tendencias = stats_det_t.get("tendencias", {}) if stats_det_t else {}
+                            # --- SECCIÓN DE TENDENCIAS Y MOMENTUM ---
+                            stats_det_t = resultado.get("stats_detalladas", {})
+                            tendencias_obj = stats_det_t.get("tendencias") if isinstance(stats_det_t, dict) else None
+                            features_t = resultado.get("features_usadas", {})
 
-                        # Extraer datos: prioridad tendencias (nuevo) → features (legacy)
-                        if tendencias:
-                            t_h = tendencias.get("home", {})
-                            t_a = tendencias.get("away", {})
-                            win_rate_h = float(t_h.get("win_rate", 0.5)) * 100
-                            racha_h = int(t_h.get("racha", 0))
-                            runs_avg_h = float(t_h.get("runs_avg", 0))
-                            runs_diff_h = float(t_h.get("runs_diff", 0))
-                            win_rate_a = float(t_a.get("win_rate", 0.5)) * 100
-                            racha_a = int(t_a.get("racha", 0))
-                            runs_avg_a = float(t_a.get("runs_avg", 0))
-                            runs_diff_a = float(t_a.get("runs_diff", 0))
-                        elif features:
-                            win_rate_h = float(features.get("home_win_rate_10", 0.5)) * 100
-                            racha_h = int(features.get("home_racha", 0))
-                            runs_avg_h = float(features.get("home_runs_avg", 0))
-                            runs_diff_h = float(features.get("home_runs_diff", 0))
-                            win_rate_a = float(features.get("away_win_rate_10", 0.5)) * 100
-                            racha_a = int(features.get("away_racha", 0))
-                            runs_avg_a = float(features.get("away_runs_avg", 0))
-                            runs_diff_a = float(features.get("away_runs_diff", 0))
-                        else:
-                            tendencias = None  # No hay datos disponibles
+                            # Variables de trabajo
+                            data_ready = False
+                            
+                            # Caso 1: Datos ya estructurados en 'tendencias'
+                            if tendencias_obj and isinstance(tendencias_obj, dict):
+                                try:
+                                    t_h = tendencias_obj.get("home", {})
+                                    t_a = tendencias_obj.get("away", {})
+                                    win_rate_h = float(t_h.get("win_rate", 0.5)) * 100
+                                    racha_h = int(t_h.get("racha", 0))
+                                    runs_avg_h = float(t_h.get("runs_avg", 0))
+                                    runs_diff_h = float(t_h.get("runs_diff", 0))
+                                    
+                                    win_rate_a = float(t_a.get("win_rate", 0.5)) * 100
+                                    racha_a = int(t_a.get("racha", 0))
+                                    runs_avg_a = float(t_a.get("runs_avg", 0))
+                                    runs_diff_a = float(t_a.get("runs_diff", 0))
+                                    data_ready = True
+                                except Exception:
+                                    data_ready = False
 
-                        if tendencias is not None or features:
-                            def _racha_badge(racha):
-                                if racha > 0:
-                                    return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
-                                elif racha < 0:
-                                    return f'<span style="background:#8b1a1a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">❄️ {abs(racha)}P</span>'
-                                return '<span style="background:#555;color:#fff;padding:2px 10px;border-radius:12px">—</span>'
+                            # Caso 2: Retrocompatibilidad con features_usadas
+                            if not data_ready and features_t:
+                                try:
+                                    win_rate_h = float(features_t.get("home_win_rate_10", 0.5)) * 100
+                                    racha_h = int(features_t.get("home_racha", 0))
+                                    runs_avg_h = float(features_t.get("home_runs_avg", 0))
+                                    runs_diff_h = float(features_t.get("home_runs_diff", 0))
+                                    
+                                    win_rate_a = float(features_t.get("away_win_rate_10", 0.5)) * 100
+                                    racha_a = int(features_t.get("away_racha", 0))
+                                    runs_avg_a = float(features_t.get("away_runs_avg", 0))
+                                    runs_diff_a = float(features_t.get("away_runs_diff", 0))
+                                    data_ready = True
+                                except Exception:
+                                    data_ready = False
 
-                            def _diff_color(val):
-                                return "#1a6b3a" if val >= 0 else "#8b1a1a"
+                            if data_ready:
+                                def _racha_badge(racha):
+                                    if racha > 0:
+                                        return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
+                                    elif racha < 0:
+                                        return f'<span style="background:#8b1a1a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">❄️ {abs(racha)}P</span>'
+                                    return '<span style="background:#555;color:#fff;padding:2px 10px;border-radius:12px">—</span>'
 
-                            st.markdown("---")
-                            st.markdown("### 📈 Tendencias y Momentum — Últimos 10 Juegos")
-                            st.markdown(
-                                f"""
-                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
-                                    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
-                                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
-                                            {get_team_logo_html(home_team, 32)}
-                                            <strong style="font-size:1.1rem">{home_team}</strong>
+                                # Cálculo de récord W-L basado en win_rate
+                                w_h = int(round(win_rate_h / 10))
+                                l_h = 10 - w_h
+                                w_a = int(round(win_rate_a / 10))
+                                l_a = 10 - w_a
+
+                                st.markdown("---")
+                                st.markdown("### 📈 Tendencias y Momentum — Últimos 10 Juegos")
+                                st.markdown(
+                                    f"""
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+                                        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+                                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                                                {get_team_logo_html(home_team, 32)}
+                                                <strong style="font-size:1.1rem">{home_team}</strong>
+                                            </div>
+                                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
+                                                <div>
+                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
+                                                    <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if win_rate_h >= 50 else '#ef4444'}">{win_rate_h:.0f}%</div>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
+                                                    <div style="font-size:1.4rem;font-weight:700">{w_h}-{l_h}</div>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
+                                                    <div>{_racha_badge(racha_h)}</div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;text-align:center">
-                                            <div>
-                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                                                <div style="font-size:1.4rem;font-weight:700;color:{'#1a6b3a' if win_rate_h >= 50 else '#8b1a1a'}">{win_rate_h:.0f}%</div>
+                                        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+                                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                                                {get_team_logo_html(away_team, 32)}
+                                                <strong style="font-size:1.1rem">{away_team}</strong>
                                             </div>
-                                            <div>
-                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
-                                                <div>{_racha_badge(racha_h)}</div>
-                                            </div>
-                                            <div>
-                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">CARR/J</div>
-                                                <div style="font-size:1.4rem;font-weight:700">{runs_avg_h:.1f}</div>
-                                            </div>
-                                            <div>
-                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RUN DIFF</div>
-                                                <div style="font-size:1.4rem;font-weight:700;color:{_diff_color(runs_diff_h)}">{runs_diff_h:+.1f}</div>
+                                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
+                                                <div>
+                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
+                                                    <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if win_rate_a >= 50 else '#ef4444'}">{win_rate_a:.0f}%</div>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
+                                                    <div style="font-size:1.4rem;font-weight:700">{w_a}-{l_a}</div>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
+                                                    <div>{_racha_badge(racha_a)}</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
-                                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
-                                            {get_team_logo_html(away_team, 32)}
-                                            <strong style="font-size:1.1rem">{away_team}</strong>
-                                        </div>
-                                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;text-align:center">
-                                            <div>
-                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                                                <div style="font-size:1.4rem;font-weight:700;color:{'#1a6b3a' if win_rate_a >= 50 else '#8b1a1a'}">{win_rate_a:.0f}%</div>
-                                            </div>
-                                            <div>
-                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
-                                                <div>{_racha_badge(racha_a)}</div>
-                                            </div>
-                                            <div>
-                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">CARR/J</div>
-                                                <div style="font-size:1.4rem;font-weight:700">{runs_avg_a:.1f}</div>
-                                            </div>
-                                            <div>
-                                                <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RUN DIFF</div>
-                                                <div style="font-size:1.4rem;font-weight:700;color:{_diff_color(runs_diff_a)}">{runs_diff_a:+.1f}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                """,
-                                unsafe_allow_html=True,
-                            )
+                                    """,
+                                    unsafe_allow_html=True,
+                                )
 
                         # FIX: Estadísticas detalladas - Validación completa
                         stats_det = resultado.get("stats_detalladas", {})
@@ -2357,7 +2472,7 @@ elif pagina == "📈 Dashboard's Interactivos":
                 
                 # Confianza ya fue normalizada al cargar los datos
                 confianza_norm = df_display['Confianza']
-                df_display['Predicción'] = "⚾ " + df_display['Prediccion'] + " | " + confianza_norm.round(1).astype(str) + "%"
+                df_display['Predicción'] = "⚾ " + df_display['Prediccion'] + " | " + (confianza_norm * 100).round(1).astype(str) + "%"
                 
                 df_final = df_display[['Fecha', 'Juego', 'Predicción', 'Resultado_Real', 'Estado']].copy()
                 df_final.columns = ['Fecha', 'Encuentro', 'Predicción del Modelo', 'Ganador Real', 'Estado']

@@ -93,6 +93,26 @@ def _get_cached_detailed_prediction(cache_key):
             _detailed_prediction_cache.pop(cache_key, None)
             return None
 
+        # RETROCOMPATIBILIDAD: Si el payload en cache no tiene tendencias, intentar inyectarlas
+        if isinstance(payload, dict) and "stats_detalladas" in payload:
+            stats_det = payload["stats_detalladas"]
+            features = payload.get("features_usadas", {})
+            if "tendencias" not in stats_det and features:
+                stats_det["tendencias"] = {
+                    "home": {
+                        "win_rate": float(features.get("home_win_rate_10", 0.5)),
+                        "racha": int(features.get("home_racha", 0)),
+                        "runs_avg": float(features.get("home_runs_avg", 0)),
+                        "runs_diff": float(features.get("home_runs_diff", 0)),
+                    },
+                    "away": {
+                        "win_rate": float(features.get("away_win_rate_10", 0.5)),
+                        "racha": int(features.get("away_racha", 0)),
+                        "runs_avg": float(features.get("away_runs_avg", 0)),
+                        "runs_diff": float(features.get("away_runs_diff", 0)),
+                    },
+                }
+
         return payload
 
 
