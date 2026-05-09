@@ -2351,8 +2351,15 @@ elif pagina == "📈 Dashboard's Interactivos":
                     st.markdown("### 🎯 Aciertos por Nivel de Confianza")
                     
                     df_conf = df_filtered.copy()
-                    # Asegurar que confianza esté en porcentaje (0-100)
-                    df_conf['Conf_Pct'] = df_conf['Confianza'].apply(lambda x: x if x > 1 else x * 100)
+                    # Asegurar que confianza esté en porcentaje (0-100) y manejar strings
+                    def parse_confianza(x):
+                        try:
+                            val = float(str(x).replace('%', '').strip())
+                            return val if val > 1 else val * 100
+                        except:
+                            return 0
+                            
+                    df_conf['Conf_Pct'] = df_conf['Confianza'].apply(parse_confianza)
                     
                     # Crear los buckets
                     def categorize_conf(val):
