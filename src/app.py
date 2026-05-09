@@ -1154,6 +1154,7 @@ with st.sidebar:
             "📅 Partidos de Hoy",
             "📊 Comparación & Historial",
             "⚾ Predicción Manual",
+            "📈 Dashboard's Interactivos",
             "🧠 Acerca del Modelo",
         ],
         index=0,
@@ -2167,6 +2168,298 @@ elif pagina == "📊 Comparación & Historial":
                         )
         else:
             st.info(f" No hay datos disponibles para {fecha_str}")
+
+# ============================================================================
+# PÁGINA: DASHBOARDS INTERACTIVOS
+# ============================================================================
+
+elif pagina == "📈 Dashboard's Interactivos":
+    st.markdown(
+        '<div class="main-title">Dashboard\'s Interactivos</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="subtitle">Análisis visual del rendimiento histórico del modelo</div>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            # Consulta a la base de datos
+            df_dash = pd.read_sql(
+                """
+                SELECT
+                    r.fecha as Fecha,
+                    r.home_team as Home,
+                    r.away_team as Away,
+                    p.prediccion as Prediccion,
+                    p.confianza as Confianza,
+                    r.home_score as Home_Score,
+                    r.away_score as Away_Score,
+                    CASE
+                        WHEN r.home_score > r.away_score THEN r.home_team
+                        WHEN r.away_score > r.home_score THEN r.away_team
+                        ELSE 'Empate'
+                    END as Resultado_Real,
+                    CASE
+                        WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
+                             (r.ganador = 0 AND p.prediccion = r.away_team)
+                        THEN '✅ Acertado'
+                        ELSE '❌ Error'
+                    END as Estado,
+                    CASE
+                        WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
+                             (r.ganador = 0 AND p.prediccion = r.away_team)
+                        THEN 1
+                        ELSE 0
+                    END as Acierto_Num
+                FROM historico_real r
+                INNER JOIN predicciones_historico p
+                    ON r.fecha = p.fecha
+                    AND r.home_team = p.home_team
+                    AND r.away_team = p.away_team
+                ORDER BY r.fecha DESC
+                """,
+                conn,
+            )
+
+        if not df_dash.empty:
+            df_dash['Fecha_Original'] = pd.to_datetime(df_dash['Fecha'])
+            df_dash['Fecha'] = df_dash['Fecha_Original'].dt.date
+            
+            st.markdown("### 📅 Filtro de Fechas")
+            min_date = df_dash['Fecha'].min()
+            max_date = df_dash['Fecha'].max()
+            
+            # Por defecto mostramos los últimos 14 días
+            default_start = max_date - timedelta(days=14) if max_date - min_date > timedelta(days=14) else min_date
+            
+            col_filter1, col_filter2 = st.columns([1, 2])
+            with col_filter1:
+                date_range = st.date_input(
+                    "Selecciona el rango:",
+                    value=(default_start, max_date),
+                    min_value=min_date,
+                    max_value=max_date
+                )
+            
+            if len(date_range) == 2:
+                start_date, end_date = date_range
+                mask = (df_dash['Fecha'] >= start_date) & (df_dash['Fecha'] <= end_date)
+                df_filtered = df_dash.loc[mask].copy()
+                
+                st.markdown("---")
+                st.markdown("### 🏟️ Resultados por Partido")
+                
+                # Crear DataFrame formateado para mostrar al usuario
+                df_display = df_filtered.copy()
+                df_display['Juego'] = df_display['Away'] + " @ " + df_display['Home']
+                
+                # Normalizar la confianza (asegurar que está en porcentaje)
+                confianza_norm = df_display['Confianza'].apply(lambda x: x if x > 1 else x * 100)
+                df_display['Predicción'] = df_display['Prediccion'] + " (" + confianza_norm.round(1).astype(str) + "%)"
+                
+                df_final = df_display[['Fecha', 'Juego', 'Predicción', 'Resultado_Real', 'Estado']].copy()
+                df_final.columns = ['Fecha', 'Juego', 'Predicción', 'Resultado Real', 'Estado']
+                
+                # Estilo condicional para el dataframe
+                def color_estado(val):
+                    color = '#dcfce7' if '✅' in val else '#fee2e2'
+                    text_color = '#166534' if '✅' in val else '#991b1b'
+                    return f'background-color: {color}; color: {text_color}; font-weight: bold;'
+                
+                styled_df = df_final.style.map(color_estado, subset=['Estado'])
+                st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                
+                st.markdown("---")
+                st.markdown("### 📈 Histórico de Tasa de Aciertos")
+                
+                col_agrup, _ = st.columns([1, 2])
+                with col_agrup:
+                    agrupacion = st.radio("Agrupar métricas por:", ["Día", "Semana", "Mes"], horizontal=True)
+                
+                df_trend = df_filtered.copy()
+                
+                if agrupacion == "Día":
+                    df_grouped = df_trend.groupby('Fecha').agg(
+                        Total=('Acierto_Num', 'count'),
+                        Aciertos=('Acierto_Num', 'sum')
+                    ).reset_index()
+                    df_grouped['Tasa de Aciertos (%)'] = (df_grouped['Aciertos'] / df_grouped['Total']) * 100
+                    x_col = 'Fecha'
+                elif agrupacion == "Semana":
+                    df_trend['Semana'] = df_trend['Fecha_Original'].dt.isocalendar().week
+                    df_grouped = df_trend.groupby('Semana').agg(
+                        Total=('Acierto_Num', 'count'),
+                        Aciertos=('Acierto_Num', 'sum')
+                    ).reset_index()
+                    df_grouped['Tasa de Aciertos (%)'] = (df_grouped['Aciertos'] / df_grouped['Total']) * 100
+                    df_grouped['Semana_Label'] = "Semana " + df_grouped['Semana'].astype(str)
+                    x_col = 'Semana_Label'
+                else: # Mes
+                    df_trend['Mes_Num'] = df_trend['Fecha_Original'].dt.month
+                    df_grouped = df_trend.groupby('Mes_Num').agg(
+                        Total=('Acierto_Num', 'count'),
+                        Aciertos=('Acierto_Num', 'sum')
+                    ).reset_index()
+                    df_grouped['Tasa de Aciertos (%)'] = (df_grouped['Aciertos'] / df_grouped['Total']) * 100
+                    meses = {1:'Enero', 2:'Febrero', 3:'Marzo', 4:'Abril', 5:'Mayo', 6:'Junio', 7:'Julio', 8:'Agosto', 9:'Septiembre', 10:'Octubre', 11:'Noviembre', 12:'Diciembre'}
+                    df_grouped['Mes_Label'] = df_grouped['Mes_Num'].map(meses)
+                    x_col = 'Mes_Label'
+                
+                # Crear gráfico de línea
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=df_grouped[x_col],
+                    y=df_grouped['Tasa de Aciertos (%)'],
+                    mode='lines+markers',
+                    name='Tasa de Aciertos',
+                    line=dict(color='#3b82f6', width=4, shape='spline'),
+                    marker=dict(size=12, color='#1e40af', line=dict(color='white', width=2)),
+                    fill='tozeroy',
+                    fillcolor='rgba(59, 130, 246, 0.1)',
+                    hovertemplate='<b>%{x}</b><br>Tasa de Aciertos: %{y:.1f}%<br>Partidos: %{customdata[0]}<extra></extra>',
+                    customdata=df_grouped[['Total']]
+                ))
+                
+                # Línea de referencia (50% de aciertos)
+                fig.add_hline(y=50, line_dash="dash", line_color="red", line_width=1, annotation_text="50% (Azar)")
+                
+                fig.update_layout(
+                    title={
+                        "text": f"Evolución de la Tasa de Aciertos (por {agrupacion.lower()})",
+                        "font": {"size": 20, "weight": "bold"},
+                        "x": 0.5
+                    },
+                    xaxis_title=agrupacion,
+                    yaxis_title="Tasa de Aciertos (%)",
+                    yaxis=dict(range=[max(0, df_grouped['Tasa de Aciertos (%)'].min() - 10), min(105, df_grouped['Tasa de Aciertos (%)'].max() + 10)]),
+                    hovermode="x unified",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    xaxis=dict(gridcolor="rgba(0,0,0,0.05)", showgrid=True),
+                    yaxis_gridcolor="rgba(0,0,0,0.05)",
+                    height=450,
+                    margin=dict(l=20, r=20, t=60, b=20)
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # --- NUEVAS MÉTRICAS ---
+                st.markdown("---")
+                
+                col_m1, col_m2 = st.columns(2)
+                
+                with col_m1:
+                    st.markdown("### 🎯 Aciertos por Nivel de Confianza")
+                    
+                    df_conf = df_filtered.copy()
+                    # Asegurar que confianza esté en porcentaje (0-100)
+                    df_conf['Conf_Pct'] = df_conf['Confianza'].apply(lambda x: x if x > 1 else x * 100)
+                    
+                    # Crear los buckets
+                    def categorize_conf(val):
+                        if val < 55: return "Baja (< 55%)"
+                        elif val <= 65: return "Media (55% - 65%)"
+                        else: return "Alta (> 65%)"
+                        
+                    df_conf['Nivel'] = df_conf['Conf_Pct'].apply(categorize_conf)
+                    
+                    df_conf_grouped = df_conf.groupby('Nivel').agg(
+                        Total=('Acierto_Num', 'count'),
+                        Aciertos=('Acierto_Num', 'sum')
+                    ).reset_index()
+                    
+                    # Evitar division by zero
+                    df_conf_grouped['Tasa (%)'] = df_conf_grouped.apply(
+                        lambda row: (row['Aciertos'] / row['Total'] * 100) if row['Total'] > 0 else 0, axis=1
+                    )
+                    
+                    # Ordenar las categorías lógicamente
+                    cat_order = {"Baja (< 55%)": 0, "Media (55% - 65%)": 1, "Alta (> 65%)": 2}
+                    df_conf_grouped['Order'] = df_conf_grouped['Nivel'].map(cat_order)
+                    df_conf_grouped = df_conf_grouped.sort_values('Order')
+                    
+                    fig_conf = go.Figure()
+                    fig_conf.add_trace(go.Bar(
+                        x=df_conf_grouped['Nivel'],
+                        y=df_conf_grouped['Tasa (%)'],
+                        text=df_conf_grouped['Tasa (%)'].round(1).astype(str) + "%",
+                        textposition='auto',
+                        marker_color=['#94a3b8', '#fbbf24', '#10b981'],
+                        hovertemplate='<b>%{x}</b><br>Aciertos: %{customdata[0]} de %{customdata[1]}<extra></extra>',
+                        customdata=df_conf_grouped[['Aciertos', 'Total']]
+                    ))
+                    
+                    fig_conf.update_layout(
+                        yaxis_title="Tasa de Aciertos (%)",
+                        yaxis=dict(range=[0, 115]),
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        margin=dict(l=20, r=20, t=30, b=20),
+                        height=350
+                    )
+                    st.plotly_chart(fig_conf, use_container_width=True)
+                
+                with col_m2:
+                    st.markdown("### 🏟️ Precisión por Equipo")
+                    
+                    # Analizar la tasa de acierto cada vez que juega un equipo
+                    df_home = df_filtered[['Home', 'Acierto_Num']].rename(columns={'Home': 'Equipo'})
+                    df_away = df_filtered[['Away', 'Acierto_Num']].rename(columns={'Away': 'Equipo'})
+                    df_teams = pd.concat([df_home, df_away])
+                    
+                    df_team_acc = df_teams.groupby('Equipo').agg(
+                        Total=('Acierto_Num', 'count'),
+                        Aciertos=('Acierto_Num', 'sum')
+                    ).reset_index()
+                    
+                    # Filtrar equipos con al menos 2 juegos en el rango para no sesgar si hay muchos juegos
+                    min_games = 2 if len(df_filtered) > 10 else 1
+                    df_team_acc = df_team_acc[df_team_acc['Total'] >= min_games]
+                    
+                    df_team_acc['Tasa (%)'] = (df_team_acc['Aciertos'] / df_team_acc['Total']) * 100
+                    
+                    # Seleccionar top 5 y peores 5
+                    df_team_acc = df_team_acc.sort_values('Tasa (%)', ascending=False)
+                    
+                    if len(df_team_acc) > 10:
+                        top_teams = df_team_acc.head(5)
+                        bottom_teams = df_team_acc.tail(5)
+                        df_show = pd.concat([top_teams, bottom_teams]).sort_values('Tasa (%)', ascending=True)
+                    else:
+                        df_show = df_team_acc.sort_values('Tasa (%)', ascending=True)
+                        
+                    colors = ['#ef4444' if x < 50 else ('#10b981' if x >= 60 else '#3b82f6') for x in df_show['Tasa (%)']]
+                    
+                    fig_team = go.Figure()
+                    fig_team.add_trace(go.Bar(
+                        y=df_show['Equipo'],
+                        x=df_show['Tasa (%)'],
+                        orientation='h',
+                        text=df_show['Tasa (%)'].round(1).astype(str) + "% (" + df_show['Total'].astype(str) + "J)",
+                        textposition='auto',
+                        marker_color=colors,
+                        hovertemplate='<b>%{y}</b><br>Tasa: %{x:.1f}%<br>Partidos: %{customdata[0]}<extra></extra>',
+                        customdata=df_show[['Total']]
+                    ))
+                    
+                    fig_team.update_layout(
+                        xaxis_title="Tasa de Aciertos (%)",
+                        xaxis=dict(range=[0, 115]),
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        margin=dict(l=20, r=20, t=30, b=20),
+                        height=350
+                    )
+                    st.plotly_chart(fig_team, use_container_width=True)
+            else:
+                st.info("ℹ️ Por favor, selecciona un rango de fechas válido (fecha inicio y fecha fin).")
+                
+        else:
+            st.info("ℹ️ No hay datos históricos disponibles en la base de datos para mostrar los dashboards.")
+    except Exception as e:
+        st.error(f"❌ Error al cargar los datos para los dashboards: {str(e)}")
 
 # ============================================================================
 # PÁGINA: ACERCA DEL MODELO
