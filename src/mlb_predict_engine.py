@@ -381,6 +381,20 @@ def predecir_juego(
                 },
                 "home_batters": _formatear_top_bateadores("home_top_3_batters_details"),
                 "away_batters": _formatear_top_bateadores("away_top_3_batters_details"),
+                "tendencias": {
+                    "home": {
+                        "win_rate": float(features_dict.get("home_win_rate_10", 0.5)),
+                        "racha": int(features_dict.get("home_racha", 0)),
+                        "runs_avg": float(features_dict.get("home_runs_avg", 0)),
+                        "runs_diff": float(features_dict.get("home_runs_diff", 0)),
+                    },
+                    "away": {
+                        "win_rate": float(features_dict.get("away_win_rate_10", 0.5)),
+                        "racha": int(features_dict.get("away_racha", 0)),
+                        "runs_avg": float(features_dict.get("away_runs_avg", 0)),
+                        "runs_diff": float(features_dict.get("away_runs_diff", 0)),
+                    },
+                },
             },
         }
         _debug_stage("assemble_details", stage_start)

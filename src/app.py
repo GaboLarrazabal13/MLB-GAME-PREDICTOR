@@ -1445,7 +1445,11 @@ if pagina == "⚾ Predicción Manual":
                                 )
 
                         # --- NUEVA SECCIÓN DE TENDENCIAS ---
-                        if features:
+                        # Intentar obtener de stats_detalladas (nuevo formato) o de features_usadas (legacy)
+                        stats_det = resultado.get("stats_detalladas", {})
+                        tendencias = stats_det.get("tendencias", {})
+                        
+                        if tendencias or features:
                             st.markdown("---")
                             st.markdown("### 📈 Tendencias y Momentum (Últimos 10 Juegos)")
                             
@@ -1455,10 +1459,17 @@ if pagina == "⚾ Predicción Manual":
                                 st.markdown(get_team_logo_html(home_team, 40) + f" **{home_team}**", unsafe_allow_html=True)
                                 sub1, sub2, sub3 = st.columns(3)
                                 
-                                win_rate_h = features.get('home_win_rate_10', 0.5) * 100
-                                racha_h = int(features.get('home_racha', 0))
-                                runs_avg_h = features.get('home_runs_avg', 0)
-                                runs_diff_h = features.get('home_runs_diff', 0)
+                                if tendencias:
+                                    t_h = tendencias.get("home", {})
+                                    win_rate_h = t_h.get("win_rate", 0.5) * 100
+                                    racha_h = int(t_h.get("racha", 0))
+                                    runs_avg_h = t_h.get("runs_avg", 0)
+                                    runs_diff_h = t_h.get("runs_diff", 0)
+                                else:
+                                    win_rate_h = features.get('home_win_rate_10', 0.5) * 100
+                                    racha_h = int(features.get('home_racha', 0))
+                                    runs_avg_h = features.get('home_runs_avg', 0)
+                                    runs_diff_h = features.get('home_runs_diff', 0)
                                 
                                 racha_str_h = f"{racha_h} G" if racha_h > 0 else (f"{abs(racha_h)} P" if racha_h < 0 else "-")
                                 
@@ -1473,10 +1484,17 @@ if pagina == "⚾ Predicción Manual":
                                 st.markdown(get_team_logo_html(away_team, 40) + f" **{away_team}**", unsafe_allow_html=True)
                                 sub1, sub2, sub3 = st.columns(3)
                                 
-                                win_rate_a = features.get('away_win_rate_10', 0.5) * 100
-                                racha_a = int(features.get('away_racha', 0))
-                                runs_avg_a = features.get('away_runs_avg', 0)
-                                runs_diff_a = features.get('away_runs_diff', 0)
+                                if tendencias:
+                                    t_a = tendencias.get("away", {})
+                                    win_rate_a = t_a.get("win_rate", 0.5) * 100
+                                    racha_a = int(t_a.get("racha", 0))
+                                    runs_avg_a = t_a.get("runs_avg", 0)
+                                    runs_diff_a = t_a.get("runs_diff", 0)
+                                else:
+                                    win_rate_a = features.get('away_win_rate_10', 0.5) * 100
+                                    racha_a = int(features.get('away_racha', 0))
+                                    runs_avg_a = features.get('away_runs_avg', 0)
+                                    runs_diff_a = features.get('away_runs_diff', 0)
                                 
                                 racha_str_a = f"{racha_a} G" if racha_a > 0 else (f"{abs(racha_a)} P" if racha_a < 0 else "-")
                                 
