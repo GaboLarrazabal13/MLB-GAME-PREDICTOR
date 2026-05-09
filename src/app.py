@@ -1444,6 +1444,49 @@ if pagina == "⚾ Predicción Manual":
                                     unsafe_allow_html=True,
                                 )
 
+                        # --- NUEVA SECCIÓN DE TENDENCIAS ---
+                        if features:
+                            st.markdown("---")
+                            st.markdown("### 📈 Tendencias y Momentum (Últimos 10 Juegos)")
+                            
+                            col_t1, col_t2 = st.columns(2)
+                            
+                            with col_t1:
+                                st.markdown(get_team_logo_html(home_team, 40) + f" **{home_team}**", unsafe_allow_html=True)
+                                sub1, sub2, sub3 = st.columns(3)
+                                
+                                win_rate_h = features.get('home_win_rate_10', 0.5) * 100
+                                racha_h = int(features.get('home_racha', 0))
+                                runs_avg_h = features.get('home_runs_avg', 0)
+                                runs_diff_h = features.get('home_runs_diff', 0)
+                                
+                                racha_str_h = f"{racha_h} G" if racha_h > 0 else (f"{abs(racha_h)} P" if racha_h < 0 else "-")
+                                
+                                with sub1:
+                                    st.metric("Win Rate", f"{win_rate_h:.0f}%")
+                                with sub2:
+                                    st.metric("Racha", racha_str_h, delta=racha_h if racha_h != 0 else None)
+                                with sub3:
+                                    st.metric("Carreras/J", f"{runs_avg_h:.1f}", delta=f"{runs_diff_h:+.1f}")
+                                    
+                            with col_t2:
+                                st.markdown(get_team_logo_html(away_team, 40) + f" **{away_team}**", unsafe_allow_html=True)
+                                sub1, sub2, sub3 = st.columns(3)
+                                
+                                win_rate_a = features.get('away_win_rate_10', 0.5) * 100
+                                racha_a = int(features.get('away_racha', 0))
+                                runs_avg_a = features.get('away_runs_avg', 0)
+                                runs_diff_a = features.get('away_runs_diff', 0)
+                                
+                                racha_str_a = f"{racha_a} G" if racha_a > 0 else (f"{abs(racha_a)} P" if racha_a < 0 else "-")
+                                
+                                with sub1:
+                                    st.metric("Win Rate", f"{win_rate_a:.0f}%")
+                                with sub2:
+                                    st.metric("Racha", racha_str_a, delta=racha_a if racha_a != 0 else None)
+                                with sub3:
+                                    st.metric("Carreras/J", f"{runs_avg_a:.1f}", delta=f"{runs_diff_a:+.1f}")
+
                         # FIX: Estadísticas detalladas - Validación completa
                         stats_det = resultado.get("stats_detalladas", {})
 
