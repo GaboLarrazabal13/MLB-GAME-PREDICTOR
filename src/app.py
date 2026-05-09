@@ -2193,7 +2193,8 @@ elif pagina == "📈 Dashboard's Interactivos":
                     r.home_team as Home,
                     r.away_team as Away,
                     p.prediccion as Prediccion,
-                    p.confianza as Confianza,
+                    p.prob_home as Prob_Home,
+                    p.prob_away as Prob_Away,
                     CASE
                         WHEN r.ganador = 1 THEN r.home_team
                         ELSE r.away_team
@@ -2221,13 +2222,10 @@ elif pagina == "📈 Dashboard's Interactivos":
             )
 
         if not df_dash.empty:
-            def _parse_conf(x):
-                try:
-                    val = float(str(x).replace('%', '').strip())
-                    return val if val > 1 else val * 100
-                except:
-                    return 0
-            df_dash['Confianza'] = df_dash['Confianza'].apply(_parse_conf)
+            # Calcular confianza numérica como el máximo de las dos probabilidades
+            df_dash['Prob_Home'] = pd.to_numeric(df_dash['Prob_Home'], errors='coerce').fillna(0)
+            df_dash['Prob_Away'] = pd.to_numeric(df_dash['Prob_Away'], errors='coerce').fillna(0)
+            df_dash['Confianza'] = df_dash[['Prob_Home', 'Prob_Away']].max(axis=1)
             
             df_dash['Fecha_Original'] = pd.to_datetime(df_dash['Fecha'])
             df_dash['Fecha'] = df_dash['Fecha_Original'].dt.date
@@ -2258,14 +2256,14 @@ elif pagina == "📈 Dashboard's Interactivos":
                 
                 # Crear DataFrame formateado para mostrar al usuario
                 df_display = df_filtered.copy()
-                df_display['Juego'] = df_display['Away'] + " @ " + df_display['Home']
+                df_display['Juego'] = "🏟️ " + df_display['Away'] + " @ " + df_display['Home']
                 
                 # Confianza ya fue normalizada al cargar los datos
                 confianza_norm = df_display['Confianza']
-                df_display['Predicción'] = df_display['Prediccion'] + " (" + confianza_norm.round(1).astype(str) + "%)"
+                df_display['Predicción'] = "⚾ " + df_display['Prediccion'] + " | " + confianza_norm.round(1).astype(str) + "%"
                 
                 df_final = df_display[['Fecha', 'Juego', 'Predicción', 'Resultado_Real', 'Estado']].copy()
-                df_final.columns = ['Fecha', 'Juego', 'Predicción', 'Resultado Real', 'Estado']
+                df_final.columns = ['Fecha', 'Encuentro', 'Predicción del Modelo', 'Ganador Real', 'Estado']
                 
                 # Estilo condicional para el dataframe
                 def color_estado(val):
