@@ -2194,12 +2194,9 @@ elif pagina == "📈 Dashboard's Interactivos":
                     r.away_team as Away,
                     p.prediccion as Prediccion,
                     p.confianza as Confianza,
-                    r.home_score as Home_Score,
-                    r.away_score as Away_Score,
                     CASE
-                        WHEN r.home_score > r.away_score THEN r.home_team
-                        WHEN r.away_score > r.home_score THEN r.away_team
-                        ELSE 'Empate'
+                        WHEN r.ganador = 1 THEN r.home_team
+                        ELSE r.away_team
                     END as Resultado_Real,
                     CASE
                         WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
