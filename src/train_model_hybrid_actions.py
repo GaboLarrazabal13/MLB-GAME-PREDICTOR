@@ -53,9 +53,7 @@ def alinear_features_entrenamiento(X_new, model_actual=None):
 
     columnas_faltantes = [col for col in features_esperadas if col not in X_new.columns]
     if columnas_faltantes:
-        print(
-            f"ℹ️ Añadiendo columnas faltantes con 0 para mantener esquema estable: {columnas_faltantes}"
-        )
+        print(f"ℹ️ Añadiendo columnas faltantes con 0 para mantener esquema estable: {columnas_faltantes}")
         for columna in columnas_faltantes:
             X_new[columna] = 0
 
@@ -66,20 +64,13 @@ def alinear_features_entrenamiento(X_new, model_actual=None):
     if not feature_names_modelo:
         return X_new
 
-    columnas_faltantes_modelo = [
-        col for col in feature_names_modelo if col not in X_new.columns
-    ]
+    columnas_faltantes_modelo = [col for col in feature_names_modelo if col not in X_new.columns]
     if columnas_faltantes_modelo:
-        print(
-            "ℹ️ Añadiendo columnas faltantes requeridas por el modelo previo: "
-            f"{columnas_faltantes_modelo}"
-        )
+        print(f"ℹ️ Añadiendo columnas faltantes requeridas por el modelo previo: {columnas_faltantes_modelo}")
         for columna in columnas_faltantes_modelo:
             X_new[columna] = 0
 
-    columnas_extra_modelo = [
-        col for col in X_new.columns if col not in feature_names_modelo
-    ]
+    columnas_extra_modelo = [col for col in X_new.columns if col not in feature_names_modelo]
     if columnas_extra_modelo:
         print(
             "ℹ️ Excluyendo columnas que no existen en el modelo previo para el "
@@ -169,11 +160,7 @@ def limpiar_dataframe(df):
 
     name_col = df.columns[0]
     df = df.dropna(subset=[name_col])
-    df = df[
-        ~df[name_col]
-        .astype(str)
-        .str.contains(r"Team Totals|Rank in|^\s*$", case=False, na=False, regex=True)
-    ]
+    df = df[~df[name_col].astype(str).str.contains(r"Team Totals|Rank in|^\s*$", case=False, na=False, regex=True)]
 
     return df.reset_index(drop=True)
 
@@ -294,18 +281,14 @@ def obtener_stats_pitcher_por_link(
             comments = soup.find_all(string=lambda text: isinstance(text, Comment))
             for comment in comments:
                 if f'id="{table_id}"' in comment:
-                    return BeautifulSoup(str(comment), "html.parser").find(
-                        "table", {"id": table_id}
-                    )
+                    return BeautifulSoup(str(comment), "html.parser").find("table", {"id": table_id})
             return None
 
         pitching_hist_table = buscar_tabla("players_standard_pitching")
         pitching_st_table = buscar_tabla("pitching_st")
 
         if not pitching_hist_table and not pitching_st_table:
-            print(
-                f"       ⚠️ No se encontró tabla de pitcheo utilizable para: {pitcher_link}"
-            )
+            print(f"       ⚠️ No se encontró tabla de pitcheo utilizable para: {pitcher_link}")
             return None
 
         meta_title = soup.select_one("#meta h1 span")
@@ -320,9 +303,7 @@ def obtener_stats_pitcher_por_link(
                 season_series = pd.to_numeric(hist_df["Season"], errors="coerce")
                 hist_df = hist_df[season_series.notna()].copy()
                 if not hist_df.empty:
-                    hist_df["Season_num"] = pd.to_numeric(
-                        hist_df["Season"], errors="coerce"
-                    )
+                    hist_df["Season_num"] = pd.to_numeric(hist_df["Season"], errors="coerce")
                     if target_year is not None:
                         year_match = hist_df[hist_df["Season_num"] == int(target_year)]
                         if not year_match.empty:
@@ -383,9 +364,7 @@ def extraer_top_relevistas(pitching_df):
     cols_relevo = ["SV", "GF", "ERA", "WHIP", "IP", "SO", "G", "GS"]
     for col in cols_relevo:
         if col in pitching_df.columns:
-            pitching_df[col] = pd.to_numeric(pitching_df[col], errors="coerce").fillna(
-                0
-            )
+            pitching_df[col] = pd.to_numeric(pitching_df[col], errors="coerce").fillna(0)
 
     # Filtrar relevistas: GS < 50% de sus juegos
     bullpen = pitching_df[pitching_df["GS"] < (pitching_df["G"] * 0.5)].copy()
@@ -412,11 +391,7 @@ def normalizar_texto(texto):
     if not texto:
         return ""
     texto = str(texto).lower()
-    texto = "".join(
-        c
-        for c in unicodedata.normalize("NFD", texto)
-        if unicodedata.category(c) != "Mn"
-    )
+    texto = "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn")
     texto = re.sub(r"[^a-z0-9]", "", texto)
     return texto
 
@@ -450,10 +425,7 @@ def encontrar_lanzador(pitching_df, nombre_lanzador):
     name_col = pitching_df.columns[0]
 
     mask = pitching_df[name_col].apply(
-        lambda x: (
-            nombre_busqueda in normalizar_texto(x)
-            or normalizar_texto(x) in nombre_busqueda
-        )
+        lambda x: (nombre_busqueda in normalizar_texto(x) or normalizar_texto(x) in nombre_busqueda)
     )
 
     if mask.sum() == 0:
@@ -518,9 +490,7 @@ def encontrar_mejor_bateador(batting_df):
     return {
         "best_bat_BA": pd.to_numeric(top_3["BA"], errors="coerce").mean(),
         "best_bat_OBP": top_3["OBP"].mean(),
-        "best_bat_OPS": pd.to_numeric(top_3["OPS"], errors="coerce").mean()
-        if "OPS" in top_3.columns
-        else 0.750,
+        "best_bat_OPS": pd.to_numeric(top_3["OPS"], errors="coerce").mean() if "OPS" in top_3.columns else 0.750,
         "best_bat_HR": pd.to_numeric(top_3["HR"], errors="coerce").mean(),
         "best_bat_RBI": pd.to_numeric(top_3["RBI"], errors="coerce").mean(),
         "detalles_visuales": detalles,
@@ -552,49 +522,78 @@ def calcular_stats_equipo(batting_df, pitching_df):
 
 
 def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
-    """Calcula rendimiento reciente de un equipo antes de la fecha del partido"""
+    """Calcula rendimiento reciente (ventana) y de toda la temporada de un equipo"""
+    from mlb_config import get_team_code, get_team_name
+
     if isinstance(fecha_limite, str):
         fecha_limite = pd.to_datetime(fecha_limite)
 
-    mask = ((df["home_team"] == team) | (df["away_team"] == team)) & (
-        pd.to_datetime(df["fecha"]) < fecha_limite
-    )
-    partidos_previos = df[mask].sort_values("fecha", ascending=False).head(ventana)
+    # Normalizar equipo
+    t_code = get_team_code(team)
+    t_full = get_team_name(t_code)
 
-    if len(partidos_previos) == 0:
+    # Normalizar columnas de equipo en el DF para evitar fallos por espacios o mayúsculas
+    df = df.copy()
+    df["home_team_norm"] = df["home_team"].astype(str).str.strip()
+    df["away_team_norm"] = df["away_team"].astype(str).str.strip()
+
+    # Filtrar todos los partidos de la misma temporada antes de la fecha límite
+    anio_partido = fecha_limite.year
+    mask_season = (
+        ((df["home_team_norm"].isin([t_code, t_full])) | (df["away_team_norm"].isin([t_code, t_full])))
+        & (pd.to_datetime(df["fecha"]) < fecha_limite)
+        & (pd.to_datetime(df["fecha"]).dt.year == anio_partido)
+    )
+
+    partidos_todos = df[mask_season].sort_values("fecha", ascending=False)
+    partidos_recientes = partidos_todos.head(ventana)
+
+    if len(partidos_todos) == 0:
         return {
             "victorias_recientes": 0.5,
+            "win_rate_season": 0.5,
             "carreras_anotadas_avg": 4.5,
             "carreras_recibidas_avg": 4.5,
             "racha_actual": 0,
             "diferencial_carreras": 0,
+            "total_juegos_season": 0,
+            "wins_season": 0,
+            "losses_season": 0,
         }
 
-    victorias = 0
-    carreras_f = 0
-    carreras_c = 0
+    # Estadísticas Ventana (L10)
+    victorias_l10 = 0
+    carreras_f_l10 = 0
+    carreras_c_l10 = 0
 
-    for _, p in partidos_previos.iterrows():
-        es_home = p["home_team"] == team
+    for _, p in partidos_recientes.iterrows():
+        es_home = p["home_team_norm"] in [t_code, t_full]
         ganador_val = p.get("ganador", 0)
         if ganador_val is None:
             ganador_val = 0
-
         ganado = (ganador_val == 1) if es_home else (ganador_val == 0)
         if ganado:
-            victorias += 1
+            victorias_l10 += 1
+        carreras_f_l10 += float(p.get("score_home", 0) if es_home else p.get("score_away", 0) or 0)
+        carreras_c_l10 += float(p.get("score_away", 0) if es_home else p.get("score_home", 0) or 0)
 
-        carreras_f += float(
-            p.get("score_home", 0) if es_home else p.get("score_away", 0) or 0
-        )
-        carreras_c += float(
-            p.get("score_away", 0) if es_home else p.get("score_home", 0) or 0
-        )
+    # Estadísticas Temporada
+    victorias_season = 0
+    for _, p in partidos_todos.iterrows():
+        es_home = p["home_team_norm"] in [t_code, t_full]
+        ganador_val = p.get("ganador", 0)
+        if ganador_val is None:
+            ganador_val = 0
+        ganado = (ganador_val == 1) if es_home else (ganador_val == 0)
+        if ganado:
+            victorias_season += 1
+
+    win_rate_season = victorias_season / len(partidos_todos)
 
     # Cálculo de racha
     racha = 0
-    for _, p in partidos_previos.iterrows():
-        es_home = p["home_team"] == team
+    for _, p in partidos_recientes.iterrows():
+        es_home = p["home_team_norm"] in [t_code, t_full]
         ganado = (p["ganador"] == 1) if es_home else (p["ganador"] == 0)
         if racha == 0:
             racha = 1 if ganado else -1
@@ -603,13 +602,17 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
         else:
             break
 
-    n = len(partidos_previos)
+    n_win = len(partidos_recientes)
     return {
-        "victorias_recientes": victorias / n,
-        "carreras_anotadas_avg": carreras_f / n,
-        "carreras_recibidas_avg": carreras_c / n,
+        "victorias_recientes": victorias_l10 / n_win if n_win > 0 else 0.5,
+        "win_rate_season": win_rate_season,
+        "carreras_anotadas_avg": carreras_f_l10 / n_win if n_win > 0 else 4.5,
+        "carreras_recibidas_avg": carreras_c_l10 / n_win if n_win > 0 else 4.5,
         "racha_actual": racha,
-        "diferencial_carreras": (carreras_f - carreras_c) / n,
+        "diferencial_carreras": (carreras_f_l10 - carreras_c_l10) / n_win if n_win > 0 else 0,
+        "total_juegos_season": len(partidos_todos),
+        "wins_season": victorias_season,
+        "losses_season": len(partidos_todos) - victorias_season,
     }
 
 
@@ -624,11 +627,7 @@ MILESTONES_TEMPORADA = [486, 972, 1458, 1944, 2430]
 
 def obtener_todos_los_juegos_temporada():
     """Devuelve todos los juegos de historico_real para la temporada actual, ordenados por fecha."""
-    temporada_objetivo = int(
-        os.getenv(
-            "TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year
-        )
-    )
+    temporada_objetivo = int(os.getenv("TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year))
     with sqlite3.connect(DB_PATH) as conn:
         df_real = pd.read_sql(
             "SELECT * FROM historico_real WHERE substr(fecha, 1, 4) = ? ORDER BY fecha",
@@ -650,11 +649,7 @@ def verificar_milestone_reentrenamiento():
     de la temporada (486 / 972 / 1458 / 1944 / 2430).
     Devuelve (should_train: bool, total: int, next_milestone: int | None).
     """
-    temporada_objetivo = int(
-        os.getenv(
-            "TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year
-        )
-    )
+    temporada_objetivo = int(os.getenv("TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year))
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
             """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
@@ -667,17 +662,13 @@ def verificar_milestone_reentrenamiento():
             (str(temporada_objetivo),),
         ).fetchone()[0]
 
-        row = conn.execute(
-            "SELECT value FROM metadata_entrenamiento WHERE key = 'last_retrain_milestone'"
-        ).fetchone()
+        row = conn.execute("SELECT value FROM metadata_entrenamiento WHERE key = 'last_retrain_milestone'").fetchone()
         try:
             last_milestone = int(row[0]) if row and row[0] else 0
         except Exception:
             last_milestone = 0
 
-    next_milestone = next(
-        (m for m in MILESTONES_TEMPORADA if m > last_milestone), None
-    )
+    next_milestone = next((m for m in MILESTONES_TEMPORADA if m > last_milestone), None)
 
     if next_milestone is None:
         print(f"✅ Todos los milestones de temporada completados. Total en BD: {total}")
@@ -715,9 +706,7 @@ def registrar_milestone_cumplido(milestone):
 # ============================================================================
 
 
-def extraer_features_hibridas(
-    row, df_historico=None, hacer_scraping=False, session_cache=None
-):
+def extraer_features_hibridas(row, df_historico=None, hacer_scraping=False, session_cache=None):
     """Extrae features combinando tendencias temporales y scraping"""
     features = {}
 
@@ -725,22 +714,22 @@ def extraer_features_hibridas(
     if df_historico is not None:
         fecha_dt = pd.to_datetime(row["fecha"])
 
-        trend_h = calcular_tendencias_equipo(
-            df_historico, row["home_team"], fecha_dt, ventana=10
-        )
-        trend_a = calcular_tendencias_equipo(
-            df_historico, row["away_team"], fecha_dt, ventana=10
-        )
+        trend_h = calcular_tendencias_equipo(df_historico, row["home_team"], fecha_dt, ventana=10)
+        trend_a = calcular_tendencias_equipo(df_historico, row["away_team"], fecha_dt, ventana=10)
 
         features["home_win_rate_10"] = trend_h.get("victorias_recientes", 0.5)
+        features["home_win_rate_season"] = trend_h.get("win_rate_season", 0.5)
         features["home_racha"] = trend_h.get("racha_actual", 0)
         features["home_runs_avg"] = trend_h.get("carreras_anotadas_avg", 4.5)
         features["home_runs_diff"] = trend_h.get("diferencial_carreras", 0)
+        features["home_season_record"] = f"{trend_h.get('wins_season', 0)}-{trend_h.get('losses_season', 0)}"
 
         features["away_win_rate_10"] = trend_a.get("victorias_recientes", 0.5)
+        features["away_win_rate_season"] = trend_a.get("win_rate_season", 0.5)
         features["away_racha"] = trend_a.get("racha_actual", 0)
         features["away_runs_avg"] = trend_a.get("carreras_anotadas_avg", 4.5)
         features["away_runs_diff"] = trend_a.get("diferencial_carreras", 0)
+        features["away_season_record"] = f"{trend_a.get('wins_season', 0)}-{trend_a.get('losses_season', 0)}"
 
     # 2. SCRAPING Y STATS DE JUGADORES
     if hacer_scraping:
@@ -753,13 +742,9 @@ def extraer_features_hibridas(
             away_code = row["away_team"]
 
         bat1, pit1 = scrape_player_stats(home_code, row["year"], session_cache)
-        time.sleep(
-            random.uniform(SCRAPING_CONFIG["min_delay"], SCRAPING_CONFIG["max_delay"])
-        )
+        time.sleep(random.uniform(SCRAPING_CONFIG["min_delay"], SCRAPING_CONFIG["max_delay"]))
         bat2, pit2 = scrape_player_stats(away_code, row["year"], session_cache)
-        time.sleep(
-            random.uniform(SCRAPING_CONFIG["min_delay"], SCRAPING_CONFIG["max_delay"])
-        )
+        time.sleep(random.uniform(SCRAPING_CONFIG["min_delay"], SCRAPING_CONFIG["max_delay"]))
 
         # Stats de Equipo
         stats_h = calcular_stats_equipo(bat1, pit1)
@@ -768,27 +753,17 @@ def extraer_features_hibridas(
         if stats_h and stats_a:
             features["home_team_OPS"] = stats_h.get("team_OPS_mean", 0)
             features["away_team_OPS"] = stats_a.get("team_OPS_mean", 0)
-            features["diff_team_BA"] = stats_h.get("team_BA_mean", 0) - stats_a.get(
-                "team_BA_mean", 0
-            )
-            features["diff_team_OPS"] = stats_h.get("team_OPS_mean", 0) - stats_a.get(
-                "team_OPS_mean", 0
-            )
-            features["diff_team_ERA"] = stats_a.get("team_ERA_mean", 0) - stats_h.get(
-                "team_ERA_mean", 0
-            )
+            features["diff_team_BA"] = stats_h.get("team_BA_mean", 0) - stats_a.get("team_BA_mean", 0)
+            features["diff_team_OPS"] = stats_h.get("team_OPS_mean", 0) - stats_a.get("team_OPS_mean", 0)
+            features["diff_team_ERA"] = stats_a.get("team_ERA_mean", 0) - stats_h.get("team_ERA_mean", 0)
 
         # Abridores
         sp1 = encontrar_lanzador(pit1, row["home_pitcher"])
         sp2 = encontrar_lanzador(pit2, row["away_pitcher"])
 
         if sp1 and sp2:
-            features["home_pitcher_name_real"] = sp1.get(
-                "nombre_real", row["home_pitcher"]
-            )
-            features["away_pitcher_name_real"] = sp2.get(
-                "nombre_real", row["away_pitcher"]
-            )
+            features["home_pitcher_name_real"] = sp1.get("nombre_real", row["home_pitcher"])
+            features["away_pitcher_name_real"] = sp2.get("nombre_real", row["away_pitcher"])
             features["home_starter_SO9"] = sp1.get("SO9", 0)
             features["away_starter_SO9"] = sp2.get("SO9", 0)
             features["home_starter_WHIP"] = sp1.get("WHIP", 0)
@@ -808,15 +783,9 @@ def extraer_features_hibridas(
             features["away_top_3_batters_details"] = hb2.get("detalles_visuales", [])
             features["home_best_OPS"] = hb1.get("best_bat_OPS", 0)
             features["away_best_OPS"] = hb2.get("best_bat_OPS", 0)
-            features["diff_best_BA"] = hb1.get("best_bat_BA", 0) - hb2.get(
-                "best_bat_BA", 0
-            )
-            features["diff_best_OPS"] = hb1.get("best_bat_OPS", 0) - hb2.get(
-                "best_bat_OPS", 0
-            )
-            features["diff_best_HR"] = hb1.get("best_bat_HR", 0) - hb2.get(
-                "best_bat_HR", 0
-            )
+            features["diff_best_BA"] = hb1.get("best_bat_BA", 0) - hb2.get("best_bat_BA", 0)
+            features["diff_best_OPS"] = hb1.get("best_bat_OPS", 0) - hb2.get("best_bat_OPS", 0)
+            features["diff_best_HR"] = hb1.get("best_bat_HR", 0) - hb2.get("best_bat_HR", 0)
 
         # Bullpen
         rel_h = extraer_top_relevistas(pit1)
@@ -826,12 +795,8 @@ def extraer_features_hibridas(
             features["away_bullpen_ERA"] = rel_a.get("bullpen_ERA_mean", 0)
             features["home_bullpen_WHIP"] = rel_h.get("bullpen_WHIP_mean", 0)
             features["away_bullpen_WHIP"] = rel_a.get("bullpen_WHIP_mean", 0)
-            features["diff_bullpen_ERA"] = rel_a.get("bullpen_ERA_mean", 0) - rel_h.get(
-                "bullpen_ERA_mean", 0
-            )
-            features["diff_bullpen_WHIP"] = rel_a.get(
-                "bullpen_WHIP_mean", 0
-            ) - rel_h.get("bullpen_WHIP_mean", 0)
+            features["diff_bullpen_ERA"] = rel_a.get("bullpen_ERA_mean", 0) - rel_h.get("bullpen_ERA_mean", 0)
+            features["diff_bullpen_WHIP"] = rel_a.get("bullpen_WHIP_mean", 0) - rel_h.get("bullpen_WHIP_mean", 0)
 
         # Anclas
         if sp1:
@@ -876,22 +841,14 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
     df_nuevos = obtener_todos_los_juegos_temporada()
 
     if not df_nuevos.empty:
-        df_nuevos["score_home"] = pd.to_numeric(
-            df_nuevos["score_home"], errors="coerce"
-        ).fillna(0)
-        df_nuevos["score_away"] = pd.to_numeric(
-            df_nuevos["score_away"], errors="coerce"
-        ).fillna(0)
-        df_nuevos["ganador"] = (
-            pd.to_numeric(df_nuevos["ganador"], errors="coerce").fillna(0).astype(int)
-        )
+        df_nuevos["score_home"] = pd.to_numeric(df_nuevos["score_home"], errors="coerce").fillna(0)
+        df_nuevos["score_away"] = pd.to_numeric(df_nuevos["score_away"], errors="coerce").fillna(0)
+        df_nuevos["ganador"] = pd.to_numeric(df_nuevos["ganador"], errors="coerce").fillna(0).astype(int)
 
     print(f"Conteo total detectado: {len(df_nuevos)}")
 
     if not df_nuevos.empty:
-        print(
-            f"Rango de fechas: {df_nuevos['fecha'].min()} hasta {df_nuevos['fecha'].max()}"
-        )
+        print(f"Rango de fechas: {df_nuevos['fecha'].min()} hasta {df_nuevos['fecha'].max()}")
 
     total_juegos = len(df_nuevos)
     df_nuevos["fecha"] = pd.to_datetime(df_nuevos["fecha"], errors="coerce")
@@ -920,9 +877,7 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
 
     for i, (_, row) in enumerate(df_para_procesar.iterrows(), juegos_saltados + 1):
         if i % 25 == 0 or i == 1 or i == total_juegos:
-            print(
-                f"⏳ Procesando juego {i}/{total_juegos}... (Equipos en caché: {len(session_cache)})"
-            )
+            print(f"⏳ Procesando juego {i}/{total_juegos}... (Equipos en caché: {len(session_cache)})")
 
         try:
             f = extraer_features_hibridas(
@@ -980,9 +935,7 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
     # El reentrenamiento solo puede consumir columnas numéricas.
     columnas_no_numericas = X_new.select_dtypes(exclude=[np.number]).columns.tolist()
     if columnas_no_numericas:
-        print(
-            f"ℹ️ Excluyendo columnas no numéricas del entrenamiento: {columnas_no_numericas}"
-        )
+        print(f"ℹ️ Excluyendo columnas no numéricas del entrenamiento: {columnas_no_numericas}")
         X_new = X_new.drop(columns=columnas_no_numericas)
 
     # 4. Cargar modelo actual y alinear esquema de features
@@ -1023,9 +976,7 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
     # 8. Optimización de hiperparámetros
     print("🔎 Buscando la mejor combinación de hiperparámetros...")
 
-    xgb_base = XGBClassifier(
-        eval_metric="logloss", random_state=MODEL_CONFIG["random_state"]
-    )
+    xgb_base = XGBClassifier(eval_metric="logloss", random_state=MODEL_CONFIG["random_state"])
     xgb_model_param = model_actual.get_booster() if model_actual else None
 
     grid = GridSearchCV(

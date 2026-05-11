@@ -38,11 +38,7 @@ def limpiar_dataframe(df):
 
     name_col = df.columns[0]
     df = df.dropna(subset=[name_col])
-    df = df[
-        ~df[name_col]
-        .astype(str)
-        .str.contains(r"Team Totals|Rank in|^\s*$", case=False, na=False, regex=True)
-    ]
+    df = df[~df[name_col].astype(str).str.contains(r"Team Totals|Rank in|^\s*$", case=False, na=False, regex=True)]
     df = df.reset_index(drop=True)
     return df
 
@@ -80,9 +76,7 @@ def obtener_roster_equipo(team_code, year=2025):
     return []
 
 
-def crear_diccionario_lanzadores(
-    equipos, year=2025, cache_file="./cachepitcher_cache.pkl"
-):
+def crear_diccionario_lanzadores(equipos, year=2025, cache_file="./cachepitcher_cache.pkl"):
     """
     Crea un diccionario que mapea cada lanzador a su equipo
 
@@ -149,9 +143,7 @@ def buscar_equipo_lanzador(nombre_lanzador, pitcher_dict):
         return pitcher_dict[nombre_busqueda]
 
     # Búsqueda parcial (apellido)
-    apellido = (
-        nombre_busqueda.split()[-1] if " " in nombre_busqueda else nombre_busqueda
-    )
+    apellido = nombre_busqueda.split()[-1] if " " in nombre_busqueda else nombre_busqueda
 
     for pitcher_name, team in pitcher_dict.items():
         if apellido in pitcher_name:
@@ -189,12 +181,8 @@ def transformar_csv(input_csv, output_csv="datos_ml_ready.csv"):
 
         # 2. OBTENER/CREAR DICCIONARIO PARA ESE AÑO ESPECÍFICO
         if anio_partido not in cache_lanzadores_por_anio:
-            print(
-                f"\n📅 Detectado año {anio_partido}. Cargando rosters de esa temporada..."
-            )
-            equipos = list(
-                set(df["home_team"].unique()) | set(df["away_team"].unique())
-            )
+            print(f"\n📅 Detectado año {anio_partido}. Cargando rosters de esa temporada...")
+            equipos = list(set(df["home_team"].unique()) | set(df["away_team"].unique()))
             # Creamos un cache específico para ese año
             cache_lanzadores_por_anio[anio_partido] = crear_diccionario_lanzadores(
                 equipos,

@@ -73,6 +73,7 @@ def get_scraper_session(force_new=False):
         )
     return _SCRAPER_SESSION
 
+
 # ============================================================================
 # FUNCIONES DE SOPORTE Y FORMATEO
 # ============================================================================
@@ -83,11 +84,7 @@ def normalizar_texto(texto):
     if not texto:
         return ""
     texto = str(texto).lower()
-    texto = "".join(
-        c
-        for c in unicodedata.normalize("NFD", texto)
-        if unicodedata.category(c) != "Mn"
-    )
+    texto = "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn")
     texto = re.sub(r"[^a-z0-9]", "", texto)
     return texto
 
@@ -107,11 +104,7 @@ def limpiar_dataframe(df):
     if df is None or len(df) == 0:
         return df
     name_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
-    df = df[
-        ~df[name_col]
-        .astype(str)
-        .str.contains(r"Team Totals|Rank in|^\s*$", case=False, na=False, regex=True)
-    ]
+    df = df[~df[name_col].astype(str).str.contains(r"Team Totals|Rank in|^\s*$", case=False, na=False, regex=True)]
     return df.reset_index(drop=True)
 
 
@@ -156,14 +149,11 @@ def obtener_html(url, max_retries=None):
                 return response.text
 
             if response.status_code in (403, 429):
-                wait_time = int((2**intento) * 10) # Aumentado el tiempo base
-                print(
-                    f"       Status {response.status_code} para {url}. "
-                    f"Esperando {wait_time}s y renovando sesión..."
-                )
+                wait_time = int((2**intento) * 10)  # Aumentado el tiempo base
+                print(f"       Status {response.status_code} para {url}. Esperando {wait_time}s y renovando sesión...")
                 if response.status_code == 403:
                     # Log breve del contenido para diagnóstico
-                    snippet = response.text[:200].replace('\n', ' ')
+                    snippet = response.text[:200].replace("\n", " ")
                     print(f"       Snippet del error: {snippet}")
 
                 get_scraper_session(force_new=True)
@@ -171,10 +161,7 @@ def obtener_html(url, max_retries=None):
                 continue
 
             wait_time = int(2**intento)
-            print(
-                f"       Status {response.status_code} para {url}. "
-                f"Reintento en {wait_time}s..."
-            )
+            print(f"       Status {response.status_code} para {url}. Reintento en {wait_time}s...")
             time.sleep(wait_time)
         except Exception as e:
             if intento == max_retries - 1:
@@ -192,9 +179,7 @@ def obtener_fechas_ejecucion():
         try:
             ahora = datetime.strptime(target_date, "%Y-%m-%d")
         except ValueError:
-            print(
-                f"⚠️ TARGET_DATE inválida '{target_date}'. Se usará fecha actual en ET."
-            )
+            print(f"⚠️ TARGET_DATE inválida '{target_date}'. Se usará fecha actual en ET.")
             ahora = datetime.now(ZoneInfo("America/New_York"))
     else:
         # Baseball-Reference publica "today" con horario del este (MLB).
@@ -202,9 +187,7 @@ def obtener_fechas_ejecucion():
         ahora = datetime.now(ZoneInfo("America/New_York"))
 
     # Formato para Baseball-Reference (ej: "Monday, April 1, 2024")
-    fecha_bref = ahora.strftime(
-        "%A, %B %-d, %Y" if os.name != "nt" else "%A, %B %#d, %Y"
-    )
+    fecha_bref = ahora.strftime("%A, %B %-d, %Y" if os.name != "nt" else "%A, %B %#d, %Y")
 
     # Formato para base de datos
     fecha_db = ahora.strftime("%Y-%m-%d")
@@ -228,11 +211,8 @@ def extraer_equipos_del_dia(soup, fecha_objetivo_db):
         print("  ⚠️ No se encontró ninguna sección válida en el schedule")
         return equipos_lista
 
-    seccion_date = seccion.get('date')
-    print(
-        "  📍 Sección seleccionada: "
-        f"{seccion.get('label', 'sin etiqueta')} -> {seccion_date}"
-    )
+    seccion_date = seccion.get("date")
+    print(f"  📍 Sección seleccionada: {seccion.get('label', 'sin etiqueta')} -> {seccion_date}")
 
     # VALIDACIÓN CRÍTICA: La sección debe coincidir con la fecha objetivo
     if seccion_date != fecha_objetivo_db:
@@ -240,8 +220,12 @@ def extraer_equipos_del_dia(soup, fecha_objetivo_db):
             print(f"  ℹ️ Usando sección 'Today's Games' para la fecha {fecha_objetivo_db}")
             seccion_date = fecha_objetivo_db
         else:
-            print(f"  ❌ ERROR: La sección encontrada ({seccion_date}) NO coinciden con la fecha objetivo ({fecha_objetivo_db})")
-            print("  Esto indica que Baseball-Reference aún no ha publicado el calendario de hoy o el scraper está viendo una versión antigua.")
+            print(
+                f"  ❌ ERROR: La sección encontrada ({seccion_date}) NO coinciden con la fecha objetivo ({fecha_objetivo_db})"
+            )
+            print(
+                "  Esto indica que Baseball-Reference aún no ha publicado el calendario de hoy o el scraper está viendo una versión antigua."
+            )
             return []
 
     for game in seccion["games"]:
@@ -311,10 +295,7 @@ def extraer_lanzadores_del_preview(preview_url, away_team=None, home_team=None):
                     if pitcher_link:
                         pitcher_name = pitcher_link.get_text(strip=True)
                         pitcher_href = pitcher_link.get("href", "")
-                        lanzadores[team_code] = {
-                            "nombre": pitcher_name,
-                            "link": pitcher_href
-                        }
+                        lanzadores[team_code] = {"nombre": pitcher_name, "link": pitcher_href}
                         print(f"     🎯 Lanzador {team_code}: {pitcher_name} | Link: {pitcher_href}")
 
         except Exception as e:
@@ -522,22 +503,17 @@ def ejecutar_pipeline_diario():
     run_source = os.getenv("RUN_SOURCE", "local").strip().lower()
     max_intentos = int(os.getenv("SCRAPER_MAX_ATTEMPTS", "3"))
     espera_reintento = int(os.getenv("SCRAPER_RETRY_WAIT_SECONDS", "90"))
-    permitir_guardado_parcial = os.getenv(
-        "SCRAPER_SAVE_PARTIAL_ON_FINAL", "1"
-    ).strip().lower() in {"1", "true", "yes", "on"}
-    espera_entre_partidos_base = int(
-        os.getenv("SCRAPER_BETWEEN_GAMES_SECONDS", "0")
-    )
-    delay_adaptativo_fallo = int(
-        os.getenv("SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS", "10")
-    )
+    permitir_guardado_parcial = os.getenv("SCRAPER_SAVE_PARTIAL_ON_FINAL", "1").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    espera_entre_partidos_base = int(os.getenv("SCRAPER_BETWEEN_GAMES_SECONDS", "0"))
+    delay_adaptativo_fallo = int(os.getenv("SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS", "10"))
     espera_entre_partidos_adaptativa = obtener_delay_adaptativo(default_seconds=0)
-    espera_entre_partidos = max(
-        espera_entre_partidos_base, espera_entre_partidos_adaptativa
-    )
-    url_schedule = (
-        f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
-    )
+    espera_entre_partidos = max(espera_entre_partidos_base, espera_entre_partidos_adaptativa)
+    url_schedule = f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
 
     print(f"\n{'=' * 70}")
     print(f"📅 Ejecutando scraping automático para: {fecha_bref}")
@@ -571,9 +547,7 @@ def ejecutar_pipeline_diario():
         equipos_hoy = extraer_equipos_del_dia(soup, fecha_db)
 
         if not equipos_hoy:
-            print(
-                "\n⚠️ No se encontraron partidos listados para hoy usando la nueva estructura."
-            )
+            print("\n⚠️ No se encontraron partidos listados para hoy usando la nueva estructura.")
             print("   (Los lineups podrían no estar publicados aún)")
             if intento < max_intentos:
                 print(f"⏳ Esperando {espera_reintento}s antes de reintentar...")
@@ -628,7 +602,7 @@ def ejecutar_pipeline_diario():
                 }
             )
             errores_partidos_ref.append(f"{away_team_val}@{home_team_val}:{motivo}")
-            print("   ⚠️ Partido guardado como pendiente " f"({motivo}).")
+            print(f"   ⚠️ Partido guardado como pendiente ({motivo}).")
 
         total_juegos = len(equipos_hoy)
         for i, (away_team, home_team, preview_link) in enumerate(equipos_hoy, start=1):
@@ -650,19 +624,27 @@ def ejecutar_pipeline_diario():
 
                 # Extraer lanzadores del preview
                 print("   🔍 Extrayendo lanzadores de preview...")
-                lanzadores = extraer_lanzadores_del_preview(
-                    preview_link, away_team=away_team, home_team=home_team
+                lanzadores = extraer_lanzadores_del_preview(preview_link, away_team=away_team, home_team=home_team)
+
+                away_pitcher = (
+                    lanzadores.get(away_team, {}).get("nombre")
+                    if isinstance(lanzadores.get(away_team), dict)
+                    else lanzadores.get(away_team)
+                )
+                away_pitcher_link = (
+                    lanzadores.get(away_team, {}).get("link", "") if isinstance(lanzadores.get(away_team), dict) else ""
+                )
+                home_pitcher = (
+                    lanzadores.get(home_team, {}).get("nombre")
+                    if isinstance(lanzadores.get(home_team), dict)
+                    else lanzadores.get(home_team)
+                )
+                home_pitcher_link = (
+                    lanzadores.get(home_team, {}).get("link", "") if isinstance(lanzadores.get(home_team), dict) else ""
                 )
 
-                away_pitcher = lanzadores.get(away_team, {}).get("nombre") if isinstance(lanzadores.get(away_team), dict) else lanzadores.get(away_team)
-                away_pitcher_link = lanzadores.get(away_team, {}).get("link", "") if isinstance(lanzadores.get(away_team), dict) else ""
-                home_pitcher = lanzadores.get(home_team, {}).get("nombre") if isinstance(lanzadores.get(home_team), dict) else lanzadores.get(home_team)
-                home_pitcher_link = lanzadores.get(home_team, {}).get("link", "") if isinstance(lanzadores.get(home_team), dict) else ""
-
                 if not away_pitcher or not home_pitcher:
-                    print(
-                        f"   ⚠️ No se encontraron lanzadores: {away_pitcher} vs {home_pitcher}"
-                    )
+                    print(f"   ⚠️ No se encontraron lanzadores: {away_pitcher} vs {home_pitcher}")
                     fecha_partido_db = extraer_fecha_desde_box_url(preview_link, fecha_db)
                     registrar_partido_pendiente(
                         data_partidos,
@@ -683,10 +665,7 @@ def ejecutar_pipeline_diario():
 
                 fecha_partido_db = extraer_fecha_desde_box_url(preview_link, fecha_db)
                 if fecha_partido_db != fecha_db:
-                    print(
-                        "   ℹ️ Ajuste de fecha por boxscore URL: "
-                        f"{fecha_db} -> {fecha_partido_db}"
-                    )
+                    print(f"   ℹ️ Ajuste de fecha por boxscore URL: {fecha_db} -> {fecha_partido_db}")
 
                 year_partido = int(fecha_partido_db[:4])
 
@@ -695,15 +674,11 @@ def ejecutar_pipeline_diario():
 
                 # Extraer stats de los lanzadores
                 print(f"   🔍 Buscando stats de {away_pitcher}...")
-                s_away = encontrar_lanzador(
-                    scrape_player_stats(away_stats_code, year_partido), away_pitcher
-                )
+                s_away = encontrar_lanzador(scrape_player_stats(away_stats_code, year_partido), away_pitcher)
                 time.sleep(SCRAPING_CONFIG["min_delay"])
 
                 print(f"   🔍 Buscando stats de {home_pitcher}...")
-                s_home = encontrar_lanzador(
-                    scrape_player_stats(home_stats_code, year_partido), home_pitcher
-                )
+                s_home = encontrar_lanzador(scrape_player_stats(home_stats_code, year_partido), home_pitcher)
                 time.sleep(SCRAPING_CONFIG["min_delay"])
 
                 # Crear game_id unificado
@@ -752,18 +727,14 @@ def ejecutar_pipeline_diario():
                 )
             finally:
                 if espera_entre_partidos > 0 and i < total_juegos:
-                    print(
-                        f"   ⏳ Esperando {espera_entre_partidos}s antes del siguiente partido..."
-                    )
+                    print(f"   ⏳ Esperando {espera_entre_partidos}s antes del siguiente partido...")
                     time.sleep(espera_entre_partidos)
 
         total_detectados = len(equipos_hoy)
         total_ok = len(data_partidos)
         completo = total_ok == total_detectados and total_detectados > 0
 
-        print(
-            f"\n📊 Resumen intento {intento}: {total_ok}/{total_detectados} partidos completos"
-        )
+        print(f"\n📊 Resumen intento {intento}: {total_ok}/{total_detectados} partidos completos")
 
         if not completo:
             if errores_partidos:
@@ -772,9 +743,7 @@ def ejecutar_pipeline_diario():
                     print(f"   - {err}")
 
             if intento < max_intentos:
-                print(
-                    f"⏳ Datos incompletos. Esperando {espera_reintento}s para reintentar..."
-                )
+                print(f"⏳ Datos incompletos. Esperando {espera_reintento}s para reintentar...")
                 time.sleep(espera_reintento)
                 continue
 
@@ -784,9 +753,7 @@ def ejecutar_pipeline_diario():
                     f"({total_ok}/{total_detectados}) para no dejar la app sin cartelera."
                 )
             else:
-                print(
-                    "⚠️ Tercer intento sin datos completos. No se guarda información y se continúa workflow."
-                )
+                print("⚠️ Tercer intento sin datos completos. No se guarda información y se continúa workflow.")
                 guardar_delay_adaptativo(delay_adaptativo_fallo)
                 return True
 
@@ -802,13 +769,9 @@ def ejecutar_pipeline_diario():
 
         with sqlite3.connect(DB_PATH) as conn:
             # Verificar esquema existente y migrar si es necesario
-            table_info = conn.execute(
-                "PRAGMA table_info(historico_partidos)"
-            ).fetchall()
+            table_info = conn.execute("PRAGMA table_info(historico_partidos)").fetchall()
             if not table_info or len(table_info) < 22:
-                print(
-                    "  ℹ️ Creando o recreando tabla historico_partidos con esquema completo"
-                )
+                print("  ℹ️ Creando o recreando tabla historico_partidos con esquema completo")
                 conn.execute("DROP TABLE IF EXISTS historico_partidos")
                 conn.execute(
                     """CREATE TABLE historico_partidos
@@ -884,12 +847,8 @@ def ejecutar_pipeline_diario():
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Scraper diario de partidos MLB (Versión 2)"
-    )
-    parser.add_argument(
-        "--retry", action="store_true", help="Modo reintentar si no hay datos"
-    )
+    parser = argparse.ArgumentParser(description="Scraper diario de partidos MLB (Versión 2)")
+    parser.add_argument("--retry", action="store_true", help="Modo reintentar si no hay datos")
     args = parser.parse_args()
 
     resultado = ejecutar_pipeline_diario()

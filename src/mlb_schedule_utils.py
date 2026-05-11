@@ -75,9 +75,7 @@ def iterar_secciones_schedule(soup, target_date=None):
                 break
 
             if sibling.name == "p" and "game" in (sibling.get("class") or []):
-                team_links = sibling.find_all(
-                    "a", href=re.compile(r"/teams/\w+/\d+\.shtml")
-                )
+                team_links = sibling.find_all("a", href=re.compile(r"/teams/\w+/\d+\.shtml"))
                 if len(team_links) < 2:
                     continue
 
@@ -133,9 +131,7 @@ def seleccionar_seccion_schedule(soup, fecha_objetivo_db):
             return seccion
 
     secciones_futuras = [
-        seccion
-        for seccion in secciones
-        if seccion.get("date") and seccion["date"] >= fecha_objetivo_db
+        seccion for seccion in secciones if seccion.get("date") and seccion["date"] >= fecha_objetivo_db
     ]
     if secciones_futuras:
         return min(secciones_futuras, key=lambda item: item["date"])

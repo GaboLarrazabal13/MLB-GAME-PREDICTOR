@@ -143,9 +143,7 @@ def ejecutar_cli_manual():
 
                 home_code = normalizar_equipo(h_input)
                 if not home_code:
-                    print(
-                        "❌ No reconozco el equipo. Intenta de nuevo o escribe 'help'."
-                    )
+                    print("❌ No reconozco el equipo. Intenta de nuevo o escribe 'help'.")
 
             # Confirmar equipo seleccionado
             home_name = get_team_name(home_code)
@@ -172,9 +170,7 @@ def ejecutar_cli_manual():
                     continue
 
                 if not away_code:
-                    print(
-                        "❌ No reconozco el equipo. Intenta de nuevo o escribe 'help'."
-                    )
+                    print("❌ No reconozco el equipo. Intenta de nuevo o escribe 'help'.")
 
             # Confirmar equipo seleccionado
             away_name = get_team_name(away_code)
@@ -193,9 +189,7 @@ def ejecutar_cli_manual():
                 continue
 
             # 4. Año para scraping
-            year_input = input(
-                "📅 Año para el scraping de stats (Enter=2026): "
-            ).strip()
+            year_input = input("📅 Año para el scraping de stats (Enter=2026): ").strip()
             year_val = validar_year(year_input)
 
             # 5. Confirmación
@@ -307,12 +301,8 @@ if __name__ == "__main__":
 
             modo_rapido(home, away, hp, ap, year)
         else:
-            print(
-                "❌ Uso: python mlb_manual_interface.py <home> <away> <home_pitcher> <away_pitcher> [year]"
-            )
-            print(
-                'Ejemplo: python mlb_manual_interface.py NYY BOS "Gerrit Cole" "Tanner Houck" 2024'
-            )
+            print("❌ Uso: python mlb_manual_interface.py <home> <away> <home_pitcher> <away_pitcher> [year]")
+            print('Ejemplo: python mlb_manual_interface.py NYY BOS "Gerrit Cole" "Tanner Houck" 2024')
     else:
         # Modo interactivo
         ejecutar_cli_manual()

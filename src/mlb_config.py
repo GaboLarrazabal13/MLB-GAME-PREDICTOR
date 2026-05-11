@@ -235,9 +235,7 @@ def validate_config():
 
     # Verificar que hay exactamente 30 equipos
     if len(TEAM_CODE_TO_NAME) != 30:
-        errors.append(
-            f"Se esperan 30 equipos MLB, se encontraron {len(TEAM_CODE_TO_NAME)}"
-        )
+        errors.append(f"Se esperan 30 equipos MLB, se encontraron {len(TEAM_CODE_TO_NAME)}")
 
     # Verificar coherencia de mapeos
     if len(TEAM_CODE_TO_NAME) != len(set(TEAM_CODE_TO_NAME.values())):
@@ -264,7 +262,5 @@ if __name__ == "__main__":
         print(f"📁 DB: {DB_PATH}")
         print(f"   Existe: {'✅ SÍ' if os.path.exists(DB_PATH) else '❌ NO'}")
         print(f"📁 Cache: {CACHE_PATH}")
-        print(
-            f"   Existe: {'✅ SÍ' if os.path.exists(CACHE_PATH) else '⚠️ NO (se creará al entrenar)'}"
-        )
+        print(f"   Existe: {'✅ SÍ' if os.path.exists(CACHE_PATH) else '⚠️ NO (se creará al entrenar)'}")
         print(f"📊 Equipos configurados: {len(TEAM_CODE_TO_NAME)}")

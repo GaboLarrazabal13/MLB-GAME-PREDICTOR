@@ -117,9 +117,7 @@ def importar_y_transformar():
     # --- VERIFICACIÓN DE INSERCIÓN FINAL ---
     print("\n🔍 VERIFICACIÓN DE TABLA HISTORICO_REAL:")
     conteo_final = conn.execute("SELECT COUNT(*) FROM historico_real").fetchone()[0]
-    por_año = pd.read_sql(
-        "SELECT year, COUNT(*) as total FROM historico_real GROUP BY year", conn
-    )
+    por_año = pd.read_sql("SELECT year, COUNT(*) as total FROM historico_real GROUP BY year", conn)
     print(f"Total de filas reales en DB: {conteo_final}")
     print(por_año.to_string(index=False))
     # ---------------------------------------

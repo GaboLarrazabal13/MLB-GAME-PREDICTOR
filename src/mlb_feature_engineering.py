@@ -43,18 +43,14 @@ def calcular_super_features(features_dict):
     home_ops = get_safe("home_team_OPS")
     away_ops = get_safe("away_team_OPS")
 
-    features_dict["super_neutralizacion_whip_ops"] = (home_whip * away_ops) - (
-        away_whip * home_ops
-    )
+    features_dict["super_neutralizacion_whip_ops"] = (home_whip * away_ops) - (away_whip * home_ops)
 
     # Super Feature 2: Resistencia ERA vs OPS
     # Mide la capacidad del pitcher de resistir la ofensiva rival
     home_era = get_safe("home_starter_ERA")
     away_era = get_safe("away_starter_ERA")
 
-    features_dict["super_resistencia_era_ops"] = (home_era / (away_ops + 0.01)) - (
-        away_era / (home_ops + 0.01)
-    )
+    features_dict["super_resistencia_era_ops"] = (home_era / (away_ops + 0.01)) - (away_era / (home_ops + 0.01))
 
     # Super Feature 3: Muro del Bullpen
     # Mide efectividad del bullpen contra mejores bateadores rivales
@@ -63,9 +59,7 @@ def calcular_super_features(features_dict):
     home_best_ops = get_safe("home_best_OPS")
     away_best_ops = get_safe("away_best_OPS")
 
-    features_dict["super_muro_bullpen"] = (home_bull_whip * away_best_ops) - (
-        away_bull_whip * home_best_ops
-    )
+    features_dict["super_muro_bullpen"] = (home_bull_whip * away_best_ops) - (away_bull_whip * home_best_ops)
 
     return features_dict
 
@@ -123,33 +117,23 @@ def calcular_estadisticas_agregadas(features_dict):
     stats = {}
 
     # Ventaja general de pitcheo
-    home_pitch_quality = (
-        features_dict.get("home_starter_ERA", 4.0)
-        + features_dict.get("home_bullpen_ERA", 4.0)
-    ) / 2
+    home_pitch_quality = (features_dict.get("home_starter_ERA", 4.0) + features_dict.get("home_bullpen_ERA", 4.0)) / 2
 
-    away_pitch_quality = (
-        features_dict.get("away_starter_ERA", 4.0)
-        + features_dict.get("away_bullpen_ERA", 4.0)
-    ) / 2
+    away_pitch_quality = (features_dict.get("away_starter_ERA", 4.0) + features_dict.get("away_bullpen_ERA", 4.0)) / 2
 
     stats["pitching_advantage"] = away_pitch_quality - home_pitch_quality
 
     # Ventaja general de bateo
-    stats["batting_advantage"] = features_dict.get(
-        "home_team_OPS", 0.75
-    ) - features_dict.get("away_team_OPS", 0.75)
+    stats["batting_advantage"] = features_dict.get("home_team_OPS", 0.75) - features_dict.get("away_team_OPS", 0.75)
 
     # Ventaja de momentum
-    stats["momentum_advantage"] = features_dict.get(
-        "home_win_rate_10", 0.5
-    ) - features_dict.get("away_win_rate_10", 0.5)
+    stats["momentum_advantage"] = features_dict.get("home_win_rate_10", 0.5) - features_dict.get(
+        "away_win_rate_10", 0.5
+    )
 
     # Score compuesto
     stats["composite_advantage"] = (
-        stats["pitching_advantage"] * 0.4
-        + stats["batting_advantage"] * 0.4
-        + stats["momentum_advantage"] * 0.2
+        stats["pitching_advantage"] * 0.4 + stats["batting_advantage"] * 0.4 + stats["momentum_advantage"] * 0.2
     )
 
     return stats
@@ -220,9 +204,7 @@ def generar_feature_importance_report(model, feature_names, top_n=20):
 
         # Convertir a DataFrame
         importance_df = (
-            pd.DataFrame(
-                [{"feature": k, "importance": v} for k, v in importance.items()]
-            )
+            pd.DataFrame([{"feature": k, "importance": v} for k, v in importance.items()])
             .sort_values("importance", ascending=False)
             .head(top_n)
         )
@@ -245,25 +227,17 @@ def crear_features_interaccion(features_dict):
     """
     # Interacción pitcheo-bateo
     if "home_starter_ERA" in features_dict and "away_best_OPS" in features_dict:
-        features_dict["home_pitch_vs_away_bat"] = (
-            features_dict["home_starter_ERA"] * features_dict["away_best_OPS"]
-        )
+        features_dict["home_pitch_vs_away_bat"] = features_dict["home_starter_ERA"] * features_dict["away_best_OPS"]
 
     if "away_starter_ERA" in features_dict and "home_best_OPS" in features_dict:
-        features_dict["away_pitch_vs_home_bat"] = (
-            features_dict["away_starter_ERA"] * features_dict["home_best_OPS"]
-        )
+        features_dict["away_pitch_vs_home_bat"] = features_dict["away_starter_ERA"] * features_dict["home_best_OPS"]
 
     # Interacción racha-calidad
     if "home_racha" in features_dict and "home_team_OPS" in features_dict:
-        features_dict["home_momentum_quality"] = (
-            features_dict["home_racha"] * features_dict["home_team_OPS"]
-        )
+        features_dict["home_momentum_quality"] = features_dict["home_racha"] * features_dict["home_team_OPS"]
 
     if "away_racha" in features_dict and "away_team_OPS" in features_dict:
-        features_dict["away_momentum_quality"] = (
-            features_dict["away_racha"] * features_dict["away_team_OPS"]
-        )
+        features_dict["away_momentum_quality"] = features_dict["away_racha"] * features_dict["away_team_OPS"]
 
     return features_dict
 

@@ -993,11 +993,19 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
     if tendencias_obj and isinstance(tendencias_obj, dict):
         try:
             t_h = tendencias_obj.get("home", {})
-            t_a = tendencias_obj.get("away", {})
             win_rate_h = float(t_h.get("win_rate", 0.5)) * 100
+            win_rate_s_h = float(t_h.get("win_rate_season", 0.5)) * 100
+            record_s_h = t_h.get("season_record", "N/A")
+            if record_s_h == "0-0":
+                record_s_h = "N/A"
             racha_h = int(t_h.get("racha", 0))
 
+            t_a = tendencias_obj.get("away", {})
             win_rate_a = float(t_a.get("win_rate", 0.5)) * 100
+            win_rate_s_a = float(t_a.get("win_rate_season", 0.5)) * 100
+            record_s_a = t_a.get("season_record", "N/A")
+            if record_s_a == "0-0":
+                record_s_a = "N/A"
             racha_a = int(t_a.get("racha", 0))
             data_ready = True
         except Exception:
@@ -1007,9 +1015,17 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
     if not data_ready and features_t:
         try:
             win_rate_h = float(features_t.get("home_win_rate_10", 0.5)) * 100
+            win_rate_s_h = float(features_t.get("home_win_rate_season", 0.5)) * 100
+            record_s_h = features_t.get("home_season_record", "N/A")
+            if record_s_h == "0-0":
+                record_s_h = "N/A"
             racha_h = int(features_t.get("home_racha", 0))
 
             win_rate_a = float(features_t.get("away_win_rate_10", 0.5)) * 100
+            win_rate_s_a = float(features_t.get("away_win_rate_season", 0.5)) * 100
+            record_s_a = features_t.get("away_season_record", "N/A")
+            if record_s_a == "0-0":
+                record_s_a = "N/A"
             racha_a = int(features_t.get("away_racha", 0))
             data_ready = True
         except Exception:
@@ -1031,7 +1047,7 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
         l_a = 10 - w_a
 
         st.markdown("---")
-        st.markdown("### 📈 Tendencias y Momentum — Últimos 10 Juegos")
+        st.markdown("### 📈 Tendencias y Momentum")
         st.markdown(
             f"""
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
@@ -1040,10 +1056,14 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
                         {get_team_logo_html(home_team, 32)}
                         <strong style="font-size:1.1rem">{home_team}</strong>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;text-align:center">
                         <div>
                             <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                            <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_h >= 50 else "#ef4444"}">{win_rate_h:.0f}%</div>
+                            <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_s_h >= 50 else "#ef4444"}">{win_rate_s_h:.0f}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD</div>
+                            <div style="font-size:1.4rem;font-weight:700">{record_s_h}</div>
                         </div>
                         <div>
                             <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
@@ -1060,10 +1080,14 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
                         {get_team_logo_html(away_team, 32)}
                         <strong style="font-size:1.1rem">{away_team}</strong>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;text-align:center">
                         <div>
                             <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                            <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_a >= 50 else "#ef4444"}">{win_rate_a:.0f}%</div>
+                            <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_s_a >= 50 else "#ef4444"}">{win_rate_s_a:.0f}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD</div>
+                            <div style="font-size:1.4rem;font-weight:700">{record_s_a}</div>
                         </div>
                         <div>
                             <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
@@ -2303,8 +2327,12 @@ elif pagina == "📈 Dashboard's Interactivos":
 
         if not df_dash.empty:
             # Calcular confianza numérica como el máximo de las dos probabilidades
-            df_dash["Prob_Home"] = pd.to_numeric(df_dash["Prob_Home"], errors="coerce").fillna(0)
-            df_dash["Prob_Away"] = pd.to_numeric(df_dash["Prob_Away"], errors="coerce").fillna(0)
+            df_dash["Prob_Home"] = (
+                pd.to_numeric(df_dash["Prob_Home"], errors="coerce").fillna(0).apply(normalizar_probabilidad)
+            )
+            df_dash["Prob_Away"] = (
+                pd.to_numeric(df_dash["Prob_Away"], errors="coerce").fillna(0).apply(normalizar_probabilidad)
+            )
             df_dash["Confianza"] = df_dash[["Prob_Home", "Prob_Away"]].max(axis=1)
 
             df_dash["Fecha_Original"] = pd.to_datetime(df_dash["Fecha"])
@@ -2463,9 +2491,10 @@ elif pagina == "📈 Dashboard's Interactivos":
 
                     # Crear los buckets
                     def categorize_conf(val):
-                        if val < 55:
+                        val_pct = val * 100 if val <= 1.0 else val
+                        if val_pct < 55:
                             return "Baja (< 55%)"
-                        elif val <= 65:
+                        elif val_pct <= 65:
                             return "Media (55% - 65%)"
                         else:
                             return "Alta (> 65%)"

@@ -273,9 +273,7 @@ def predecir_juego(
                 ("✈️  " + away_team, "away_top_3_batters_details"),
             ]:
                 print(f"\n {label}:")
-                print(
-                    f" {'Nombre':<22} | {'BA':<5} | {'OBP':<5} | {'SLG':<5} | {'OPS':<5} | {'HR':<3} | {'RBI'}"
-                )
+                print(f" {'Nombre':<22} | {'BA':<5} | {'OBP':<5} | {'SLG':<5} | {'OPS':<5} | {'HR':<3} | {'RBI'}")
                 print("-" * 75)
                 for b in features_dict.get(team_key, []):
                     nombre = b.get("n", "Desconocido")
@@ -285,9 +283,7 @@ def predecir_juego(
                     ops = b.get("ops", b.get("o", 0))
                     hr = b.get("hr", 0)
                     rbi = b.get("rbi", 0)
-                    print(
-                        f" {nombre:<22} | {ba:.3f} | {obp:.3f} | {slg:.3f} | {ops:.3f} | {int(hr):<3} | {int(rbi)}"
-                    )
+                    print(f" {nombre:<22} | {ba:.3f} | {obp:.3f} | {slg:.3f} | {ops:.3f} | {int(hr):<3} | {int(rbi)}")
 
             # Tendencias recientes
             print("\n📈 TENDENCIAS RECIENTES (Últimos 10 juegos):")
@@ -301,9 +297,7 @@ def predecir_juego(
             print("\n" + "=" * 75)
             print(f" 🏆 GANADOR PREDICHO: {ganador_full}")
             print("=" * 75)
-            print(
-                f" Probabilidades: {home_team} {prob_home_pct}% | {away_team} {prob_away_pct}%"
-            )
+            print(f" Probabilidades: {home_team} {prob_home_pct}% | {away_team} {prob_away_pct}%")
             print(f" Confianza: {conf_label}")
 
             # Diagnóstico de super features
@@ -321,18 +315,10 @@ def predecir_juego(
 
             # Análisis agregado
             print("\n💡 ANÁLISIS COMPUESTO:")
-            print(
-                f" Ventaja Pitcheo: {stats_agregadas.get('pitching_advantage', 0):+.3f}"
-            )
-            print(
-                f" Ventaja Bateo:   {stats_agregadas.get('batting_advantage', 0):+.3f}"
-            )
-            print(
-                f" Ventaja Momentum: {stats_agregadas.get('momentum_advantage', 0):+.3f}"
-            )
-            print(
-                f" Score Compuesto: {stats_agregadas.get('composite_advantage', 0):+.3f}"
-            )
+            print(f" Ventaja Pitcheo: {stats_agregadas.get('pitching_advantage', 0):+.3f}")
+            print(f" Ventaja Bateo:   {stats_agregadas.get('batting_advantage', 0):+.3f}")
+            print(f" Ventaja Momentum: {stats_agregadas.get('momentum_advantage', 0):+.3f}")
+            print(f" Score Compuesto: {stats_agregadas.get('composite_advantage', 0):+.3f}")
 
             print("=" * 75 + "\n")
 
@@ -384,12 +370,16 @@ def predecir_juego(
                 "tendencias": {
                     "home": {
                         "win_rate": float(features_dict.get("home_win_rate_10", 0.5)),
+                        "win_rate_season": float(features_dict.get("home_win_rate_season", 0.5)),
+                        "season_record": features_dict.get("home_season_record", "0-0"),
                         "racha": int(features_dict.get("home_racha", 0)),
                         "runs_avg": float(features_dict.get("home_runs_avg", 0)),
                         "runs_diff": float(features_dict.get("home_runs_diff", 0)),
                     },
                     "away": {
                         "win_rate": float(features_dict.get("away_win_rate_10", 0.5)),
+                        "win_rate_season": float(features_dict.get("away_win_rate_season", 0.5)),
+                        "season_record": features_dict.get("away_season_record", "0-0"),
                         "racha": int(features_dict.get("away_racha", 0)),
                         "runs_avg": float(features_dict.get("away_runs_avg", 0)),
                         "runs_diff": float(features_dict.get("away_runs_diff", 0)),
@@ -403,7 +393,7 @@ def predecir_juego(
 
         # Calidad de los datos: Si faltan lanzadores, es una predicción de menor calidad.
         has_pitchers = bool(home_pitcher) and bool(away_pitcher)
-        
+
         tipo_final = "AUTOMATICO" if modo_auto else "MANUAL"
         if not hacer_scraping or not has_pitchers:
             tipo_final += "_FALLBACK"
@@ -428,7 +418,9 @@ def predecir_juego(
         # a menos que el usuario lo pida explícitamente.
         if guardar_db:
             if not has_pitchers and modo_auto:
-                print(f"⚠️ Saltando guardado en DB para {away_team} @ {home_team} por falta de lanzadores (evitando contaminación).")
+                print(
+                    f"⚠️ Saltando guardado en DB para {away_team} @ {home_team} por falta de lanzadores (evitando contaminación)."
+                )
                 return resultado_data
 
             stage_start = time.perf_counter()
@@ -437,11 +429,11 @@ def predecir_juego(
                                (fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
                                 away_pitcher TEXT, prob_home REAL, prob_away REAL,
                                 prediccion TEXT, confianza TEXT, tipo TEXT, detalles TEXT)""")
-                
+
                 # Check if detalles column exists, if not, add it
                 cursor = conn.execute("PRAGMA table_info(predicciones_historico)")
                 columns = [col[1] for col in cursor.fetchall()]
-                if 'detalles' not in columns:
+                if "detalles" not in columns:
                     conn.execute("ALTER TABLE predicciones_historico ADD COLUMN detalles TEXT")
 
                 # Reemplazo por juego para evitar duplicados y mantener la corrida no destructiva.
@@ -452,11 +444,8 @@ def predecir_juego(
                     """,
                     (row_data["fecha"], home_team, away_team),
                 )
-                pd.DataFrame([db_data]).to_sql(
-                    "predicciones_historico", conn, if_exists="append", index=False
-                )
+                pd.DataFrame([db_data]).to_sql("predicciones_historico", conn, if_exists="append", index=False)
             _debug_stage("db_write", stage_start)
-
 
         if debug:
             _debug_stage("total", total_start)
@@ -492,9 +481,7 @@ def ejecutar_flujo_diario():
             if target_date:
                 fecha_objetivo = target_date
             else:
-                fecha_objetivo = conn.execute(
-                    "SELECT MAX(fecha) FROM historico_partidos"
-                ).fetchone()[0]
+                fecha_objetivo = conn.execute("SELECT MAX(fecha) FROM historico_partidos").fetchone()[0]
 
             if not fecha_objetivo:
                 print("🔭 No hay juegos registrados en historico_partidos.")
@@ -552,9 +539,7 @@ def ejecutar_flujo_diario():
 
     resultados = []
     for idx, row in df_hoy.iterrows():
-        print(
-            f"Procesando juego {idx + 1}/{len(df_hoy)}: {row['away_team']} @ {row['home_team']}"
-        )
+        print(f"Procesando juego {idx + 1}/{len(df_hoy)}: {row['away_team']} @ {row['home_team']}")
 
         try:
             resultado = predecir_juego(
@@ -565,7 +550,7 @@ def ejecutar_flujo_diario():
                 year=row.get("year", 2026),
                 modo_auto=True,
                 fecha_partido=row.get("fecha", fecha_objetivo),
-                hacer_scraping=True
+                hacer_scraping=True,
             )
         except Exception as e:
             print(f"⚠️ Error en scraping detallado para {row['away_team']} @ {row['home_team']}: {e}")
@@ -582,7 +567,7 @@ def ejecutar_flujo_diario():
                     modo_auto=True,
                     fecha_partido=row.get("fecha", fecha_objetivo),
                     hacer_scraping=False,
-                    guardar_db=False
+                    guardar_db=False,
                 )
             except Exception as e:
                 print(f"❌ Error en modo temporal para {row['away_team']} @ {row['home_team']}: {e}")
@@ -590,9 +575,7 @@ def ejecutar_flujo_diario():
 
         if resultado:
             resultados.append(resultado)
-            print(
-                f"✅ Predicción: {resultado['prediccion']} (Confianza: {resultado['confianza']})\n"
-            )
+            print(f"✅ Predicción: {resultado['prediccion']} (Confianza: {resultado['confianza']})\n")
         else:
             print("❌ Error total en predicción: No se pudo predecir de ninguna forma\n")
 
@@ -608,13 +591,9 @@ def ejecutar_flujo_diario():
             )
             conn.commit()
     else:
-        print(
-            "⚠️ No se actualizará sync_control para predictions_today: no hubo predicciones exitosas."
-        )
+        print("⚠️ No se actualizará sync_control para predictions_today: no hubo predicciones exitosas.")
 
-    print(
-        f"\n✅ Proceso completado: {len(resultados)}/{len(df_hoy)} predicciones exitosas"
-    )
+    print(f"\n✅ Proceso completado: {len(resultados)}/{len(df_hoy)} predicciones exitosas")
 
 
 if __name__ == "__main__":

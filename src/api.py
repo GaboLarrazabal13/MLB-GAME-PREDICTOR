@@ -607,6 +607,22 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                         else:
                             confianza_decimal = 0.55
 
+                        # Asegurar que tendencias tenga info de temporada si falta en el caché
+                        if "tendencias" in stats_detalladas:
+                            t = stats_detalladas["tendencias"]
+                            for side in ["home", "away"]:
+                                if side not in t:
+                                    t[side] = {}
+                                f_pre = f"{side}_"
+                                if "win_rate_season" not in t[side]:
+                                    val = float(features_usadas.get(f"{f_pre}win_rate_season", 0.5))
+                                    t[side]["win_rate_season"] = val
+                                if "season_record" not in t[side]:
+                                    val = features_usadas.get(f"{f_pre}season_record", "0-0")
+                                    t[side]["season_record"] = val
+
+                        print(f"DEBUG API: tendencias_home = {stats_detalladas.get('tendencias', {}).get('home')}")
+
                         return {
                             "ganador": prediccion_code,
                             "prob_home": prob_home_decimal,
@@ -656,12 +672,16 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
             stats_detalladas["tendencias"] = {
                 "home": {
                     "win_rate": float(features_usadas.get("home_win_rate_10", 0.5)),
+                    "win_rate_season": float(features_usadas.get("home_win_rate_season", 0.5)),
+                    "season_record": features_usadas.get("home_season_record", "0-0"),
                     "racha": int(features_usadas.get("home_racha", 0)),
                     "runs_avg": float(features_usadas.get("home_runs_avg", 0)),
                     "runs_diff": float(features_usadas.get("home_runs_diff", 0)),
                 },
                 "away": {
                     "win_rate": float(features_usadas.get("away_win_rate_10", 0.5)),
+                    "win_rate_season": float(features_usadas.get("away_win_rate_season", 0.5)),
+                    "season_record": features_usadas.get("away_season_record", "0-0"),
                     "racha": int(features_usadas.get("away_racha", 0)),
                     "runs_avg": float(features_usadas.get("away_runs_avg", 0)),
                     "runs_diff": float(features_usadas.get("away_runs_diff", 0)),
@@ -1198,6 +1218,7 @@ async def obtener_estadisticas_equipo(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error obteniendo stats del equipo: {str(e)}") from e
+
 
 
 # ============================================================================

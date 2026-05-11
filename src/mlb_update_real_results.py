@@ -53,9 +53,7 @@ def obtener_fechas_ayer():
     ayer = datetime.now(ZoneInfo("America/New_York")) - timedelta(days=1)
 
     # Formato para Baseball-Reference
-    fecha_bref = ayer.strftime(
-        "%A, %B %-d, %Y" if os.name != "nt" else "%A, %B %#d, %Y"
-    )
+    fecha_bref = ayer.strftime("%A, %B %-d, %Y" if os.name != "nt" else "%A, %B %#d, %Y")
 
     # Formato para base de datos
     fecha_db = ayer.strftime("%Y-%m-%d")
@@ -174,9 +172,7 @@ def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
     print(f"🕐 Actualizando resultados reales para: {fecha_bref}")
     print(f"{'=' * 70}")
 
-    url_schedule = (
-        f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
-    )
+    url_schedule = f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
     html = obtener_html(url_schedule)
 
     if not html:
@@ -280,9 +276,7 @@ def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
             df_p = pd.DataFrame(columns=["game_id", "team", "pitcher"])
 
         if df_p.empty:
-            print(
-                "⚠️ No se encontraron lineups previos. Intentando extraer WP/LP desde boxscore."
-            )
+            print("⚠️ No se encontraron lineups previos. Intentando extraer WP/LP desde boxscore.")
             df_res["home_pitcher"] = None
             df_res["away_pitcher"] = None
         else:
@@ -293,9 +287,7 @@ def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
                 right_on=["game_id", "team"],
                 how="left",
             )
-            df_final = df_final.rename(columns={"pitcher": "home_pitcher"}).drop(
-                columns=["team"], errors="ignore"
-            )
+            df_final = df_final.rename(columns={"pitcher": "home_pitcher"}).drop(columns=["team"], errors="ignore")
 
             # Merge para Away Pitcher
             df_final = df_final.merge(
@@ -304,20 +296,14 @@ def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
                 right_on=["game_id", "team"],
                 how="left",
             )
-            df_final = df_final.rename(columns={"pitcher": "away_pitcher"}).drop(
-                columns=["team"], errors="ignore"
-            )
+            df_final = df_final.rename(columns={"pitcher": "away_pitcher"}).drop(columns=["team"], errors="ignore")
 
             df_res = df_final
 
         # Fallback: completar lanzadores faltantes desde boxscore (WP/LP)
-        faltantes = df_res[
-            df_res["home_pitcher"].isna() | df_res["away_pitcher"].isna()
-        ].copy()
+        faltantes = df_res[df_res["home_pitcher"].isna() | df_res["away_pitcher"].isna()].copy()
         if not faltantes.empty:
-            print(
-                f"ℹ️ Intentando completar lanzadores desde boxscore para {len(faltantes)} partidos..."
-            )
+            print(f"ℹ️ Intentando completar lanzadores desde boxscore para {len(faltantes)} partidos...")
             for idx, row in faltantes.iterrows():
                 home_pitcher, away_pitcher = extraer_pitchers_desde_boxscore(
                     row.get("box_score_url"), row.get("ganador") == 1
@@ -351,12 +337,8 @@ def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
         df_export = df_res[columnas_finales].copy()
 
         # Mostrar cuántos tienen pitchers
-        con_pitchers = df_export[
-            df_export["home_pitcher"].notna() & df_export["away_pitcher"].notna()
-        ]
-        sin_pitchers = df_export[
-            df_export["home_pitcher"].isna() | df_export["away_pitcher"].isna()
-        ]
+        con_pitchers = df_export[df_export["home_pitcher"].notna() & df_export["away_pitcher"].notna()]
+        sin_pitchers = df_export[df_export["home_pitcher"].isna() | df_export["away_pitcher"].isna()]
 
         print("\n📊 Estadísticas:")
         print(f"   - Partidos con lanzadores: {len(con_pitchers)}")
@@ -382,9 +364,7 @@ def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
 
         conn.commit()
 
-        print(
-            f"\n✅ Se han guardado {len(df_export)} resultados reales en 'historico_real'"
-        )
+        print(f"\n✅ Se han guardado {len(df_export)} resultados reales en 'historico_real'")
         print(f"{'=' * 70}\n")
 
         return True
@@ -407,9 +387,7 @@ def actualizar_resultados_reales():
             procesados += 1
 
     if procesados == 0:
-        print(
-            "\nℹ️ No se encontraron nuevos resultados finales para las fechas objetivo."
-        )
+        print("\nℹ️ No se encontraron nuevos resultados finales para las fechas objetivo.")
     else:
         print(f"\n✅ Fechas procesadas con resultados guardados: {procesados}")
 
@@ -444,15 +422,13 @@ def verificar_juegos_pendientes():
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Actualizador de resultados reales MLB"
-    )
+    parser = argparse.ArgumentParser(description="Actualizador de resultados reales MLB")
+    parser.add_argument("--verificar", action="store_true", help="Verificar juegos pendientes")
     parser.add_argument(
-        "--verificar", action="store_true", help="Verificar juegos pendientes"
-    )
-    parser.add_argument(
-        "--fecha", type=str, default=None,
-        help="Fecha específica a procesar (formato YYYY-MM-DD). Si no se indica, usa TARGET_DATE env var o auto-detección."
+        "--fecha",
+        type=str,
+        default=None,
+        help="Fecha específica a procesar (formato YYYY-MM-DD). Si no se indica, usa TARGET_DATE env var o auto-detección.",
     )
     args = parser.parse_args()
 

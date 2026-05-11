@@ -209,9 +209,7 @@ def extraer_rango_fechas(fecha_inicio_str, fecha_fin_str, mostrar_progreso=True)
     dias_procesados = 0
 
     if mostrar_progreso:
-        print(
-            f"⌛ Extrayendo de {fecha_inicio_str} a {fecha_fin_str} ({total_dias} días)..."
-        )
+        print(f"⌛ Extrayendo de {fecha_inicio_str} a {fecha_fin_str} ({total_dias} días)...")
 
     while fecha_actual <= fecha_fin:
         fecha_str = fecha_actual.strftime("%Y-%m-%d")
@@ -226,9 +224,7 @@ def extraer_rango_fechas(fecha_inicio_str, fecha_fin_str, mostrar_progreso=True)
         # Mostrar progreso cada 10 días
         if mostrar_progreso and dias_procesados % 10 == 0:
             progreso = (dias_procesados / total_dias) * 100
-            print(
-                f"   📊 Progreso: {dias_procesados}/{total_dias} días ({progreso:.1f}%)"
-            )
+            print(f"   📊 Progreso: {dias_procesados}/{total_dias} días ({progreso:.1f}%)")
 
         fecha_actual += delta
 
@@ -252,9 +248,7 @@ def solicitar_temporadas():
     # Solicitar cantidad de temporadas
     while True:
         try:
-            num_temporadas = int(
-                input("\n📋 ¿Cuántas temporadas deseas descargar? (1-10): ")
-            )
+            num_temporadas = int(input("\n📋 ¿Cuántas temporadas deseas descargar? (1-10): "))
             if 1 <= num_temporadas <= 10:
                 break
             print("   ❌ Por favor, ingresa un número entre 1 y 10")
@@ -281,9 +275,7 @@ def solicitar_temporadas():
 
         # Fecha de inicio
         while True:
-            fecha_inicio = input(
-                f"Fecha de inicio de temporada {año} (YYYY-MM-DD): "
-            ).strip()
+            fecha_inicio = input(f"Fecha de inicio de temporada {año} (YYYY-MM-DD): ").strip()
             try:
                 datetime.strptime(fecha_inicio, "%Y-%m-%d")
                 break
@@ -299,15 +291,11 @@ def solicitar_temporadas():
 
                 if fecha_fin_dt >= fecha_inicio_dt:
                     break
-                print(
-                    "   ❌ La fecha de fin debe ser posterior o igual a la fecha de inicio"
-                )
+                print("   ❌ La fecha de fin debe ser posterior o igual a la fecha de inicio")
             except ValueError:
                 print("   ❌ Formato incorrecto. Usa YYYY-MM-DD (ejemplo: 2023-10-01)")
 
-        temporadas.append(
-            {"año": año, "fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin}
-        )
+        temporadas.append({"año": año, "fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin})
 
         print(f"   ✅ Temporada {año} configurada: {fecha_inicio} al {fecha_fin}")
 
@@ -335,22 +323,16 @@ def procesar_temporadas(temporadas):
         print(f"\n🔄 Procesando Temporada {i}/{len(temporadas)}: {temp['año']}")
         print(f"   Rango: {temp['fecha_inicio']} → {temp['fecha_fin']}")
 
-        df_temporada = extraer_rango_fechas(
-            temp["fecha_inicio"], temp["fecha_fin"], mostrar_progreso=True
-        )
+        df_temporada = extraer_rango_fechas(temp["fecha_inicio"], temp["fecha_fin"], mostrar_progreso=True)
 
         if not df_temporada.empty:
             # Reemplazar N/A en Salvado_Pitcher
-            df_temporada["Salvado_Pitcher"] = df_temporada["Salvado_Pitcher"].replace(
-                "N/A", "NotApplyed"
-            )
+            df_temporada["Salvado_Pitcher"] = df_temporada["Salvado_Pitcher"].replace("N/A", "NotApplyed")
 
             todos_los_datos.append(df_temporada)
             años_procesados.append(str(temp["año"]))
 
-            print(
-                f"   ✅ {len(df_temporada)} juegos extraídos de temporada {temp['año']}"
-            )
+            print(f"   ✅ {len(df_temporada)} juegos extraídos de temporada {temp['año']}")
         else:
             print(f"   ⚠️  No se obtuvieron datos para temporada {temp['año']}")
 
@@ -422,8 +404,7 @@ if __name__ == "__main__":
 
     for i, temp in enumerate(temporadas, 1):
         dias = (
-            datetime.strptime(temp["fecha_fin"], "%Y-%m-%d")
-            - datetime.strptime(temp["fecha_inicio"], "%Y-%m-%d")
+            datetime.strptime(temp["fecha_fin"], "%Y-%m-%d") - datetime.strptime(temp["fecha_inicio"], "%Y-%m-%d")
         ).days + 1
         print(f"\n{i}. Temporada {temp['año']}")
         print(f"   Desde: {temp['fecha_inicio']}")

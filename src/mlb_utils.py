@@ -53,20 +53,10 @@ def analizar_accuracy_historico(dias=30):
         return None
 
     # Merge para comparar
-    df_pred["match_key"] = (
-        df_pred["fecha"] + "_" + df_pred["home_team"] + "_" + df_pred["away_team"]
-    )
-    df_real["match_key"] = (
-        df_real["fecha"].astype(str)
-        + "_"
-        + df_real["home_team"]
-        + "_"
-        + df_real["away_team"]
-    )
+    df_pred["match_key"] = df_pred["fecha"] + "_" + df_pred["home_team"] + "_" + df_pred["away_team"]
+    df_real["match_key"] = df_real["fecha"].astype(str) + "_" + df_real["home_team"] + "_" + df_real["away_team"]
 
-    merged = df_pred.merge(
-        df_real[["match_key", "ganador"]], on="match_key", how="inner"
-    )
+    merged = df_pred.merge(df_real[["match_key", "ganador"]], on="match_key", how="inner")
 
     if merged.empty:
         print("⚠️ No se pudieron emparejar predicciones con resultados")
@@ -87,9 +77,7 @@ def analizar_accuracy_historico(dias=30):
     accuracy = (aciertos / total * 100) if total > 0 else 0
 
     # Estadísticas por confianza
-    stats_confianza = (
-        merged.groupby("confianza").agg({"acierto": ["count", "sum", "mean"]}).round(3)
-    )
+    stats_confianza = merged.groupby("confianza").agg({"acierto": ["count", "sum", "mean"]}).round(3)
 
     print("\n" + "=" * 60)
     print(f"📊 ANÁLISIS DE RENDIMIENTO - Últimos {dias} días")
@@ -143,20 +131,14 @@ def generar_reporte_equipos(equipo_code, ultimos_n=20):
     predicho_ganar_visitante = (como_visitante["prediccion"] == equipo_code).sum()
 
     print(f"\nComo Local: {len(como_local)} juegos")
-    print(
-        f"  Predicho ganar: {predicho_ganar_local} ({predicho_ganar_local / len(como_local) * 100:.1f}%)"
-    )
+    print(f"  Predicho ganar: {predicho_ganar_local} ({predicho_ganar_local / len(como_local) * 100:.1f}%)")
 
     print(f"\nComo Visitante: {len(como_visitante)} juegos")
-    print(
-        f"  Predicho ganar: {predicho_ganar_visitante} ({predicho_ganar_visitante / len(como_visitante) * 100:.1f}%)"
-    )
+    print(f"  Predicho ganar: {predicho_ganar_visitante} ({predicho_ganar_visitante / len(como_visitante) * 100:.1f}%)")
 
     # Probabilidad promedio
     prob_promedio_local = como_local["prob_home"].mean() if len(como_local) > 0 else 0
-    prob_promedio_visitante = (
-        (100 - como_visitante["prob_home"]).mean() if len(como_visitante) > 0 else 0
-    )
+    prob_promedio_visitante = (100 - como_visitante["prob_home"]).mean() if len(como_visitante) > 0 else 0
 
     print(f"\nProbabilidad promedio como local: {prob_promedio_local:.1f}%")
     print(f"Probabilidad promedio como visitante: {prob_promedio_visitante:.1f}%")
@@ -167,9 +149,7 @@ def generar_reporte_equipos(equipo_code, ultimos_n=20):
         es_local = row["home_team"] == equipo_code
         rival = row["away_team"] if es_local else row["home_team"]
         prob = row["prob_home"] if es_local else row["prob_away"]
-        print(
-            f"{row['fecha']}: vs {rival} - Pred: {row['prediccion']} ({prob:.1f}%) [{row['confianza']}]"
-        )
+        print(f"{row['fecha']}: vs {rival} - Pred: {row['prediccion']} ({prob:.1f}%) [{row['confianza']}]")
 
     print("=" * 60 + "\n")
 

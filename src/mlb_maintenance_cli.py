@@ -95,20 +95,19 @@ def push_db_to_production():
 
     # Obtener rama actual
     try:
-        branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], 
-                                       cwd=BASE_DIR, text=True).strip()
+        branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=BASE_DIR, text=True).strip()
     except:
         branch = "main"
 
     print(f"🌿 Rama detectada: {branch}")
-    
+
     subprocess.run(["git", "add", db_relative], cwd=BASE_DIR)
     commit_msg = f"data: maintenance update - {now_str}"
     subprocess.run(["git", "commit", "-m", commit_msg], cwd=BASE_DIR)
-    
+
     print("🔄 Sincronizando con repositorio remoto...")
     subprocess.run(["git", "pull", "--no-rebase", "-X", "ours", "origin", branch], cwd=BASE_DIR)
-    
+
     res = subprocess.run(["git", "push", "origin", branch], cwd=BASE_DIR)
     if res.returncode == 0:
         print("\n✅ Base de datos subida exitosamente.")

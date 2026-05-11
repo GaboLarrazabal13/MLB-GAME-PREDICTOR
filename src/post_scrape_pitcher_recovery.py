@@ -81,13 +81,13 @@ def evaluar_estado_fechas(conn: sqlite3.Connection) -> dict[str, Any]:
 
     valid_dates = {today_et, yesterday_et}
     stale_games = (bool(max_games) and max_games not in valid_dates) or today_missing
-    
+
     if stale_games:
-        print(f"[post-scrape] Motivo stale: max_games({max_games}) no en {valid_dates} o today_missing({today_missing})")
-    
-    desync_pred_gt_games = bool(max_preds) and (
-        (not max_games) or (max_preds > max_games)
-    )
+        print(
+            f"[post-scrape] Motivo stale: max_games({max_games}) no en {valid_dates} o today_missing({today_missing})"
+        )
+
+    desync_pred_gt_games = bool(max_preds) and ((not max_games) or (max_preds > max_games))
 
     return {
         "max_games": max_games,
@@ -98,7 +98,6 @@ def evaluar_estado_fechas(conn: sqlite3.Connection) -> dict[str, Any]:
         "today_missing": today_missing,
         "desync_pred_gt_games": desync_pred_gt_games,
     }
-
 
 
 def ejecutar_refuerzo_scrape() -> None:
@@ -182,9 +181,7 @@ def detectar_anomalias(conn: sqlite3.Connection, fecha: str) -> list[dict[str, A
     for row in rows:
         data = dict(zip(columns, row, strict=False))
 
-        missing_pitchers = is_missing_text(data.get("away_pitcher")) or is_missing_text(
-            data.get("home_pitcher")
-        )
+        missing_pitchers = is_missing_text(data.get("away_pitcher")) or is_missing_text(data.get("home_pitcher"))
         missing_stats = any(
             data.get(k) is None
             for k in (
@@ -197,9 +194,7 @@ def detectar_anomalias(conn: sqlite3.Connection, fecha: str) -> list[dict[str, A
             )
         )
         missing_prediction = (
-            is_missing_text(data.get("prediccion"))
-            or data.get("prob_home") is None
-            or data.get("prob_away") is None
+            is_missing_text(data.get("prediccion")) or data.get("prob_home") is None or data.get("prob_away") is None
         )
 
         if missing_pitchers or missing_stats or missing_prediction:
@@ -223,14 +218,10 @@ def refrescar_partido(conn: sqlite3.Connection, partido: dict[str, Any]) -> bool
     fecha = _to_text(partido.get("fecha"))
 
     if not box_url:
-        print(
-            f"   - SKIP {away_team}@{home_team}: sin box_score_url para refrescar ({partido.get('reasons')})"
-        )
+        print(f"   - SKIP {away_team}@{home_team}: sin box_score_url para refrescar ({partido.get('reasons')})")
         return False
 
-    print(
-        f"   - Reprocesando {away_team}@{home_team} ({fecha}) | razones: {partido.get('reasons')}"
-    )
+    print(f"   - Reprocesando {away_team}@{home_team} ({fecha}) | razones: {partido.get('reasons')}")
 
     lanzadores = extraer_lanzadores_del_preview(
         box_url,
@@ -368,10 +359,7 @@ def main() -> int:
             )
 
             if estado["stale_games"] or estado["desync_pred_gt_games"]:
-                print(
-                    "[post-scrape] Detectado desfase de fecha/consistencia. "
-                    "Se intentará ronda extra de scraping."
-                )
+                print("[post-scrape] Detectado desfase de fecha/consistencia. Se intentará ronda extra de scraping.")
                 requiere_refuerzo_fecha = True
 
         if requiere_refuerzo_fecha:
@@ -420,16 +408,12 @@ def main() -> int:
                     if refrescar_partido(conn, partido):
                         fixed += 1
                 except Exception as exc:
-                    print(
-                        f"   - ERROR inesperado en {partido.get('away_team')}@{partido.get('home_team')}: {exc}"
-                    )
+                    print(f"   - ERROR inesperado en {partido.get('away_team')}@{partido.get('home_team')}: {exc}")
             total_fixed += fixed
             conn.commit()
 
             pendientes = detectar_anomalias(conn, fecha_objetivo)
-            print(
-                f"[post-scrape] Fin intento {intento}: reparados={fixed}, pendientes={len(pendientes)}"
-            )
+            print(f"[post-scrape] Fin intento {intento}: reparados={fixed}, pendientes={len(pendientes)}")
 
             if not pendientes:
                 final_estado = evaluar_estado_fechas(conn)
@@ -470,9 +454,7 @@ def main() -> int:
         final_max_preds = final_estado["max_preds"] or ""
         final_anomalies = len(pendientes)
 
-    print(
-        f"[post-scrape] FALLO: persisten {len(pendientes)} anomalias tras {max_intentos} intentos."
-    )
+    print(f"[post-scrape] FALLO: persisten {len(pendientes)} anomalias tras {max_intentos} intentos.")
     write_outputs(
         status="failed",
         attempts=max_intentos,
