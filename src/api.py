@@ -581,18 +581,20 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                         features_usadas = detalles.get("features_usadas") or {}
                         year_usado = detalles.get("year_usado", request.year)
 
-                        # Si stats_detalladas no tiene el objeto tendencias (predicciones
-                        # generadas antes del cambio), construirlo desde features_usadas
                         if "tendencias" not in stats_detalladas and features_usadas:
                             stats_detalladas["tendencias"] = {
                                 "home": {
                                     "win_rate": float(features_usadas.get("home_win_rate_10", 0.5)),
+                                    "win_rate_season": float(features_usadas.get("home_win_rate_season", 0.5)),
+                                    "season_record": features_usadas.get("home_season_record", "0-0"),
                                     "racha": int(features_usadas.get("home_racha", 0)),
                                     "runs_avg": float(features_usadas.get("home_runs_avg", 0)),
                                     "runs_diff": float(features_usadas.get("home_runs_diff", 0)),
                                 },
                                 "away": {
                                     "win_rate": float(features_usadas.get("away_win_rate_10", 0.5)),
+                                    "win_rate_season": float(features_usadas.get("away_win_rate_season", 0.5)),
+                                    "season_record": features_usadas.get("away_season_record", "0-0"),
                                     "racha": int(features_usadas.get("away_racha", 0)),
                                     "runs_avg": float(features_usadas.get("away_runs_avg", 0)),
                                     "runs_diff": float(features_usadas.get("away_runs_diff", 0)),
@@ -617,27 +619,43 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                                 if "win_rate_season" not in t[side]:
                                     val = float(features_usadas.get(f"{f_pre}win_rate_season", 0.5))
                                     t[side]["win_rate_season"] = val
-                                if "season_record" not in t[side]:
-                                    val = features_usadas.get(f"{f_pre}season_record", "0-0")
-                                    t[side]["season_record"] = val
+                                if not t[side].get("season_record"):
+                                    t[side]["season_record"] = features_usadas.get(f"{f_pre}season_record", "0-0")
+                                if t[side].get("racha") is None:
+                                    t[side]["racha"] = int(features_usadas.get(f"{f_pre}racha", 0))
+                                if t[side].get("runs_avg") is None:
+                                    t[side]["runs_avg"] = float(features_usadas.get(f"{f_pre}runs_avg", 0))
+                                if t[side].get("runs_diff") is None:
+                                    t[side]["runs_diff"] = float(features_usadas.get(f"{f_pre}runs_diff", 0))
 
                         print(f"DEBUG API: tendencias_home = {stats_detalladas.get('tendencias', {}).get('home')}")
 
-                        return {
-                            "ganador": prediccion_code,
-                            "prob_home": prob_home_decimal,
-                            "prob_away": prob_away_decimal,
-                            "confianza": confianza_decimal,
-                            "year_solicitado": request.year,
-                            "year_usado_home": year_usado,
-                            "year_usado_away": year_usado,
-                            "razon_fallback_home": None,
-                            "razon_fallback_away": None,
-                            "ip_home": stats_detalladas.get("home_pitcher", {}).get("IP", 0),
-                            "ip_away": stats_detalladas.get("away_pitcher", {}).get("IP", 0),
-                            "features_usadas": features_usadas,
-                            "stats_detalladas": stats_detalladas,
-                        }
+                        # VERIFICACIÓN DE CACHÉ OBSOLETA:
+                        # Si es 0-0 pero el win_rate de los últimos 10 juegos indica que SI hubieron partidos,
+                        # la caché está incompleta (generada antes del update de temporada).
+                        is_cache_valid = True
+                        home_record = features_usadas.get("home_season_record", "0-0")
+                        if home_record == "0-0" and float(features_usadas.get("home_win_rate_10", 0.5)) != 0.5:
+                            is_cache_valid = False
+
+                        if is_cache_valid:
+                            return {
+                                "ganador": prediccion_code,
+                                "prob_home": prob_home_decimal,
+                                "prob_away": prob_away_decimal,
+                                "confianza": confianza_decimal,
+                                "year_solicitado": request.year,
+                                "year_usado_home": year_usado,
+                                "year_usado_away": year_usado,
+                                "razon_fallback_home": None,
+                                "razon_fallback_away": None,
+                                "ip_home": stats_detalladas.get("home_pitcher", {}).get("IP", 0),
+                                "ip_away": stats_detalladas.get("away_pitcher", {}).get("IP", 0),
+                                "features_usadas": features_usadas,
+                                "stats_detalladas": stats_detalladas,
+                            }
+                        else:
+                            print(f"⚠️ Caché OBSOLETO para {away_code} @ {home_code} (Falta récord de temporada). Forzando recálculo.")
                 except Exception as db_e:
                     print(f"⚠️ Error leyendo caché de BD: {db_e}")
 

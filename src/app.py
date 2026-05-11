@@ -348,7 +348,85 @@ st.markdown(
         margin: 1rem 0;
         box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         border-top: 4px solid var(--primary-blue);
+    }
+
+    /* MLB Scoreboard Style Cards */
+    .mlb-scoreboard-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        padding: 0;
+        margin-bottom: 20px;
+        border: 1px solid #e0e0e0;
+        overflow: hidden;
         transition: transform 0.2s;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .mlb-scoreboard-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    }
+    .mlb-card-header {
+        padding: 8px 15px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #eeeeee;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #616161;
+        display: flex;
+        justify-content: space-between;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .mlb-card-body {
+        padding: 15px;
+    }
+    .mlb-team-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+    .mlb-team-row:last-child {
+        margin-bottom: 0;
+    }
+    .mlb-team-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .mlb-team-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #212121;
+    }
+    .mlb-team-record {
+        font-size: 0.75rem;
+        color: #757575;
+        font-weight: 400;
+    }
+    .mlb-score {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #212121;
+    }
+    .mlb-card-footer {
+        padding: 10px 15px;
+        background: #ffffff;
+        border-top: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .mlb-prediction-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 10px;
+        border-radius: 4px;
+        background: #f1f5f9;
     }
 
     .game-card:hover {
@@ -798,6 +876,80 @@ def obtener_prediccion_detallada_partido(home_team, away_team, home_pitcher, awa
         return False, str(e)
 
 
+def render_tendencias_html(home_team, away_team, win_rate_h, racha_h, win_rate_s_h, record_s_h, win_rate_a, racha_a, win_rate_s_a, record_s_a):
+    """Genera el HTML para la sección de tendencias y momentum"""
+
+    def _racha_badge(racha):
+        if racha > 0:
+            return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
+        elif racha < 0:
+            return f'<span style="background:#8b1a1a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">❄️ {abs(racha)}P</span>'
+        return '<span style="background:#555;color:#fff;padding:2px 10px;border-radius:12px">—</span>'
+
+    # Cálculo de récord W-L basado en win_rate (L10)
+    w_h = int(round(win_rate_h / 10))
+    l_h = 10 - w_h
+    record_l10_h = f"{w_h}-{l_h}"
+
+    w_a = int(round(win_rate_a / 10))
+    l_a = 10 - w_a
+    record_l10_a = f"{w_a}-{l_a}"
+
+    html = f"""
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                {get_team_logo_html(home_team, 32)}
+                <strong style="font-size:1.1rem">{home_team}</strong>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:0.5rem;text-align:center">
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">W% SEASON</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:{"#10b981" if win_rate_s_h >= 50 else "#ef4444"}">{win_rate_s_h:.0f}%</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">RÉCORD</div>
+                    <div style="font-size:1.1rem;font-weight:700">{record_s_h}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
+                    <div style="font-size:1.1rem;font-weight:700">{record_l10_h}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">RACHA</div>
+                    <div style="margin-top:2px">{_racha_badge(racha_h)}</div>
+                </div>
+            </div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                {get_team_logo_html(away_team, 32)}
+                <strong style="font-size:1.1rem">{away_team}</strong>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:0.5rem;text-align:center">
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">W% SEASON</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:{"#10b981" if win_rate_s_a >= 50 else "#ef4444"}">{win_rate_s_a:.0f}%</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">RÉCORD</div>
+                    <div style="font-size:1.1rem;font-weight:700">{record_s_a}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
+                    <div style="font-size:1.1rem;font-weight:700">{record_l10_a}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">RACHA</div>
+                    <div style="margin-top:2px">{_racha_badge(racha_a)}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """
+    return html
+
+
 def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_team, home_pitcher, away_pitcher):
     """Renderiza en UI el mismo análisis detallado usado en Predicción Manual."""
     if resultado_detallado.get("modo_degradado"):
@@ -995,17 +1147,13 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
             t_h = tendencias_obj.get("home", {})
             win_rate_h = float(t_h.get("win_rate", 0.5)) * 100
             win_rate_s_h = float(t_h.get("win_rate_season", 0.5)) * 100
-            record_s_h = t_h.get("season_record", "N/A")
-            if record_s_h == "0-0":
-                record_s_h = "N/A"
+            record_s_h = t_h.get("season_record", "0-0")
             racha_h = int(t_h.get("racha", 0))
 
             t_a = tendencias_obj.get("away", {})
             win_rate_a = float(t_a.get("win_rate", 0.5)) * 100
             win_rate_s_a = float(t_a.get("win_rate_season", 0.5)) * 100
-            record_s_a = t_a.get("season_record", "N/A")
-            if record_s_a == "0-0":
-                record_s_a = "N/A"
+            record_s_a = t_a.get("season_record", "0-0")
             racha_a = int(t_a.get("racha", 0))
             data_ready = True
         except Exception:
@@ -1016,91 +1164,25 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
         try:
             win_rate_h = float(features_t.get("home_win_rate_10", 0.5)) * 100
             win_rate_s_h = float(features_t.get("home_win_rate_season", 0.5)) * 100
-            record_s_h = features_t.get("home_season_record", "N/A")
-            if record_s_h == "0-0":
-                record_s_h = "N/A"
+            record_s_h = features_t.get("home_season_record", "0-0")
             racha_h = int(features_t.get("home_racha", 0))
 
             win_rate_a = float(features_t.get("away_win_rate_10", 0.5)) * 100
             win_rate_s_a = float(features_t.get("away_win_rate_season", 0.5)) * 100
-            record_s_a = features_t.get("away_season_record", "N/A")
-            if record_s_a == "0-0":
-                record_s_a = "N/A"
+            record_s_a = features_t.get("away_season_record", "0-0")
             racha_a = int(features_t.get("away_racha", 0))
             data_ready = True
         except Exception:
             data_ready = False
 
     if data_ready:
-
-        def _racha_badge(racha):
-            if racha > 0:
-                return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
-            elif racha < 0:
-                return f'<span style="background:#8b1a1a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">❄️ {abs(racha)}P</span>'
-            return '<span style="background:#555;color:#fff;padding:2px 10px;border-radius:12px">—</span>'
-
-        # Cálculo de récord W-L basado en win_rate
-        w_h = int(round(win_rate_h / 10))
-        l_h = 10 - w_h
-        w_a = int(round(win_rate_a / 10))
-        l_a = 10 - w_a
-
         st.markdown("---")
         st.markdown("### 📈 Tendencias y Momentum")
         st.markdown(
-            f"""
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
-                <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
-                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
-                        {get_team_logo_html(home_team, 32)}
-                        <strong style="font-size:1.1rem">{home_team}</strong>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;text-align:center">
-                        <div>
-                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                            <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_s_h >= 50 else "#ef4444"}">{win_rate_s_h:.0f}%</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD</div>
-                            <div style="font-size:1.4rem;font-weight:700">{record_s_h}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
-                            <div style="font-size:1.4rem;font-weight:700">{w_h}-{l_h}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
-                            <div>{_racha_badge(racha_h)}</div>
-                        </div>
-                    </div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
-                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
-                        {get_team_logo_html(away_team, 32)}
-                        <strong style="font-size:1.1rem">{away_team}</strong>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;text-align:center">
-                        <div>
-                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                            <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_s_a >= 50 else "#ef4444"}">{win_rate_s_a:.0f}%</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD</div>
-                            <div style="font-size:1.4rem;font-weight:700">{record_s_a}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
-                            <div style="font-size:1.4rem;font-weight:700">{w_a}-{l_a}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
-                            <div>{_racha_badge(racha_a)}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            """,
+            render_tendencias_html(
+                home_team, away_team, win_rate_h, racha_h, win_rate_s_h, record_s_h,
+                win_rate_a, racha_a, win_rate_s_a, record_s_a
+            ),
             unsafe_allow_html=True,
         )
 
@@ -1525,11 +1607,15 @@ if pagina == "⚾ Predicción Manual":
                             if tendencias_obj and isinstance(tendencias_obj, dict):
                                 try:
                                     t_h = tendencias_obj.get("home", {})
-                                    t_a = tendencias_obj.get("away", {})
                                     win_rate_h = float(t_h.get("win_rate", 0.5)) * 100
+                                    win_rate_s_h = float(t_h.get("win_rate_season", 0.5)) * 100
+                                    record_s_h = t_h.get("season_record", "0-0")
                                     racha_h = int(t_h.get("racha", 0))
 
+                                    t_a = tendencias_obj.get("away", {})
                                     win_rate_a = float(t_a.get("win_rate", 0.5)) * 100
+                                    win_rate_s_a = float(t_a.get("win_rate_season", 0.5)) * 100
+                                    record_s_a = t_a.get("season_record", "0-0")
                                     racha_a = int(t_a.get("racha", 0))
                                     data_ready = True
                                 except Exception:
@@ -1539,80 +1625,34 @@ if pagina == "⚾ Predicción Manual":
                             if not data_ready and features_t:
                                 try:
                                     win_rate_h = float(features_t.get("home_win_rate_10", 0.5)) * 100
+                                    win_rate_s_h = float(features_t.get("home_win_rate_season", 0.5)) * 100
+                                    record_s_h = features_t.get("home_season_record", "0-0")
                                     racha_h = int(features_t.get("home_racha", 0))
-                                    runs_avg_h = float(features_t.get("home_runs_avg", 0))
-                                    runs_diff_h = float(features_t.get("home_runs_diff", 0))
 
                                     win_rate_a = float(features_t.get("away_win_rate_10", 0.5)) * 100
+                                    win_rate_s_a = float(features_t.get("away_win_rate_season", 0.5)) * 100
+                                    record_s_a = features_t.get("away_season_record", "0-0")
                                     racha_a = int(features_t.get("away_racha", 0))
-                                    runs_avg_a = float(features_t.get("away_runs_avg", 0))
-                                    runs_diff_a = float(features_t.get("away_runs_diff", 0))
                                     data_ready = True
                                 except Exception:
                                     data_ready = False
 
                             if data_ready:
-
-                                def _racha_badge(racha):
-                                    if racha > 0:
-                                        return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
-                                    elif racha < 0:
-                                        return f'<span style="background:#8b1a1a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">❄️ {abs(racha)}P</span>'
-                                    return '<span style="background:#555;color:#fff;padding:2px 10px;border-radius:12px">—</span>'
-
-                                # Cálculo de récord W-L basado en win_rate
-                                w_h = int(round(win_rate_h / 10))
-                                l_h = 10 - w_h
-                                w_a = int(round(win_rate_a / 10))
-                                l_a = 10 - w_a
-
                                 st.markdown("---")
-                                st.markdown("### 📈 Tendencias y Momentum — Últimos 10 Juegos")
+                                st.markdown("### 📈 Tendencias y Momentum")
                                 st.markdown(
-                                    f"""
-                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
-                                        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
-                                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
-                                                {get_team_logo_html(home_team, 32)}
-                                                <strong style="font-size:1.1rem">{home_team}</strong>
-                                            </div>
-                                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
-                                                <div>
-                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                                                    <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_h >= 50 else "#ef4444"}">{win_rate_h:.0f}%</div>
-                                                </div>
-                                                <div>
-                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
-                                                    <div style="font-size:1.4rem;font-weight:700">{w_h}-{l_h}</div>
-                                                </div>
-                                                <div>
-                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
-                                                    <div>{_racha_badge(racha_h)}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
-                                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
-                                                {get_team_logo_html(away_team, 32)}
-                                                <strong style="font-size:1.1rem">{away_team}</strong>
-                                            </div>
-                                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center">
-                                                <div>
-                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">WIN RATE</div>
-                                                    <div style="font-size:1.4rem;font-weight:700;color:{"#10b981" if win_rate_a >= 50 else "#ef4444"}">{win_rate_a:.0f}%</div>
-                                                </div>
-                                                <div>
-                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RÉCORD L10</div>
-                                                    <div style="font-size:1.4rem;font-weight:700">{w_a}-{l_a}</div>
-                                                </div>
-                                                <div>
-                                                    <div style="font-size:0.75rem;opacity:0.7;margin-bottom:4px">RACHA</div>
-                                                    <div>{_racha_badge(racha_a)}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    """,
+                                    render_tendencias_html(
+                                        home_team,
+                                        away_team,
+                                        win_rate_h,
+                                        racha_h,
+                                        win_rate_s_h,
+                                        record_s_h,
+                                        win_rate_a,
+                                        racha_a,
+                                        win_rate_s_a,
+                                        record_s_a,
+                                    ),
                                     unsafe_allow_html=True,
                                 )
 
@@ -2165,111 +2205,88 @@ elif pagina == "📊 Comparación & Historial":
 
             st.markdown("### Resultados Detallados" if not solo_predicciones else "### Partidos")
 
-            for partido in partidos:
-                acierto = partido.get("acierto", 0)
-                _ht = partido["home_team"]
-                _at = partido["away_team"]
-                _hn = get_team_display_name(_ht)
-                _an = get_team_display_name(_at)
-                _h_logo = get_team_logo_html(_ht, 28)
-                _a_logo = get_team_logo_html(_at, 28)
-                _score_a = partido["score_away"]
-                _score_h = partido["score_home"]
-                _badge = "✅" if acierto else "❌"
+            # Grid de Tarjetas estilo MLB
+            num_cols = 2
+            for i in range(0, len(partidos), num_cols):
+                grid_cols = st.columns(num_cols)
+                for j in range(num_cols):
+                    if i + j < len(partidos):
+                        partido = partidos[i + j]
+                        with grid_cols[j]:
+                            acierto = partido.get("acierto", 0)
+                            _ht = partido["home_team"]
+                            _at = partido["away_team"]
+                            _hn = get_team_display_name(_ht)
+                            _an = get_team_display_name(_at)
+                            _h_logo = get_team_logo_html(_ht, 32)
+                            _a_logo = get_team_logo_html(_at, 32)
+                            _score_a = partido.get("score_away", "-")
+                            _score_h = partido.get("score_home", "-")
+                            _badge_icon = "✅" if acierto else "❌"
+                            _badge_text = "ACIERTO" if acierto else "ERROR"
+                            _badge_color = "#dcfce7" if acierto else "#fee2e2"
+                            _text_color = "#166534" if acierto else "#991b1b"
 
-                _titulo_exp = (
-                    f"{_an} @ {_hn}"
-                    if solo_predicciones or _score_a is None
-                    else f"{_badge}  {_an} @ {_hn}  —  {_score_a}-{_score_h}"
-                )
-                with st.expander(_titulo_exp, expanded=False):
-                    prob_h = partido.get("prob_home", 0)
-                    prob_a = partido.get("prob_away", 0)
-                    prob_h_norm = normalizar_probabilidad(prob_h)
-                    prob_a_norm = normalizar_probabilidad(prob_a)
-                    prediccion_code = partido.get("prediccion", "")
-                    prediccion_nombre = get_team_display_name(prediccion_code) if prediccion_code else "N/A"
-                    pred_logo = get_team_logo_html(prediccion_code, 22) if prediccion_code else ""
-
-                    ganador_real_code = _ht if partido["ganador_real"] == 1 else _at
-                    ganador_real_nombre = get_team_display_name(ganador_real_code)
-                    ganador_real_logo = get_team_logo_html(ganador_real_code, 22)
-
-                    confianza = partido.get("confianza", "N/A")
-                    color_conf = {
-                        "MUY ALTA": "#ef4444",
-                        "ALTA": "#f59e0b",
-                        "MODERADA": "#22c55e",
-                        "BAJA": "#64748b",
-                    }.get(confianza, "#64748b")
-
-                    col1, col2, col3 = st.columns(3)
-
-                    with col1:
-                        st.markdown(
-                            f"""
-<div style="background:rgba(59,130,246,0.06);border-radius:10px;padding:14px 16px;">
-  <div style="font-size:0.75rem;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🤖 Predicción</div>
-  <div style="display:flex;align-items:center;gap:6px;font-size:1rem;font-weight:600;margin-bottom:10px;">
-    {pred_logo}{prediccion_nombre}
-  </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-    <span style="display:flex;align-items:center;gap:4px;font-size:0.85rem;">{get_team_logo_html(_ht, 16)}{_hn}</span>
-    <span style="font-weight:700;font-size:0.95rem;">{prob_h_norm * 100:.1f}%</span>
-  </div>
-  <div style="background:#e2e8f0;border-radius:4px;height:6px;margin-bottom:8px;">
-    <div style="background:#3b82f6;width:{prob_h_norm * 100:.1f}%;height:6px;border-radius:4px;"></div>
-  </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-    <span style="display:flex;align-items:center;gap:4px;font-size:0.85rem;">{get_team_logo_html(_at, 16)}{_an}</span>
-    <span style="font-weight:700;font-size:0.95rem;">{prob_a_norm * 100:.1f}%</span>
-  </div>
-  <div style="background:#e2e8f0;border-radius:4px;height:6px;">
-    <div style="background:#8b5cf6;width:{prob_a_norm * 100:.1f}%;height:6px;border-radius:4px;"></div>
-  </div>
-</div>""",
-                            unsafe_allow_html=True,
-                        )
-
-                    with col2:
-                        st.markdown(
-                            f"""
-<div style="background:rgba(16,185,129,0.06);border-radius:10px;padding:14px 16px;">
-  <div style="font-size:0.75rem;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">⚾ Resultado Real</div>
-  <div style="display:flex;align-items:center;gap:6px;font-size:1rem;font-weight:600;margin-bottom:12px;">
-    {ganador_real_logo}{ganador_real_nombre}
-  </div>
-  <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:8px;">
-    <div style="text-align:center;">
-      <div style="font-size:0.75rem;color:#64748b;">{_an}</div>
-      <div style="font-size:2rem;font-weight:800;line-height:1;">{_score_a}</div>
+                            # Renderizado de Tarjeta
+                            st.markdown(
+                                f"""
+<div class="mlb-scoreboard-card">
+    <div class="mlb-card-header">
+        <span>FINAL</span>
+        <span>{partido.get('fecha', '')}</span>
     </div>
-    <div style="font-size:1rem;color:#64748b;font-weight:600;">—</div>
-    <div style="text-align:center;">
-      <div style="font-size:0.75rem;color:#64748b;">{_hn}</div>
-      <div style="font-size:2rem;font-weight:800;line-height:1;">{_score_h}</div>
+    <div class="mlb-card-body">
+        <div class="mlb-team-row">
+            <div class="mlb-team-info">
+                {_a_logo}
+                <div class="mlb-team-name">{_an}</div>
+            </div>
+            <div class="mlb-score">{_score_a}</div>
+        </div>
+        <div class="mlb-team-row">
+            <div class="mlb-team-info">
+                {_h_logo}
+                <div class="mlb-team-name">{_hn}</div>
+            </div>
+            <div class="mlb-score">{_score_h}</div>
+        </div>
     </div>
-  </div>
-</div>""",
-                            unsafe_allow_html=True,
-                        )
+    <div class="mlb-card-footer">
+        <div class="mlb-prediction-badge" style="background:{_badge_color}; color:{_text_color};">
+            {_badge_icon} <b>{_badge_text}</b>
+        </div>
+        <div style="font-size: 0.75rem; color: #64748b;">
+            Predicción: <b>{get_team_display_name(partido.get('prediccion', ''))}</b>
+        </div>
+    </div>
+</div>
+""",
+                                unsafe_allow_html=True,
+                            )
+                            # Botón de detalles opcional
+                            with st.expander("🔍 Ver Análisis Detallado", expanded=False):
+                                prob_h = normalizar_probabilidad(partido.get("prob_home", 0.5))
+                                prob_a = normalizar_probabilidad(partido.get("prob_away", 0.5))
+                                
+                                # Confianza
+                                confianza = partido.get("confianza", "N/A")
+                                color_conf = {
+                                    "MUY ALTA": "#ef4444",
+                                    "ALTA": "#f59e0b",
+                                    "MODERADA": "#22c55e",
+                                    "BAJA": "#64748b",
+                                }.get(confianza, "#64748b")
 
-                    with col3:
-                        res_bg = "rgba(34,197,94,0.08)" if acierto else "rgba(239,68,68,0.08)"
-                        res_color = "#16a34a" if acierto else "#dc2626"
-                        res_text = "ACIERTO ✅" if acierto else "ERROR ❌"
-                        st.markdown(
-                            f"""
-<div style="background:{res_bg};border-radius:10px;padding:14px 16px;text-align:center;">
-  <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">✓ Verificación</div>
-  <div style="font-size:1.3rem;font-weight:800;color:{res_color};margin-bottom:14px;">{res_text}</div>
-  <div style="background:rgba(0,0,0,0.05);border-radius:6px;padding:6px 10px;display:inline-block;">
-    <span style="font-size:0.75rem;color:#64748b;">Confianza: </span>
-    <span style="font-size:0.85rem;font-weight:700;color:{color_conf};">{confianza}</span>
-  </div>
-</div>""",
-                            unsafe_allow_html=True,
-                        )
+                                st.markdown(f"**Confianza:** <span style='color:{color_conf}; font-weight:bold;'>{confianza}</span>", unsafe_allow_html=True)
+                                
+                                col_p1, col_p2 = st.columns(2)
+                                with col_p1:
+                                    st.metric(f"Prob. {_at}", f"{prob_a*100:.1f}%")
+                                with col_p2:
+                                    st.metric(f"Prob. {_ht}", f"{prob_h*100:.1f}%")
+
+                                if "stats_detalladas" in partido:
+                                    st.json(partido["stats_detalladas"], expanded=False)
         else:
             st.info(f" No hay datos disponibles para {fecha_str}")
 

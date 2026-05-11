@@ -534,15 +534,18 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
 
     # Normalizar columnas de equipo en el DF para evitar fallos por espacios o mayúsculas
     df = df.copy()
-    df["home_team_norm"] = df["home_team"].astype(str).str.strip()
-    df["away_team_norm"] = df["away_team"].astype(str).str.strip()
+    df["home_team_norm"] = df["home_team"].astype(str).str.strip().str.upper()
+    df["away_team_norm"] = df["away_team"].astype(str).str.strip().str.upper()
+    
+    t_code_u = t_code.upper()
+    t_full_u = t_full.upper()
 
     # Filtrar todos los partidos de la misma temporada antes de la fecha límite
     anio_partido = fecha_limite.year
     mask_season = (
-        ((df["home_team_norm"].isin([t_code, t_full])) | (df["away_team_norm"].isin([t_code, t_full])))
-        & (pd.to_datetime(df["fecha"]) < fecha_limite)
-        & (pd.to_datetime(df["fecha"]).dt.year == anio_partido)
+        ((df["home_team_norm"].isin([t_code_u, t_full_u])) | (df["away_team_norm"].isin([t_code_u, t_full_u])))
+        & (pd.to_datetime(df["fecha"], errors="coerce") < fecha_limite)
+        & (pd.to_datetime(df["fecha"], errors="coerce").dt.year == anio_partido)
     )
 
     partidos_todos = df[mask_season].sort_values("fecha", ascending=False)
@@ -559,6 +562,7 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
             "total_juegos_season": 0,
             "wins_season": 0,
             "losses_season": 0,
+            "season_record": "0-0"
         }
 
     # Estadísticas Ventana (L10)
@@ -567,7 +571,7 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
     carreras_c_l10 = 0
 
     for _, p in partidos_recientes.iterrows():
-        es_home = p["home_team_norm"] in [t_code, t_full]
+        es_home = p["home_team_norm"] in [t_code_u, t_full_u]
         ganador_val = p.get("ganador", 0)
         if ganador_val is None:
             ganador_val = 0
@@ -580,7 +584,7 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
     # Estadísticas Temporada
     victorias_season = 0
     for _, p in partidos_todos.iterrows():
-        es_home = p["home_team_norm"] in [t_code, t_full]
+        es_home = p["home_team_norm"] in [t_code_u, t_full_u]
         ganador_val = p.get("ganador", 0)
         if ganador_val is None:
             ganador_val = 0
@@ -593,7 +597,7 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
     # Cálculo de racha
     racha = 0
     for _, p in partidos_recientes.iterrows():
-        es_home = p["home_team_norm"] in [t_code, t_full]
+        es_home = p["home_team_norm"] in [t_code_u, t_full_u]
         ganado = (p["ganador"] == 1) if es_home else (p["ganador"] == 0)
         if racha == 0:
             racha = 1 if ganado else -1
@@ -613,6 +617,7 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
         "total_juegos_season": len(partidos_todos),
         "wins_season": victorias_season,
         "losses_season": len(partidos_todos) - victorias_season,
+        "season_record": f"{victorias_season}-{len(partidos_todos) - victorias_season}"
     }
 
 
