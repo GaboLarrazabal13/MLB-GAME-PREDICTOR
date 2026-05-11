@@ -876,7 +876,9 @@ def obtener_prediccion_detallada_partido(home_team, away_team, home_pitcher, awa
         return False, str(e)
 
 
-def render_tendencias_html(home_team, away_team, win_rate_h, racha_h, win_rate_s_h, record_s_h, win_rate_a, racha_a, win_rate_s_a, record_s_a):
+def render_tendencias_html(
+    home_team, away_team, win_rate_h, racha_h, win_rate_s_h, record_s_h, win_rate_a, racha_a, win_rate_s_a, record_s_a
+):
     """Genera el HTML para la sección de tendencias y momentum"""
 
     def _racha_badge(racha):
@@ -1180,8 +1182,16 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
         st.markdown("### 📈 Tendencias y Momentum")
         st.markdown(
             render_tendencias_html(
-                home_team, away_team, win_rate_h, racha_h, win_rate_s_h, record_s_h,
-                win_rate_a, racha_a, win_rate_s_a, record_s_a
+                home_team,
+                away_team,
+                win_rate_h,
+                racha_h,
+                win_rate_s_h,
+                record_s_h,
+                win_rate_a,
+                racha_a,
+                win_rate_s_a,
+                record_s_a,
             ),
             unsafe_allow_html=True,
         )
@@ -2233,7 +2243,7 @@ elif pagina == "📊 Comparación & Historial":
 <div class="mlb-scoreboard-card">
     <div class="mlb-card-header">
         <span>FINAL</span>
-        <span>{partido.get('fecha', '')}</span>
+        <span>{partido.get("fecha", "")}</span>
     </div>
     <div class="mlb-card-body">
         <div class="mlb-team-row">
@@ -2256,7 +2266,7 @@ elif pagina == "📊 Comparación & Historial":
             {_badge_icon} <b>{_badge_text}</b>
         </div>
         <div style="font-size: 0.75rem; color: #64748b;">
-            Predicción: <b>{get_team_display_name(partido.get('prediccion', ''))}</b>
+            Predicción: <b>{get_team_display_name(partido.get("prediccion", ""))}</b>
         </div>
     </div>
 </div>
@@ -2267,7 +2277,7 @@ elif pagina == "📊 Comparación & Historial":
                             with st.expander("🔍 Ver Análisis Detallado", expanded=False):
                                 prob_h = normalizar_probabilidad(partido.get("prob_home", 0.5))
                                 prob_a = normalizar_probabilidad(partido.get("prob_away", 0.5))
-                                
+
                                 # Confianza
                                 confianza = partido.get("confianza", "N/A")
                                 color_conf = {
@@ -2277,13 +2287,16 @@ elif pagina == "📊 Comparación & Historial":
                                     "BAJA": "#64748b",
                                 }.get(confianza, "#64748b")
 
-                                st.markdown(f"**Confianza:** <span style='color:{color_conf}; font-weight:bold;'>{confianza}</span>", unsafe_allow_html=True)
-                                
+                                st.markdown(
+                                    f"**Confianza:** <span style='color:{color_conf}; font-weight:bold;'>{confianza}</span>",
+                                    unsafe_allow_html=True,
+                                )
+
                                 col_p1, col_p2 = st.columns(2)
                                 with col_p1:
-                                    st.metric(f"Prob. {_at}", f"{prob_a*100:.1f}%")
+                                    st.metric(f"Prob. {_at}", f"{prob_a * 100:.1f}%")
                                 with col_p2:
-                                    st.metric(f"Prob. {_ht}", f"{prob_h*100:.1f}%")
+                                    st.metric(f"Prob. {_ht}", f"{prob_h * 100:.1f}%")
 
                                 if "stats_detalladas" in partido:
                                     st.json(partido["stats_detalladas"], expanded=False)

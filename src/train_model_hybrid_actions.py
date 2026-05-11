@@ -536,7 +536,7 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
     df = df.copy()
     df["home_team_norm"] = df["home_team"].astype(str).str.strip().str.upper()
     df["away_team_norm"] = df["away_team"].astype(str).str.strip().str.upper()
-    
+
     t_code_u = t_code.upper()
     t_full_u = t_full.upper()
 
@@ -562,7 +562,7 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
             "total_juegos_season": 0,
             "wins_season": 0,
             "losses_season": 0,
-            "season_record": "0-0"
+            "season_record": "0-0",
         }
 
     # Estadísticas Ventana (L10)
@@ -617,7 +617,7 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
         "total_juegos_season": len(partidos_todos),
         "wins_season": victorias_season,
         "losses_season": len(partidos_todos) - victorias_season,
-        "season_record": f"{victorias_season}-{len(partidos_todos) - victorias_season}"
+        "season_record": f"{victorias_season}-{len(partidos_todos) - victorias_season}",
     }
 
 

@@ -655,7 +655,9 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                                 "stats_detalladas": stats_detalladas,
                             }
                         else:
-                            print(f"⚠️ Caché OBSOLETO para {away_code} @ {home_code} (Falta récord de temporada). Forzando recálculo.")
+                            print(
+                                f"⚠️ Caché OBSOLETO para {away_code} @ {home_code} (Falta récord de temporada). Forzando recálculo."
+                            )
                 except Exception as db_e:
                     print(f"⚠️ Error leyendo caché de BD: {db_e}")
 
@@ -1236,7 +1238,6 @@ async def obtener_estadisticas_equipo(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error obteniendo stats del equipo: {str(e)}") from e
-
 
 
 # ============================================================================
