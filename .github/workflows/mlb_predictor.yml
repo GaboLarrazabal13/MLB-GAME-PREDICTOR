@@ -3,11 +3,11 @@ name: MLB Predictor Automation
 on:
   schedule:
     # Horarios en UTC. Referencia operativa en ET (America/New_York).
-    # Update de resultados reales (día siguiente)
-    - cron: '30 16 * * *'
+    # Update de resultados reales (mañana España / madrugada ET)
+    - cron: '0 10 * * *'
     # Scraping principal
     - cron: '30 17 * * *'
-    # Validación post-scrape / tareas posteriores
+    # Validación post-scrape y recuperación de resultados
     - cron: '30 18 * * *'
   
   workflow_dispatch:  # Permite ejecución manual
@@ -644,6 +644,45 @@ jobs:
           key: mlb-data-${{ github.sha }}
           restore-keys: |
             mlb-data-
+
+      - name: Verificar resultados reales del día anterior
+        id: check_results
+        run: |
+          cd src
+          python - <<'PY'
+          import os
+          import sqlite3
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+          from mlb_config import DB_PATH
+
+          now_et = datetime.now(ZoneInfo("America/New_York"))
+          yesterday_et = (now_et - timedelta(days=1)).strftime("%Y-%m-%d")
+          
+          print(f"Checking results for {yesterday_et}...")
+          
+          with sqlite3.connect(DB_PATH) as conn:
+              count = conn.execute(
+                  "SELECT COUNT(*) FROM historico_real WHERE fecha = ?", 
+                  (yesterday_et,)
+              ).fetchone()[0]
+          
+          missing = count == 0
+          print(f"Results count: {count}")
+          print(f"Missing: {missing}")
+          
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"missing_yesterday={'true' if missing else 'false'}\n")
+              f.write(f"yesterday={yesterday_et}\n")
+          PY
+
+      - name: Forzar actualización de resultados si faltan
+        if: steps.check_results.outputs.missing_yesterday == 'true'
+        run: |
+          cd src
+          echo "⚠️ Resultados de ayer faltantes. Ejecutando actualización forzada..."
+          python mlb_update_real_results.py
+          python mlb_mass_healer.py
 
       - name: Validar y recuperar juegos con anomalias
         id: post_validate

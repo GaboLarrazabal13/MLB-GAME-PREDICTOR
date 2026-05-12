@@ -1,5 +1,7 @@
 import sqlite3
+
 import pandas as pd
+
 from mlb_config import DB_PATH
 
 try:
