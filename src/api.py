@@ -631,33 +631,43 @@ def _crear_prediccion_detallada_sync(request: PrediccionRequest):
                         print(f"DEBUG API: tendencias_home = {stats_detalladas.get('tendencias', {}).get('home')}")
 
                         # VERIFICACIÓN DE CACHÉ OBSOLETA:
-                        # Si es 0-0 pero el win_rate de los últimos 10 juegos indica que SI hubieron partidos,
-                        # la caché está incompleta (generada antes del update de temporada).
-                        is_cache_valid = True
+                        # Si es 0-0 pero el win_rate indica que sí hay partidos, la caché es antigua.
+                        # En lugar de invalidar TODA la caché (y perder los datos de pitchers/bateadores),
+                        # calculamos solo el récord faltante directamente de historico_real.
                         home_record = features_usadas.get("home_season_record", "0-0")
                         if home_record == "0-0" and float(features_usadas.get("home_win_rate_10", 0.5)) != 0.5:
-                            is_cache_valid = False
+                            print(f"⚠️ Récord 0-0 detectado en caché para {away_code} @ {home_code}. Recuperando récords de la BD...")
+                            for t_code, prefix in [(home_code, "home"), (away_code, "away")]:
+                                try:
+                                    q_w = "SELECT COUNT(*) FROM historico_real WHERE ((home_team_norm = ? AND ganador = 1) OR (away_team_norm = ? AND ganador = 0)) AND strftime('%Y', fecha) = ?"
+                                    wins = conn.execute(q_w, (t_code, t_code, str(year_usado))).fetchone()[0]
+                                    q_t = "SELECT COUNT(*) FROM historico_real WHERE (home_team_norm = ? OR away_team_norm = ?) AND strftime('%Y', fecha) = ?"
+                                    total = conn.execute(q_t, (t_code, t_code, str(year_usado))).fetchone()[0]
 
-                        if is_cache_valid:
-                            return {
-                                "ganador": prediccion_code,
-                                "prob_home": prob_home_decimal,
-                                "prob_away": prob_away_decimal,
-                                "confianza": confianza_decimal,
-                                "year_solicitado": request.year,
-                                "year_usado_home": year_usado,
-                                "year_usado_away": year_usado,
-                                "razon_fallback_home": None,
-                                "razon_fallback_away": None,
-                                "ip_home": stats_detalladas.get("home_pitcher", {}).get("IP", 0),
-                                "ip_away": stats_detalladas.get("away_pitcher", {}).get("IP", 0),
-                                "features_usadas": features_usadas,
-                                "stats_detalladas": stats_detalladas,
-                            }
-                        else:
-                            print(
-                                f"⚠️ Caché OBSOLETO para {away_code} @ {home_code} (Falta récord de temporada). Forzando recálculo."
-                            )
+                                    real_record = f"{wins}-{total - wins}"
+                                    features_usadas[f"{prefix}_season_record"] = real_record
+
+                                    # Actualizar también en el objeto de tendencias que va al UI
+                                    if "tendencias" in stats_detalladas and prefix in stats_detalladas["tendencias"]:
+                                        stats_detalladas["tendencias"][prefix]["season_record"] = real_record
+                                except Exception as e:
+                                    print(f"Error recuperando récord para {t_code}: {e}")
+
+                        return {
+                            "ganador": prediccion_code,
+                            "prob_home": prob_home_decimal,
+                            "prob_away": prob_away_decimal,
+                            "confianza": confianza_decimal,
+                            "year_solicitado": request.year,
+                            "year_usado_home": year_usado,
+                            "year_usado_away": year_usado,
+                            "razon_fallback_home": None,
+                            "razon_fallback_away": None,
+                            "ip_home": stats_detalladas.get("home_pitcher", {}).get("IP", 0),
+                            "ip_away": stats_detalladas.get("away_pitcher", {}).get("IP", 0),
+                            "features_usadas": features_usadas,
+                            "stats_detalladas": stats_detalladas,
+                        }
                 except Exception as db_e:
                     print(f"⚠️ Error leyendo caché de BD: {db_e}")
 
