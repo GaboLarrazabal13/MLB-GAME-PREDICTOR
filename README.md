@@ -25,11 +25,12 @@
 5. [Ingeniería de Features](#ingeniería-de-features)
 6. [API REST y Dashboard](#api-rest-y-dashboard)
 7. [Infraestructura y DevOps](#infraestructura-y-devops)
-8. [Instalación y Uso](#instalación-y-uso)
-9. [Base de Datos](#base-de-datos)
-10. [Métricas de Rendimiento](#métricas-de-rendimiento)
-11. [Stack Tecnológico](#stack-tecnológico)
-12. [Créditos](#créditos)
+8. [Ciclo de Vida MLOps](#ciclo-de-vida-mlops)
+9. [Instalación y Uso](#instalación-y-uso)
+10. [Base de Datos](#base-de-datos)
+11. [Métricas de Rendimiento](#métricas-de-rendimiento)
+12. [Stack Tecnológico](#stack-tecnológico)
+13. [Créditos](#créditos)
 
 ---
 
@@ -316,8 +317,31 @@ FROM python:3.12-slim as production
 | `test` | pytest + pytest-cov | Tests con cobertura mínima del 60% |
 | `build-docker` | Docker | Build + health check de imagen de producción |
 | `security` | Safety | Auditoría de vulnerabilidades en dependencias |
-
 Los jobs de CI se omiten automáticamente en commits del bot (scraping, resultados, reentrenamiento) para evitar ciclos innecesarios.
+
+---
+
+## Ciclo de Vida MLOps
+
+El sistema implementa un ciclo de MLOps (Machine Learning Operations) continuo, auto-regulado y diseñado para mitigar la degradación del modelo (concept drift) a lo largo de la temporada.
+
+### 1. Ingestión Continua (Data Drift Monitoring)
+El pipeline diario ingiere nuevos datos. Si ocurren fallos de red o de parsing debido a cambios en la web origen, la capa de validación (`post_scrape_validation`) y los mecanismos de Auto-Heal (`mlb_mass_healer.py`) aseguran que no queden "huecos" temporales que puedan corromper las secuencias o rachas.
+
+### 2. Entrenamiento e Hitos Automáticos
+No requiere intervención manual para el reentrenamiento. El sistema monitorea el volumen de la base de datos y detona el entrenamiento de un nuevo modelo (Challenger) al cruzar hitos predefinidos (e.g., 486, 972 partidos).
+
+### 3. Shadow Testing y Validación
+- Cuando se entrena un modelo **Challenger**, se evalúa utilizando validación cruzada y GridSearchCV.
+- Se compara frente al modelo **Champion** actual usando el conjunto de test más reciente.
+- Solo si el **Challenger** mejora el accuracy global sin caer en sobreajuste, reemplaza al Champion. En caso de error o degradación, el sistema retiene la versión previa (Backup fallback).
+
+### 4. Monitoreo de Rendimiento (Feedback Loop)
+Todos los días a las 10:00 UTC, el job `update_real_results` busca el resultado de los partidos predecidos el día anterior. 
+Este feedback se escribe en `historico_real`, permitiendo que el dashboard de Streamlit actualice la métrica de **Accuracy Global** en tiempo real. Esto provee un termómetro inmediato de la salud del modelo en producción.
+
+### 5. Inferencia en Producción (Serving)
+El modelo ganador se expone mediante FastAPI, protegiendo los cálculos costosos con cachés y evitando fallos mediante validaciones asíncronas tipo Pydantic V2.
 
 ---
 
