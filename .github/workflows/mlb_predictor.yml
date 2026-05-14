@@ -730,7 +730,7 @@ jobs:
   update_real_results:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '30 16 * * *' ||
+      github.event.schedule == '0 10 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'update_results')
     
     steps:
