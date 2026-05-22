@@ -150,7 +150,7 @@ def obtener_html(url, max_retries=None):
 
             if response.status_code in (403, 429):
                 wait_time = int((2**intento) * 10)  # Aumentado el tiempo base
-                print(f"       Status {response.status_code} para {url}. Esperando {wait_time}s y renovando sesión...")
+                print(f"       Status {response.status_code} para {url} - Esperando {wait_time}s y renovando sesión...")
                 if response.status_code == 403:
                     # Log breve del contenido para diagnóstico
                     snippet = response.text[:200].replace("\n", " ")
@@ -161,7 +161,7 @@ def obtener_html(url, max_retries=None):
                 continue
 
             wait_time = int(2**intento)
-            print(f"       Status {response.status_code} para {url}. Reintento en {wait_time}s...")
+            print(f"       Status {response.status_code} para {url} - Reintento en {wait_time}s...")
             time.sleep(wait_time)
         except Exception as e:
             if intento == max_retries - 1:
