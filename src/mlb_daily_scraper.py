@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 
 import cloudscraper
 import pandas as pd
+import requests
 from bs4 import BeautifulSoup, Comment
 
 # Importar configuración centralizada
@@ -36,6 +37,37 @@ TEAM_CODE_ALIASES = {
     "SLN": "STL",
     "TBD": "TBR",
 }
+
+STANDARD_TO_BREF = {v: k for k, v in TEAM_CODE_ALIASES.items()}
+
+
+def obtener_stats_pitcher_api(pitcher_id, year):
+    """
+    Obtiene estadísticas oficiales de pitcheo del lanzador para el año indicado desde la API de la MLB.
+    Retorna un diccionario con ERA, WHIP, H9, SO9, W, L.
+    """
+    if not pitcher_id:
+        return None
+    url = f"https://statsapi.mlb.com/api/v1/people/{pitcher_id}/stats?stats=statsSingleSeason&group=pitching&season={year}"
+    try:
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            if "stats" in data and len(data["stats"]) > 0:
+                splits = data["stats"][0].get("splits", [])
+                if splits:
+                    stat = splits[0].get("stat", {})
+                    return {
+                        "ERA": safe_float(stat.get("era", 0.0)),
+                        "WHIP": safe_float(stat.get("whip", 0.0)),
+                        "H9": safe_float(stat.get("hitsPer9Inn", 0.0)),
+                        "SO9": safe_float(stat.get("strikeoutsPer9Inn", 0.0)),
+                        "W": int(stat.get("wins", 0)),
+                        "L": int(stat.get("losses", 0)),
+                    }
+    except Exception as e:
+        print(f"      ⚠️ Error obteniendo stats del pitcher {pitcher_id} desde la API: {e}")
+    return None
 
 
 def get_scraper_session(force_new=False):
@@ -244,10 +276,59 @@ def extraer_equipos_del_dia(soup, fecha_objetivo_db):
 
 def extraer_lanzadores_del_preview(preview_url, away_team=None, home_team=None):
     """
-    Extrae los nombres Y LINKS de los lanzadores iniciales de la página del preview
-    Busca divs con class="section_heading assoc_sp_{TEAM_CODE}"
-    Retorna diccionario: {team_code: {"nombre": pitcher_name, "link": pitcher_href}}
+    Extrae los nombres Y LINKS de los lanzadores iniciales de la página del preview.
+    Intenta usar la API oficial de la MLB primero para máxima fiabilidad.
+    Si falla o no coincide, hace fallback al scraping HTML clásico.
     """
+    away_team = normalizar_team_code(away_team)
+    home_team = normalizar_team_code(home_team)
+
+    # 1. INTENTAR VIA MLB STATS API (NUEVA RUTA ULTRA-FIABLE)
+    try:
+        # Intentar extraer la fecha del preview_url (ej: /boxes/SDN/SDN202605200.shtml)
+        match = re.search(r"/boxes/([A-Z]{3})/([A-Z]{3})(\d{4})(\d{2})(\d{2})\d\.shtml", preview_url)
+        if match:
+            bref_home_code = match.group(1)
+            year, month, day = match.group(2), match.group(3), match.group(4)
+            fecha_obj = f"{year}-{month}-{day}"
+            home_std = normalizar_team_code(bref_home_code)
+
+            url_api = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={fecha_obj}&hydrate=probablePitcher"
+            r = requests.get(url_api, timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                if "dates" in data and len(data["dates"]) > 0:
+                    games = data["dates"][0].get("games", [])
+                    for g in games:
+                        g_away = normalizar_team_code(get_team_code(g["teams"]["away"]["team"]["name"]))
+                        g_home = normalizar_team_code(get_team_code(g["teams"]["home"]["team"]["name"]))
+
+                        if g_home == home_std or (away_team and g_away == away_team) or (home_team and g_home == home_team):
+                            lanzadores = {}
+                            away_p = g["teams"]["away"].get("probablePitcher")
+                            home_p = g["teams"]["home"].get("probablePitcher")
+
+                            if away_p:
+                                lanzadores[g_away] = {
+                                    "nombre": away_p["fullName"],
+                                    "link": f"/api/v1/people/{away_p['id']}",
+                                    "id": away_p["id"]
+                                }
+                                print(f"     🎯 [API] Lanzador {g_away}: {away_p['fullName']} (ID: {away_p['id']})")
+                            if home_p:
+                                lanzadores[g_home] = {
+                                    "nombre": home_p["fullName"],
+                                    "link": f"/api/v1/people/{home_p['id']}",
+                                    "id": home_p["id"]
+                                }
+                                print(f"     🎯 [API] Lanzador {g_home}: {home_p['fullName']} (ID: {home_p['id']})")
+
+                            if lanzadores:
+                                return lanzadores
+    except Exception as e:
+        print(f"     ⚠️ Falló extracción via API de la MLB en preview: {e}. Intentando fallback HTML...")
+
+    # 2. FALLBACK AL SCRAPING HTML CLÁSICO (LEGACY)
     preview_retries = int(os.getenv("SCRAPER_PREVIEW_RETRIES", "3"))
     preview_retry_wait = int(os.getenv("SCRAPER_PREVIEW_RETRY_WAIT_SECONDS", "8"))
 
@@ -268,9 +349,6 @@ def extraer_lanzadores_del_preview(preview_url, away_team=None, home_team=None):
         return {}
 
     soup = BeautifulSoup(html, "html.parser")
-
-    away_team = normalizar_team_code(away_team)
-    home_team = normalizar_team_code(home_team)
 
     # Buscar todos los divs con class que contenga "assoc_sp_" (estructura preview clásica)
     lanzadores = {}
@@ -529,33 +607,87 @@ def ejecutar_pipeline_diario():
     for intento in range(1, max_intentos + 1):
         print(f"\n🔁 Intento de scraping {intento}/{max_intentos}")
 
-        html = obtener_html(url_schedule)
-        if not html:
-            print("❌ No se pudo conectar a Baseball-Reference")
-            if intento < max_intentos:
-                print(f"⏳ Esperando {espera_reintento}s antes de reintentar...")
-                time.sleep(espera_reintento)
-                continue
-            guardar_delay_adaptativo(delay_adaptativo_fallo)
-            print("⚠️ Máximo de intentos alcanzado. Continuando workflow sin guardar.")
-            return True
+        # 1. INTENTAR CONSEGUIR LA CARTELERA VIA API DE LA MLB (RÁPIDO Y SEGURO)
+        equipos_hoy = []
+        completo_api = False
+        try:
+            url_api = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={fecha_db}&hydrate=probablePitcher"
+            print(f"  🔍 Consultando cartelera oficial en la API de la MLB para la fecha: {fecha_db}...")
+            r = requests.get(url_api, timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                if "dates" in data and len(data["dates"]) > 0:
+                    games = data["dates"][0].get("games", [])
+                    for g in games:
+                        away_name = g["teams"]["away"]["team"]["name"]
+                        home_name = g["teams"]["home"]["team"]["name"]
+                        away_std = normalizar_team_code(get_team_code(away_name))
+                        home_std = normalizar_team_code(get_team_code(home_name))
 
-        soup = BeautifulSoup(html, "html.parser")
+                        # Generar el boxscore URL relativo sintético en formato Baseball-Reference
+                        bref_home_code = STANDARD_TO_BREF.get(home_std, home_std)
+                        date_clean = fecha_db.replace("-", "")
+                        game_num_str = "0"
+                        if g.get("doubleHeader") in ("Y", "S") and g.get("gameNumber") in (2, "2"):
+                            game_num_str = "2"
+                        preview_link = f"/boxes/{bref_home_code}/{bref_home_code}{date_clean}{game_num_str}.shtml"
 
-        # Extraer equipos usando la nueva estructura (span id="today")
-        print(f"\n🔍 Buscando partidos para la fecha MLB objetivo: {fecha_db}...")
-        equipos_hoy = extraer_equipos_del_dia(soup, fecha_db)
+                        # Guardar el probablePitcher de away y home
+                        away_p = g["teams"]["away"].get("probablePitcher", {})
+                        home_p = g["teams"]["home"].get("probablePitcher", {})
 
-        if not equipos_hoy:
-            print("\n⚠️ No se encontraron partidos listados para hoy usando la nueva estructura.")
-            print("   (Los lineups podrían no estar publicados aún)")
-            if intento < max_intentos:
-                print(f"⏳ Esperando {espera_reintento}s antes de reintentar...")
-                time.sleep(espera_reintento)
-                continue
-            guardar_delay_adaptativo(delay_adaptativo_fallo)
-            print("⚠️ Máximo de intentos alcanzado. Continuando workflow sin guardar.")
-            return True
+                        equipos_hoy.append({
+                            "away_team": away_std,
+                            "home_team": home_std,
+                            "preview_link": preview_link,
+                            "lanzadores_api": {
+                                away_std: {"nombre": away_p.get("fullName"), "link": f"/api/v1/people/{away_p.get('id')}" if away_p.get("id") else "", "id": away_p.get("id")} if away_p.get("id") else None,
+                                home_std: {"nombre": home_p.get("fullName"), "link": f"/api/v1/people/{home_p.get('id')}" if home_p.get("id") else "", "id": home_p.get("id")} if home_p.get("id") else None
+                            }
+                        })
+                        print(f"  ✅ [API] Encontrado: {away_std} @ {home_std} (BRef URL: {preview_link})")
+
+                    if equipos_hoy:
+                        completo_api = True
+        except Exception as e:
+            print(f"  ⚠️ Error consultando cartelera via API: {e}. Intentando fallback HTML...")
+
+        # 2. FALLBACK A BASEBALL-REFERENCE SCHEDULE HTML
+        if not completo_api:
+            print("  🔍 [Fallback] Descargando cartelera desde Baseball-Reference HTML...")
+            html = obtener_html(url_schedule)
+            if not html:
+                print("❌ No se pudo conectar a Baseball-Reference")
+                if intento < max_intentos:
+                    print(f"⏳ Esperando {espera_reintento}s antes de reintentar...")
+                    time.sleep(espera_reintento)
+                    continue
+                guardar_delay_adaptativo(delay_adaptativo_fallo)
+                print("⚠️ Máximo de intentos alcanzado. Continuando workflow sin guardar.")
+                return True
+
+            soup = BeautifulSoup(html, "html.parser")
+            print(f"\n🔍 Buscando partidos para la fecha MLB objetivo: {fecha_db}...")
+            equipos_bref = extraer_equipos_del_dia(soup, fecha_db)
+
+            if not equipos_bref:
+                print("\n⚠️ No se encontraron partidos listados para hoy usando la estructura HTML.")
+                if intento < max_intentos:
+                    print(f"⏳ Esperando {espera_reintento}s antes de reintentar...")
+                    time.sleep(espera_reintento)
+                    continue
+                guardar_delay_adaptativo(delay_adaptativo_fallo)
+                print("⚠️ Máximo de intentos alcanzado. Continuando workflow sin guardar.")
+                return True
+
+            # Formatear equipos_bref al mismo formato que equipos_hoy
+            for away_team, home_team, preview_link in equipos_bref:
+                equipos_hoy.append({
+                    "away_team": away_team,
+                    "home_team": home_team,
+                    "preview_link": preview_link,
+                    "lanzadores_api": {} # No hay lanzadores pre-cargados de API en fallback
+                })
 
         data_partidos = []
         errores_partidos = []
@@ -605,7 +737,12 @@ def ejecutar_pipeline_diario():
             print(f"   ⚠️ Partido guardado como pendiente ({motivo}).")
 
         total_juegos = len(equipos_hoy)
-        for i, (away_team, home_team, preview_link) in enumerate(equipos_hoy, start=1):
+        for i, juego_dict in enumerate(equipos_hoy, start=1):
+            away_team = juego_dict["away_team"]
+            home_team = juego_dict["home_team"]
+            preview_link = juego_dict["preview_link"]
+            lanzadores_api_precargados = juego_dict["lanzadores_api"]
+
             try:
                 print(f"\n⚾ Procesando: {away_team} @ {home_team}")
 
@@ -622,26 +759,32 @@ def ejecutar_pipeline_diario():
                     )
                     continue
 
-                # Extraer lanzadores del preview
-                print("   🔍 Extrayendo lanzadores de preview...")
-                lanzadores = extraer_lanzadores_del_preview(preview_link, away_team=away_team, home_team=home_team)
+                # Extraer lanzadores del preview (o usar los precargados de la API)
+                lanzadores = {}
+                if lanzadores_api_precargados and any(lanzadores_api_precargados.values()):
+                    # Filtrar nulos
+                    lanzadores = {k: v for k, v in lanzadores_api_precargados.items() if v is not None}
 
-                away_pitcher = (
-                    lanzadores.get(away_team, {}).get("nombre")
-                    if isinstance(lanzadores.get(away_team), dict)
-                    else lanzadores.get(away_team)
-                )
-                away_pitcher_link = (
-                    lanzadores.get(away_team, {}).get("link", "") if isinstance(lanzadores.get(away_team), dict) else ""
-                )
-                home_pitcher = (
-                    lanzadores.get(home_team, {}).get("nombre")
-                    if isinstance(lanzadores.get(home_team), dict)
-                    else lanzadores.get(home_team)
-                )
-                home_pitcher_link = (
-                    lanzadores.get(home_team, {}).get("link", "") if isinstance(lanzadores.get(home_team), dict) else ""
-                )
+                if not lanzadores:
+                    print("   🔍 Extrayendo lanzadores del preview...")
+                    lanzadores = extraer_lanzadores_del_preview(preview_link, away_team=away_team, home_team=home_team)
+
+                away_info = lanzadores.get(away_team) if isinstance(lanzadores.get(away_team), dict) else {}
+                home_info = lanzadores.get(home_team) if isinstance(lanzadores.get(home_team), dict) else {}
+
+                away_pitcher = away_info.get("nombre") or ""
+                away_pitcher_link = away_info.get("link") or ""
+                away_pitcher_id = away_info.get("id") or None
+
+                home_pitcher = home_info.get("nombre") or ""
+                home_pitcher_link = home_info.get("link") or ""
+                home_pitcher_id = home_info.get("id") or None
+
+                # Si no vinieron nombres, intentar resolver si se pasaron como strings simples en fallback
+                if not away_pitcher and away_team in lanzadores and isinstance(lanzadores[away_team], str):
+                    away_pitcher = lanzadores[away_team]
+                if not home_pitcher and home_team in lanzadores and isinstance(lanzadores[home_team], str):
+                    home_pitcher = lanzadores[home_team]
 
                 if not away_pitcher or not home_pitcher:
                     print(f"   ⚠️ No se encontraron lanzadores: {away_pitcher} vs {home_pitcher}")
@@ -672,14 +815,26 @@ def ejecutar_pipeline_diario():
                 away_stats_code = away_team or get_team_code(away_team)
                 home_stats_code = home_team or get_team_code(home_team)
 
-                # Extraer stats de los lanzadores
-                print(f"   🔍 Buscando stats de {away_pitcher}...")
-                s_away = encontrar_lanzador(scrape_player_stats(away_stats_code, year_partido), away_pitcher)
-                time.sleep(SCRAPING_CONFIG["min_delay"])
+                # Extraer stats de los lanzadores (API primero, fallback HTML secundario)
+                s_away = None
+                if away_pitcher_id:
+                    print(f"   🔍 Buscando stats de {away_pitcher} via MLB API...")
+                    s_away = obtener_stats_pitcher_api(away_pitcher_id, year_partido)
 
-                print(f"   🔍 Buscando stats de {home_pitcher}...")
-                s_home = encontrar_lanzador(scrape_player_stats(home_stats_code, year_partido), home_pitcher)
-                time.sleep(SCRAPING_CONFIG["min_delay"])
+                if not s_away:
+                    print(f"   🔍 [Fallback] Buscando stats de {away_pitcher} via HTML...")
+                    s_away = encontrar_lanzador(scrape_player_stats(away_stats_code, year_partido), away_pitcher)
+                    time.sleep(SCRAPING_CONFIG["min_delay"])
+
+                s_home = None
+                if home_pitcher_id:
+                    print(f"   🔍 Buscando stats de {home_pitcher} via MLB API...")
+                    s_home = obtener_stats_pitcher_api(home_pitcher_id, year_partido)
+
+                if not s_home:
+                    print(f"   🔍 [Fallback] Buscando stats de {home_pitcher} via HTML...")
+                    s_home = encontrar_lanzador(scrape_player_stats(home_stats_code, year_partido), home_pitcher)
+                    time.sleep(SCRAPING_CONFIG["min_delay"])
 
                 # Crear game_id unificado
                 game_id = f"{fecha_partido_db}_{home_team}_{away_team}"
