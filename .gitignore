@@ -133,9 +133,10 @@ test_*.txt
 test_*.json
 
 # ============================================================================
-# EXCEPCIONES PARA BACKUP (V2.0 LOCAL)
+# EXCEPCIONES PARA BACKUP Y PRUEBAS
 # ============================================================================
-backup/* . d b 
+backup/
+src/test_*.py
 
 # Scratch files (temporary tools)
 scratch/
