@@ -5,6 +5,7 @@ joblib>=1.5.3
 scikit-learn>=1.8.0
 xgboost==3.1.2
 scipy>=1.13.0
+optuna>=3.6.0
 
 # Web Scraping
 cloudscraper>=1.2.71

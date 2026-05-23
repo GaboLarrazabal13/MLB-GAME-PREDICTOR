@@ -25,7 +25,8 @@ import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup, Comment
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import GridSearchCV, train_test_split
+import optuna
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
@@ -978,22 +979,74 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
         except Exception as e:
             print(f"⚠️ Error evaluando modelo previo: {e}")
 
-    # 8. Optimización de hiperparámetros
-    print("🔎 Buscando la mejor combinación de hiperparámetros...")
+    # 8. Optimización de hiperparámetros con Optuna
+    print("🔎 Buscando la mejor combinación de hiperparámetros con Optuna...")
 
-    xgb_base = XGBClassifier(eval_metric="logloss", random_state=MODEL_CONFIG["random_state"])
     xgb_model_param = model_actual.get_booster() if model_actual else None
 
-    grid = GridSearchCV(
-        estimator=xgb_base,
-        param_grid=MODEL_CONFIG["param_grid"],
-        cv=MODEL_CONFIG["cv_folds"],
-        scoring="accuracy",
-        verbose=1,
-    )
+    # Desactivar logs detallados de optuna para no inundar la consola
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
 
+    def objective(trial):
+        params = {
+            "n_estimators": trial.suggest_int("n_estimators", 150, 450),
+            "max_depth": trial.suggest_int("max_depth", 3, 9),
+            "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.1, log=True),
+            "gamma": trial.suggest_float("gamma", 0.0, 0.5),
+            "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+            "min_child_weight": trial.suggest_int("min_child_weight", 1, 8),
+            "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 5.0, log=True),
+            "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 5.0, log=True),
+            "eval_metric": "logloss",
+            "random_state": MODEL_CONFIG["random_state"],
+            "n_jobs": -1
+        }
+        
+        cv = StratifiedKFold(n_splits=MODEL_CONFIG["cv_folds"], shuffle=True, random_state=MODEL_CONFIG["random_state"])
+        scores = []
+        
+        for train_idx, val_idx in cv.split(X_train, y_train):
+            X_tr, X_val = X_train.iloc[train_idx], X_train.iloc[val_idx]
+            y_tr, y_val = y_train[train_idx], y_train[val_idx]
+            
+            model = XGBClassifier(**params)
+            
+            # Intentar entrenar con el booster anterior si está disponible y es compatible
+            try:
+                if xgb_model_param is not None:
+                    model.fit(X_tr, y_tr, xgb_model=xgb_model_param)
+                else:
+                    model.fit(X_tr, y_tr)
+            except Exception:
+                # Si falla el warm start, hacer fallback transparente
+                model.fit(X_tr, y_tr)
+                
+            y_pred = model.predict(X_val)
+            scores.append(accuracy_score(y_val, y_pred))
+            
+        return np.mean(scores)
+
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=35)
+    
+    best_params = study.best_params
+    print(f"🏆 Mejores parámetros encontrados por Optuna: {best_params}")
+    print(f"📈 Mejor Accuracy en CV: {study.best_value:.2%}")
+    
+    # Entrenar el modelo final con los mejores parámetros
+    model_nuevo = XGBClassifier(
+        **best_params,
+        eval_metric="logloss",
+        random_state=MODEL_CONFIG["random_state"],
+        n_jobs=-1
+    )
+    
     try:
-        grid.fit(X_train, y_train, xgb_model=xgb_model_param)
+        if xgb_model_param is not None:
+            model_nuevo.fit(X_train, y_train, xgb_model=xgb_model_param)
+        else:
+            model_nuevo.fit(X_train, y_train)
     except Exception as e:
         if xgb_model_param is not None and "feature_names mismatch" in str(e):
             print(
@@ -1001,12 +1054,11 @@ def ejecutar_reentrenamiento_incremental(bloque_size=None, pausa_entre_bloques=N
                 "features con el modelo previo. Reintentando entrenamiento "
                 "sin xgb_model para mantener el pipeline estable..."
             )
-            grid.fit(X_train, y_train)
+            model_nuevo.fit(X_train, y_train)
         else:
             raise
 
-    model_nuevo = grid.best_estimator_
-    print(f"🏆 Mejores parámetros encontrados: {grid.best_params_}")
+    print(f"🏆 Mejores parámetros encontrados: {best_params}")
 
     # 9. Validación final
     y_pred_new = model_nuevo.predict(X_test)
