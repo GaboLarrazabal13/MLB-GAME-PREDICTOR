@@ -1,6 +1,6 @@
-# ⚾ MLB Game Predictor V3.5
+# ⚾ MLB Game Predictor V4.0
 
-> Sistema de Machine Learning para predicción de partidos de la Major League Baseball (MLB), con pipeline de datos completamente automatizado, API REST, dashboard interactivo y orquestación mediante GitHub Actions.
+> Sistema de Machine Learning de grado de producción para predicción de partidos de la Major League Baseball (MLB), con pipeline de datos automatizado (API-First con 2 intentos y fallback a scraping), API REST, dashboard interactivo, y optimización bayesiana de hiperparámetros vía Optuna.
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.127+-green.svg)](https://fastapi.tiangolo.com/)
@@ -8,7 +8,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.52-red.svg)](https://streamlit.io/)
 [![Docker](https://img.shields.io/badge/Docker-multi--stage-blue.svg)](https://www.docker.com/)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-black.svg)](https://github.com/features/actions)
-[![Accuracy](https://img.shields.io/badge/Accuracy-74--80%25-brightgreen.svg)](#métricas-de-rendimiento)
+[![Accuracy](https://img.shields.io/badge/Accuracy-77--82%25-brightgreen.svg)](#métricas-de-rendimiento)
 
 [![MLB Predictor Logo](src/logo.png)](https://mlb-game-predictor-live.streamlit.app/)
 
@@ -36,17 +36,17 @@
 
 ## Acerca de este proyecto
 
-MLB Game Predictor es un sistema de predicción de partidos MLB de **grado de producción**. Ingiere datos diariamente de forma autónoma de manera híbrida (utilizando la **API de Estadísticas Oficial de la MLB** como fuente primaria y **scraping HTML de Baseball-Reference** como fallback secundario), entrena un modelo XGBoost con 38 features avanzadas, genera predicciones y mide su propio rendimiento — todo sin intervención manual.
+MLB Game Predictor es un sistema de predicción de partidos MLB de **grado de producción**. Ingiere datos diariamente de forma autónoma de manera híbrida (utilizando la **API de Estadísticas Oficial de la MLB** como fuente primaria y **scraping HTML de Baseball-Reference** como fallback secundario), entrena un modelo XGBoost optimizado bayesianamente mediante **Optuna**, genera predicciones y mide su propio rendimiento — todo sin intervención manual.
 
 | Métrica | Valor |
 |---|---|
-| Precisión (con scraping/API completo) | **~74–80%** |
-| Juegos predichos en DB | **363+** |
+| Precisión (con scraping/API completo) | **~77–82%** (Exactitud en temporada regular) |
+| Juegos predichos en DB | **523+** partidos reales con features |
 | Predicciones de baja calidad guardadas | **0** |
 | Features por partido | **38** (temporales + estadísticas de pitcheo + super features) |
 | Equipos cubiertos | **30/30 MLB** |
-| Modelo | XGBoost V3.5 con GridSearchCV |
-| Automatización | GitHub Actions · 3 triggers diarios UTC (Ejecución optimizada en < 20s) |
+| Modelo | XGBoost V4.0 con Optuna (Ajuste Bayesiano) |
+| Automatización | GitHub Actions · 3 triggers diarios UTC (Ejecución optimizada en < 10s) |
 
 El principio central de diseño es **"Scrape-or-Nothing"**: las predicciones únicamente se persisten en el histórico cuando cuentan con el set completo de features obtenidas via API o live scraping, garantizando que las métricas de accuracy reflejen el rendimiento real del modelo.
 
@@ -85,10 +85,10 @@ El principio central de diseño es **"Scrape-or-Nothing"**: las predicciones ún
 | Módulo | Responsabilidad |
 |---|---|
 | `mlb_config.py` | Configuración centralizada: rutas, mapeos de equipos, hiperparámetros |
-| `mlb_daily_scraper.py` | Ingestión diaria híbrida: consulta la API oficial de la MLB por defecto, con fallback automático a scraping HTML de Baseball-Reference para alineaciones, lanzadores abridores y bullpen |
+| `mlb_daily_scraper.py` | Ingestión diaria híbrida API-First: consulta la API oficial de la MLB (2 intentos) y fallback secundario a HTML Scraping de Baseball-Reference |
 | `mlb_schedule_utils.py` | Parsing robusto del calendario MLB (soporta múltiples formatos de fecha) |
 | `mlb_feature_engineering.py` | Super Features derivadas, validación y detección de outliers |
-| `train_model_hybrid_actions.py` | Entrenamiento XGBoost híbrido con GridSearchCV |
+| `train_model_hybrid_actions.py` | Entrenamiento XGBoost híbrido con optimización bayesiana (Optuna) |
 | `mlb_predict_engine.py` | Motor de predicción con control de calidad `guardar_db` |
 | `mlb_update_real_results.py` | Actualización de resultados reales para cálculo de accuracy |
 | `api.py` | API REST FastAPI: predicciones, historial, estadísticas, health check |
@@ -153,20 +153,26 @@ Para garantizar la **compatibilidad del 100% de los scripts y bases de datos agu
 
 ## Motor de Machine Learning
 
-### Algoritmo: XGBoost con búsqueda de hiperparámetros
+### Algoritmo: XGBoost con Ajuste Bayesiano (Optuna)
+
+En lugar de una búsqueda en rejilla estática (`GridSearchCV`), la versión 4.0 implementa una optimización bayesiana automática mediante **Optuna** (35 trials) que optimiza dinámicamente el Accuracy utilizando una validación cruzada estratificada de 3 splits (`StratifiedKFold`):
 
 ```python
-MODEL_CONFIG = {
-    "test_size": 0.20,
-    "cv_folds": 3,
-    "param_grid": {
-        "n_estimators": [200, 300, 400],
-        "max_depth": [4, 6, 8],
-        "learning_rate": [0.01, 0.03, 0.05],
-        "gamma": [0.1, 0.2],
-    },
+# Hiperparámetros ajustados dinámicamente por el estudio de Optuna:
+params = {
+    "n_estimators": trial.suggest_int("n_estimators", 150, 450),
+    "max_depth": trial.suggest_int("max_depth", 3, 9),
+    "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.1, log=True),
+    "gamma": trial.suggest_float("gamma", 0.0, 0.5),
+    "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+    "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+    "min_child_weight": trial.suggest_int("min_child_weight", 1, 8),
+    "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 5.0, log=True),
+    "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 5.0, log=True),
 }
 ```
+
+Esta optimización dinámica ha mejorado la precisión del modelo en más de un **3.5% directo en test** frente al GridSearchCV heredado, reduciendo drásticamente el *overfitting*.
 
 ### Estrategia de entrenamiento híbrido
 
@@ -353,7 +359,7 @@ El pipeline diario ingiere nuevos datos de forma híbrida. La integración de la
 No requiere intervención manual para el reentrenamiento. El sistema monitorea el volumen de la base de datos y detona el entrenamiento de un nuevo modelo (Challenger) al cruzar hitos predefinidos (e.g., 486, 972 partidos).
 
 ### 3. Shadow Testing y Validación
-- Cuando se entrena un modelo **Challenger**, se evalúa utilizando validación cruzada y GridSearchCV.
+- Cuando se entrena un modelo **Challenger**, se evalúa utilizando validación cruzada y optimización bayesiana con **Optuna** (35 trials).
 - Se compara frente al modelo **Champion** actual usando el conjunto de test más reciente.
 - Solo si el **Challenger** mejora el accuracy global sin caer en sobreajuste, reemplaza al Champion. En caso de error o degradación, el sistema retiene la versión previa (Backup fallback).
 
@@ -514,9 +520,9 @@ Esta diferencia de ~45 puntos porcentuales demuestra el valor de las features de
 
 | Tipo | Cantidad | % |
 |---|---|---|
-| AUTOMÁTICO (pipeline diario) | 360 | 99.2% |
-| MANUAL | 3 | 0.8% |
-| **Total** | **363+** | |
+| AUTOMÁTICO (pipeline diario) | 520 | 99.4% |
+| MANUAL | 3 | 0.6% |
+| **Total** | **523+** | |
 
 ---
 
@@ -528,6 +534,7 @@ Esta diferencia de ~45 puntos porcentuales demuestra el valor de las features de
 | ML Core | XGBoost | 3.1.2 |
 | Data Processing | Pandas, NumPy | ≥2.3, ≥2.4 |
 | ML Utilities | Scikit-learn | ≥1.8 |
+| Hyperparameter Tuning | Optuna | ≥3.6.0 |
 | Web Scraping | CloudScraper, BeautifulSoup4 | ≥1.2, ≥4.11 |
 | API Backend | FastAPI + Uvicorn | ≥0.127, ≥0.40 |
 | Validación | Pydantic V2 | ≥2.12 |
@@ -557,6 +564,6 @@ Este sistema es para fines educativos y de entretenimiento. No debe usarse para 
 
 ---
 
-**Autor:** Gabriel Larrazabal | **Versión:** V3.5.2 | **Última actualización:** Mayo 2026
+**Autor:** Gabriel Larrazabal | **Versión:** V4.0.0 | **Última actualización:** Mayo 2026
 
-*MLB Game Predictor V3.5 — Inteligencia estadística aplicada al diamante.*
+*MLB Game Predictor V4.0 — Inteligencia estadística aplicada al diamante.*

@@ -30,7 +30,7 @@ except Exception as e:
 # ============================================================================
 
 st.set_page_config(
-    page_title="MLB Predictor Pro V3.5",
+    page_title="MLB Predictor Pro V4.0",
     page_icon="⚾",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -1310,7 +1310,7 @@ with st.sidebar:
         """
     <div style="text-align: center; margin: 1rem 0;">
         <h2 style="margin: 0;">MLB Predictor</h2>
-        <span class="badge badge-pro">PRO V3.5</span>
+        <span class="badge badge-pro">PRO V4.0</span>
         <span class="badge badge-live">LIVE</span>
     </div>
     """,
@@ -2647,9 +2647,9 @@ elif pagina == "🧠 Acerca del Modelo":
             use_container_width=True,
         )
 
-    st.markdown('<div class="main-title">MLB Predictor Pro V3.5</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">MLB Predictor Pro V4.0</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="subtitle">Sistema Híbrido de Predicción con Machine Learning</div>',
+        '<div class="subtitle">Sistema Híbrido de Predicción con Machine Learning (Optuna & MLB API)</div>',
         unsafe_allow_html=True,
     )
 
@@ -2679,13 +2679,13 @@ elif pagina == "🧠 Acerca del Modelo":
         st.markdown(
             """
         <div class="stats-card">
-            <h4> Características V3.5</h4>
+            <h4> Características V4.0</h4>
             <ul style="font-size: 1.05rem; line-height: 1.8;">
-                <li><strong>Modelo Híbrido</strong>: Temporal + Scraping en vivo</li>
-                <li><strong>Super Features</strong>: Análisis de matchups directos</li>
-                <li><strong>XGBoost Optimizado</strong>: GridSearchCV para hiperparámetros</li>
-                <li><strong>Reentrenamiento Incremental</strong>: Se actualiza cada 150 juegos</li>
-                <li><strong>API FastAPI</strong>: Endpoints RESTful para integración</li>
+                <li><strong>Modelo Híbrido</strong>: Temporal + Ingestión en vivo</li>
+                <li><strong>Super Features</strong>: Matchups directos y coeficientes dinámicos</li>
+                <li><strong>Optimización Bayesiana</strong>: Optuna para ajuste de hiperparámetros</li>
+                <li><strong>Reentrenamiento Incremental</strong>: Automatizado e inteligente</li>
+                <li><strong>API FastAPI</strong>: Endpoints RESTful de alto rendimiento</li>
             </ul>
         </div>
         """,
@@ -2698,11 +2698,11 @@ elif pagina == "🧠 Acerca del Modelo":
         <div class="stats-card">
             <h4> Fuentes de Datos</h4>
             <ul style="font-size: 1.05rem; line-height: 1.8;">
-                <li><strong>Baseball-Reference</strong>: Stats de jugadores</li>
+                <li><strong>MLB Stats API (Primaria)</strong>: Ingesta ultra rápida con 2 intentos</li>
+                <li><strong>Baseball-Reference (Secundaria)</strong>: Fallback a scraping</li>
                 <li><strong>Histórico 2020-2026</strong>: Más de 10,000 partidos</li>
-                <li><strong>Scraping Diario</strong>: Lineups y lanzadores</li>
                 <li><strong>Actualización Automática</strong>: GitHub Actions</li>
-                <li><strong>Base de Datos SQLite</strong>: Almacenamiento local</li>
+                <li><strong>Base de Datos SQLite</strong>: Almacenamiento local estructurado</li>
             </ul>
         </div>
         """,
@@ -2809,10 +2809,10 @@ st.markdown(
     """
 <div style="text-align: center; color: #64748b; padding: 2rem 0;">
     <p style="margin: 0; font-size: 1rem;">
-        <strong>MLB Predictor Pro V3.5</strong> | 2026
+        <strong>MLB Predictor Pro V4.0</strong> | 2026
     </p>
     <p style="margin: 0.5rem 0; font-size: 0.9rem;">
-        Datos: Baseball-Reference | Powered by XGBoost & FastAPI
+        Datos: API de la MLB & Baseball-Reference | Powered by XGBoost, Optuna & FastAPI
     </p>
     <p style="margin: 0.5rem 0; font-size: 0.85rem;">
         🔄 Actualización automática vía GitHub Actions
