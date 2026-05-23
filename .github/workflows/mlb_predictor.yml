@@ -3,8 +3,8 @@ name: MLB Predictor Automation
 on:
   schedule:
     # Horarios en UTC. Referencia operativa en ET (America/New_York).
-    # Update de resultados reales (mañana España / madrugada ET)
-    - cron: '0 10 * * *'
+    # Update de resultados reales (9:00 AM España / 3:00 AM ET)
+    - cron: '0 7 * * *'
     # Scraping principal
     - cron: '30 17 * * *'
     # Validación post-scrape y recuperación de resultados
@@ -730,7 +730,7 @@ jobs:
   update_real_results:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '0 10 * * *' ||
+      github.event.schedule == '0 7 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'update_results')
     
     steps:
