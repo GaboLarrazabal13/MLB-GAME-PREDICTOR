@@ -1,5 +1,5 @@
 """
-Configuración Centralizada para el Sistema MLB Predictor V3.5
+Configuración Centralizada para el Sistema MLB Predictor V4.0
 Evita duplicación de código y facilita mantenimiento
 """
 
@@ -17,10 +17,10 @@ if os.path.basename(CURRENT_DIR) == "src":
 else:
     BASE_DIR = CURRENT_DIR
 
-MODELO_PATH = os.path.join(BASE_DIR, "models", "modelo_mlb_v3.5.json")
-MODELO_BACKUP = os.path.join(BASE_DIR, "models", "modelo_mlb_v3.5_backup.json")
+MODELO_PATH = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.0.json")
+MODELO_BACKUP = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.0_backup.json")
 DB_PATH = os.path.join(BASE_DIR, "data", "mlb_reentrenamiento.db")
-CACHE_PATH = os.path.join(BASE_DIR, "cache", "features_hibridas_v3.5_cache.pkl")
+CACHE_PATH = os.path.join(BASE_DIR, "cache", "features_hibridas_v4.0_cache.pkl")
 
 # ============================================================================
 # MAPEO UNIFICADO DE EQUIPOS

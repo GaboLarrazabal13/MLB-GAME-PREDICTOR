@@ -38,7 +38,7 @@ class TestAPIEndpoints:
         with patch("src.api.DB_PATH", test_db_path):
             with patch(
                 "src.mlb_config.MODELO_PATH",
-                str(Path(__file__).parent.parent / "models" / "modelo_mlb_v3.5.json"),
+                str(Path(__file__).parent.parent / "models" / "modelo_mlb_v4.0.json"),
             ):
                 response = client.get("/health")
                 assert response.status_code == 200
