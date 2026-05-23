@@ -441,14 +441,19 @@ python src/mlb_manual_interface.py NYY BOS "Gerrit Cole" "Tanner Houck" 2026
 Todos los parámetros se centralizan en `src/mlb_config.py`:
 
 ```python
-# Hiperparámetros del modelo
+# Hiperparámetros del modelo (Espacio de búsqueda de Optuna)
 MODEL_CONFIG = {
     "test_size": 0.20, "cv_folds": 3,
-    "param_grid": {
-        "n_estimators": [200, 300, 400],
-        "max_depth": [4, 6, 8],
-        "learning_rate": [0.01, 0.03, 0.05],
-        "gamma": [0.1, 0.2],
+    "optuna_search_space": {
+        "n_estimators_range": (150, 450),
+        "max_depth_range": (3, 9),
+        "learning_rate_range": (0.005, 0.1),
+        "gamma_range": (0.0, 0.5),
+        "subsample_range": (0.6, 1.0),
+        "colsample_bytree_range": (0.6, 1.0),
+        "min_child_weight_range": (1, 8),
+        "reg_alpha_range": (1e-8, 5.0),
+        "reg_lambda_range": (1e-8, 5.0),
     },
 }
 
