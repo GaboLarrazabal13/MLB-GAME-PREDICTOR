@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 import cloudscraper
 import pandas as pd
+import requests
 from bs4 import BeautifulSoup
 
 # Importar configuración centralizada
@@ -172,86 +173,172 @@ def actualizar_resultados_reales_en_fecha(fecha_bref, fecha_db, year_val):
     print(f"🕐 Actualizando resultados reales para: {fecha_bref}")
     print(f"{'=' * 70}")
 
-    url_schedule = f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
-    html = obtener_html(url_schedule)
-
-    if not html:
-        print("❌ Error de conexión con Baseball-Reference.")
-        return False
-
-    soup = BeautifulSoup(html, "html.parser")
-    seccion = seleccionar_seccion_schedule(soup, fecha_db)
-
-    if not seccion or seccion.get("date") != fecha_db:
-        print(f"⚠️ No hay juegos registrados para la fecha {fecha_bref} aún.")
-        return False
-
-    print(
-        "📍 Sección de resultados seleccionada: "
-        f"{seccion.get('label', 'sin etiqueta')} -> {seccion.get('date', 'sin fecha')}"
-    )
-
     data_resultados = []
     partidos_procesados = 0
+    completo_api = False
 
-    for game in seccion["games"]:
-        cursor = game.get("node")
-        if not cursor:
-            continue
+    TEAM_CODE_ALIASES = {
+        "ANA": "LAA",
+        "CHN": "CHC",
+        "KCA": "KCR",
+        "LAN": "LAD",
+        "NYN": "NYM",
+        "SDN": "SDP",
+        "SFN": "SFG",
+        "SLN": "STL",
+        "TBD": "TBR",
+    }
+    STANDARD_TO_BREF = {v: k for k, v in TEAM_CODE_ALIASES.items()}
 
+    # 1. INTENTAR VIA MLB STATS API (2 INTENTOS)
+    url_api = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={fecha_db}"
+    for intento_api in range(1, 3):
         try:
-            links = cursor.find_all("a")
-            if len(links) >= 3:
-                box_score_url = None
-                for link in links:
-                    href = link.get("href", "")
-                    if href.startswith("/boxes/"):
-                        box_score_url = href
+            print(f"  🔍 Consultando resultados en la API de la MLB (intento {intento_api}/2) para la fecha: {fecha_db}...")
+            r = requests.get(url_api, timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                if "dates" in data and len(data["dates"]) > 0:
+                    games = data["dates"][0].get("games", [])
+                    for g in games:
+                        # Solo procesar juegos finalizados
+                        state = g.get("status", {}).get("abstractGameState", "")
+                        coded_state = g.get("status", {}).get("codedGameState", "")
+                        if state != "Final" and coded_state != "F":
+                            continue
+
+                        away_name = g["teams"]["away"]["team"]["name"]
+                        home_name = g["teams"]["home"]["team"]["name"]
+                        away_team = get_team_code(away_name) or away_name
+                        home_team = get_team_code(home_name) or home_name
+
+                        # Normalizar códigos de equipo
+                        away_team = TEAM_CODE_ALIASES.get(away_team, away_team)
+                        home_team = TEAM_CODE_ALIASES.get(home_team, home_team)
+
+                        score_away = g["teams"]["away"].get("score")
+                        score_home = g["teams"]["home"].get("score")
+
+                        if score_away is not None and score_home is not None:
+                            score_away = int(score_away)
+                            score_home = int(score_home)
+                            ganador = 1 if score_home > score_away else 0
+
+                            # Generar boxscore URL relativo sintético
+                            bref_home_code = STANDARD_TO_BREF.get(home_team, home_team)
+                            date_clean = fecha_db.replace("-", "")
+                            game_num_str = "0"
+                            if g.get("doubleHeader") in ("Y", "S") and g.get("gameNumber") in (2, "2"):
+                                game_num_str = "2"
+                            box_score_url = f"/boxes/{bref_home_code}/{bref_home_code}{date_clean}{game_num_str}.shtml"
+
+                            game_id = f"{fecha_db}_{home_team}_{away_team}"
+
+                            data_resultados.append(
+                                {
+                                    "game_id": game_id,
+                                    "box_score_url": box_score_url,
+                                    "fecha": fecha_db,
+                                    "year": year_val,
+                                    "home_team": home_team,
+                                    "away_team": away_team,
+                                    "score_home": score_home,
+                                    "score_away": score_away,
+                                    "ganador": ganador,
+                                }
+                            )
+                            partidos_procesados += 1
+                            print(f"✅ [API] {away_team} @ {home_team}: {score_away}-{score_home}")
+
+                    if data_resultados:
+                        completo_api = True
                         break
-
-                away_team_full = links[0].text.strip()
-                home_team_full = links[1].text.strip()
-
-                # Convertir a códigos
-                away_team = get_team_code(away_team_full) or away_team_full
-                home_team = get_team_code(home_team_full) or home_team_full
-
-                # Extraer scores del texto
-                texto_juego = cursor.get_text()
-                scores = re.findall(r"\((\d+)\)", texto_juego)
-
-                if len(scores) >= 2:
-                    score_away = int(scores[0])
-                    score_home = int(scores[1])
-                    ganador = 1 if score_home > score_away else 0
-
-                    # Crear game_id consistente
-                    game_id = f"{fecha_db}_{home_team}_{away_team}"
-
-                    data_resultados.append(
-                        {
-                            "game_id": game_id,
-                            "box_score_url": box_score_url,
-                            "fecha": fecha_db,
-                            "year": year_val,
-                            "home_team": home_team,
-                            "away_team": away_team,
-                            "score_home": score_home,
-                            "score_away": score_away,
-                            "ganador": ganador,
-                        }
-                    )
-
-                    partidos_procesados += 1
-                    print(f"✅ {away_team} @ {home_team}: {score_away}-{score_home}")
-                else:
-                    print(f"⚠️ Partido sin scores finales: {away_team} @ {home_team}")
-
+            else:
+                print(f"  ⚠️ [API] Intento {intento_api}/2 falló con status {r.status_code}")
         except Exception as e:
-            print(f"⚠️ Error procesando partido: {e}")
-            import traceback
+            print(f"  ⚠️ Error consultando resultados via API (intento {intento_api}/2): {e}")
+        if not completo_api and intento_api < 2:
+            time.sleep(2)
 
-            traceback.print_exc()
+    # 2. FALLBACK A BASEBALL-REFERENCE SCHEDULE HTML
+    if not completo_api:
+        print("  ⚠️ Falló la API de la MLB para resultados tras 2 intentos. Activando fallback HTML...")
+        url_schedule = f"https://www.baseball-reference.com/leagues/majors/{year_val}-schedule.shtml"
+        html = obtener_html(url_schedule)
+
+        if not html:
+            print("❌ Error de conexión con Baseball-Reference.")
+            return False
+
+        soup = BeautifulSoup(html, "html.parser")
+        seccion = seleccionar_seccion_schedule(soup, fecha_db)
+
+        if not seccion or seccion.get("date") != fecha_db:
+            print(f"⚠️ No hay juegos registrados para la fecha {fecha_bref} aún.")
+            return False
+
+        print(
+            "📍 Sección de resultados seleccionada: "
+            f"{seccion.get('label', 'sin etiqueta')} -> {seccion.get('date', 'sin fecha')}"
+        )
+
+        for game in seccion["games"]:
+            cursor = game.get("node")
+            if not cursor:
+                continue
+
+            try:
+                links = cursor.find_all("a")
+                if len(links) >= 3:
+                    box_score_url = None
+                    for link in links:
+                        href = link.get("href", "")
+                        if href.startswith("/boxes/"):
+                            box_score_url = href
+                            break
+
+                    away_team_full = links[0].text.strip()
+                    home_team_full = links[1].text.strip()
+
+                    # Convertir a códigos
+                    away_team = get_team_code(away_team_full) or away_team_full
+                    home_team = get_team_code(home_team_full) or home_team_full
+
+                    # Extraer scores del texto
+                    texto_juego = cursor.get_text()
+                    scores = re.findall(r"\((\d+)\)", texto_juego)
+
+                    if len(scores) >= 2:
+                        score_away = int(scores[0])
+                        score_home = int(scores[1])
+                        ganador = 1 if score_home > score_away else 0
+
+                        # Crear game_id consistente
+                        game_id = f"{fecha_db}_{home_team}_{away_team}"
+
+                        data_resultados.append(
+                            {
+                                "game_id": game_id,
+                                "box_score_url": box_score_url,
+                                "fecha": fecha_db,
+                                "year": year_val,
+                                "home_team": home_team,
+                                "away_team": away_team,
+                                "score_home": score_home,
+                                "score_away": score_away,
+                                "ganador": ganador,
+                            }
+                        )
+
+                        partidos_procesados += 1
+                        print(f"✅ {away_team} @ {home_team}: {score_away}-{score_home}")
+                    else:
+                        print(f"⚠️ Partido sin scores finales: {away_team} @ {home_team}")
+
+            except Exception as e:
+                print(f"⚠️ Error procesando partido: {e}")
+                import traceback
+                traceback.print_exc()
 
     if not data_resultados:
         print("\n⚠️ No se encontraron resultados finales para procesar.")
