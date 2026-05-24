@@ -5,8 +5,8 @@ on:
     # Horarios en UTC. Referencia operativa en ET (America/New_York).
     # Update de resultados reales (9:00 AM España / 3:00 AM ET)
     - cron: '0 7 * * *'
-    # Scraping principal
-    - cron: '30 17 * * *'
+    # Scraping principal (12:00 PM España / 6:00 AM ET)
+    - cron: '0 10 * * *'
     # Validación post-scrape y recuperación de resultados
     - cron: '30 18 * * *'
   
@@ -448,7 +448,7 @@ jobs:
   scrape_daily_games:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '30 17 * * *' ||
+      github.event.schedule == '0 10 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scrape')
     
     steps:
@@ -805,7 +805,7 @@ jobs:
   incremental_training:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '30 17 * * *' ||
+      github.event.schedule == '0 10 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'train')
     
     steps:
