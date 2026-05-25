@@ -2006,7 +2006,7 @@ elif pagina == "📅 Partidos de Hoy":
                                 delta=partido.get("confianza", "N/A"),
                             )
                         else:
-                            st.warning("⏳ Pendiente")
+                            st.info("⏳ Esperando abridores confirmados y datos de pitcheo de calidad para predecir")
 
                     if "prediccion" in partido:
                         pred_team = get_team_display_name(partido["prediccion"])

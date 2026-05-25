@@ -5,9 +5,15 @@ on:
     # Horarios en UTC. Referencia operativa en ET (America/New_York).
     # Update de resultados reales (9:00 AM España / 3:00 AM ET)
     - cron: '0 7 * * *'
-    # Scraping principal (12:00 PM España / 6:00 AM ET)
+    # Scraping principal de cartelera (12:00 PM España / 6:00 AM ET)
     - cron: '0 10 * * *'
-    # Validación post-scrape y recuperación de resultados
+    # Reintento 1 de features de pitcheo (2:00 PM España / 8:00 AM ET)
+    - cron: '0 12 * * *'
+    # Reintento 2 de features de pitcheo (4:00 PM España / 10:00 AM ET)
+    - cron: '0 14 * * *'
+    # Reintento 3 de features de pitcheo (6:00 PM España / 12:00 PM ET)
+    - cron: '0 16 * * *'
+    # Validación post-scrape y recuperación de resultados finales (8:30 PM España / 2:30 PM ET)
     - cron: '30 18 * * *'
   
   workflow_dispatch:  # Permite ejecución manual
@@ -449,6 +455,10 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event.schedule == '0 10 * * *' ||
+      github.event.schedule == '0 12 * * *' ||
+      github.event.schedule == '0 14 * * *' ||
+      github.event.schedule == '0 16 * * *' ||
+      github.event.schedule == '30 18 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scrape')
     
     steps:

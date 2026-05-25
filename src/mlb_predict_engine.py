@@ -123,11 +123,24 @@ def predecir_juego(
             return {"error": debug_info["error"], "_debug": debug_info}
         return None
 
-    # 3. Normalizar nombres de lanzadores
+    # 3. Normalizar nombres de lanzadores y validación de calidad
     stage_start = time.perf_counter()
     p_home_clean = normalizar_texto(home_pitcher)
     p_away_clean = normalizar_texto(away_pitcher)
     _debug_stage("normalize_inputs", stage_start)
+
+    # Validación estricta de lanzadores confirmados en modo automático para evitar fallback de baja calidad (35% acc)
+    p_home_upper = (home_pitcher or "").strip().upper()
+    p_away_upper = (away_pitcher or "").strip().upper()
+    has_pitchers = bool(home_pitcher) and bool(away_pitcher) and \
+                   p_home_upper not in ["TBD", "TO BE DETERMINED", "TBD TBD", ""] and \
+                   p_away_upper not in ["TBD", "TO BE DETERMINED", "TBD TBD", ""]
+
+    if modo_auto and (not has_pitchers or not hacer_scraping):
+        print(
+            f"🔭 Abortando predicción automática para {away_team} @ {home_team} por falta de lanzadores confirmados o fallback (evitando contaminación)."
+        )
+        return None
 
     # 4. Preparar datos del partido
     row_data = {
@@ -553,31 +566,14 @@ def ejecutar_flujo_diario():
                 hacer_scraping=True,
             )
         except Exception as e:
-            print(f"⚠️ Error en scraping detallado para {row['away_team']} @ {row['home_team']}: {e}")
+            print(f"⚠️ Error en predicción detallada para {row['away_team']} @ {row['home_team']}: {e}")
             resultado = None
-        if not resultado:
-            print("⚠️ Reintentando en modo de datos temporales (hacer_scraping=False)...")
-            try:
-                resultado = predecir_juego(
-                    row["home_team"],
-                    row["away_team"],
-                    row["home_pitcher"],
-                    row["away_pitcher"],
-                    year=int(row.get("year", 2026)),
-                    modo_auto=True,
-                    fecha_partido=row.get("fecha", fecha_objetivo),
-                    hacer_scraping=False,
-                    guardar_db=False,
-                )
-            except Exception as e:
-                print(f"❌ Error en modo temporal para {row['away_team']} @ {row['home_team']}: {e}")
-                resultado = None
 
         if resultado:
             resultados.append(resultado)
-            print(f"✅ Predicción: {resultado['prediccion']} (Confianza: {resultado['confianza']})\n")
+            print(f"✅ Predicción de Calidad: {resultado['prediccion']} (Confianza: {resultado['confianza']})\n")
         else:
-            print("❌ Error total en predicción: No se pudo predecir de ninguna forma\n")
+            print(f"❌ Abortado: No hay datos de calidad suficientes para predecir {row['away_team']} @ {row['home_team']}\n")
 
     if resultados:
         with sqlite3.connect(DB_PATH) as conn:
