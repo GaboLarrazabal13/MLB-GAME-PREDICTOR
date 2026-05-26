@@ -140,3 +140,19 @@ src/test_*.py
 
 # Scratch files (temporary tools)
 scratch/
+
+# ============================================================================
+# AGENTS & MLOPS (MLFLOW)
+# ============================================================================
+.agents/
+mlflow.db
+mlruns/
+
+# ============================================================================
+# LOCAL EXPERIMENTAL BACKUPS & SANDBOX DATABASES/MODELS
+# ============================================================================
+data/mlb_historical_experiment.db
+data/mlb_reentrenamiento_backup*.db
+models/modelo_mlb_experimental.json
+models/modelo_mlb_v3.5_backup.json
+
