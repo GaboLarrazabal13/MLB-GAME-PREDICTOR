@@ -1,6 +1,6 @@
 # ⚾ MLB Game Predictor V4.0
 
-> Sistema de Machine Learning de grado de producción para predicción de partidos de la Major League Baseball (MLB), con pipeline de datos automatizado (API-First con 2 intentos y fallback a scraping), API REST, dashboard interactivo, y optimización bayesiana de hiperparámetros vía Optuna.
+> Sistema de Machine Learning de grado de producción para predicción de partidos de la Major League Baseball (MLB), con pipeline de datos automatizado (100% digital vía la API Oficial de la MLB), API REST, dashboard interactivo, y optimización bayesiana de hiperparámetros vía Optuna.
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.127+-green.svg)](https://fastapi.tiangolo.com/)
@@ -36,11 +36,11 @@
 
 ## Acerca de este proyecto
 
-MLB Game Predictor es un sistema de predicción de partidos MLB de **grado de producción**. Ingiere datos diariamente de forma autónoma de manera híbrida (utilizando la **API de Estadísticas Oficial de la MLB** como fuente primaria y **scraping HTML de Baseball-Reference** como fallback secundario), entrena un modelo XGBoost optimizado bayesianamente mediante **Optuna**, genera predicciones y mide su propio rendimiento — todo sin intervención manual.
+MLB Game Predictor es un sistema de predicción de partidos MLB de **grado de producción**. Ingiere datos diariamente de forma autónoma utilizando la **API de Estadísticas Oficial de la MLB**, entrena un modelo XGBoost optimizado bayesianamente mediante **Optuna**, genera predicciones y mide su propio rendimiento — todo sin intervención manual.
 
 | Métrica | Valor |
 |---|---|
-| Precisión (con scraping/API completo) | **~77–82%** (Exactitud en temporada regular) |
+| Precisión (con API de la MLB completo) | **~77–82%** (Exactitud en temporada regular) |
 | Juegos predichos en DB | **523+** partidos reales con features |
 | Predicciones de baja calidad guardadas | **0** |
 | Features por partido | **38** (temporales + estadísticas de pitcheo + super features) |
@@ -48,7 +48,7 @@ MLB Game Predictor es un sistema de predicción de partidos MLB de **grado de pr
 | Modelo | XGBoost V4.0 con Optuna (Ajuste Bayesiano) |
 | Automatización | GitHub Actions · 3 triggers diarios UTC (Ejecución optimizada en < 10s) |
 
-El principio central de diseño es **"Scrape-or-Nothing"**: las predicciones únicamente se persisten en el histórico cuando cuentan con el set completo de features obtenidas via API o live scraping, garantizando que las métricas de accuracy reflejen el rendimiento real del modelo.
+El principio central de diseño es **"API-or-Nothing"**: las predicciones únicamente se persisten en el histórico cuando cuentan con el set completo de features obtenidas via la API oficial, garantizando que las métricas de accuracy reflejen el rendimiento real del modelo.
 
 ---
 
@@ -85,8 +85,7 @@ El principio central de diseño es **"Scrape-or-Nothing"**: las predicciones ún
 | Módulo | Responsabilidad |
 |---|---|
 | `mlb_config.py` | Configuración centralizada: rutas, mapeos de equipos, hiperparámetros |
-| `mlb_daily_scraper.py` | Ingestión diaria híbrida API-First: consulta la API oficial de la MLB (2 intentos) y fallback secundario a HTML Scraping de Baseball-Reference |
-| `mlb_schedule_utils.py` | Parsing robusto del calendario MLB (soporta múltiples formatos de fecha) |
+| `mlb_daily_scraper.py` | Ingestión diaria oficial API-First: consulta la API de Estadísticas de la MLB de forma directa y autónoma |
 | `mlb_feature_engineering.py` | Super Features derivadas, validación y detección de outliers |
 | `train_model_hybrid_actions.py` | Entrenamiento XGBoost híbrido con optimización bayesiana (Optuna) |
 | `mlb_predict_engine.py` | Motor de predicción con control de calidad `guardar_db` |
@@ -98,23 +97,21 @@ El principio central de diseño es **"Scrape-or-Nothing"**: las predicciones ún
 
 ## Pipeline de Datos Automatizado
 
-El pipeline opera **de forma completamente autónoma** mediante 3 triggers diarios en GitHub Actions. Gracias a la migración a la **API de Estadísticas de la MLB (MLB Stats API)** como fuente de datos primaria, el job de ingesta y generación de predicciones se ha optimizado drásticamente, completándose en **menos de 20 segundos** sin riesgo de bloqueos de IP o captchas de Cloudflare.
+El pipeline opera **de forma completamente autónoma** mediante 3 triggers diarios en GitHub Actions. Utilizando la **API de Estadísticas de la MLB (MLB Stats API)** como fuente de datos única y definitiva, el job de ingesta y generación de predicciones se completa de forma extremadamente eficiente en **menos de 10 segundos** de forma digital y sin riesgo de bloqueos.
 
 ```
 16:30 UTC → mlb_update_real_results.py   # Resultados del día anterior
-17:30 UTC → mlb_daily_scraper.py         # Ingestión híbrida del día actual (API + Fallback HTML)
+17:30 UTC → mlb_daily_scraper.py         # Ingestión digital del día actual (API Oficial)
 18:30 UTC → mlb_predict_engine.py        # Predicciones del día
 ```
 
-### Flujo de Ingestión Híbrido
+### Flujo de Ingestión Digital (API-First)
 
-El sistema implementa una arquitectura tolerante a fallos de dos niveles:
-1. **Nivel Primario (MLB Stats API):** Consulta la API pública `statsapi.mlb.com` para obtener el calendario y abridores probables de la jornada, mapeando automáticamente los nombres y estadísticas de temporada de los abridores (ERA, WHIP, H9, SO9, W, L).
-2. **Nivel Secundario (Baseball-Reference Scraping):** Si la API de la MLB tiene indisponibilidad o problemas de red, se activa un fallback automático que realiza raspado de datos (scraping) clásico del HTML de Baseball-Reference.
+El sistema consulta directamente la API oficial pública `statsapi.mlb.com` para obtener el calendario y abridores probables de la jornada, mapeando automáticamente los nombres y estadísticas de temporada de los abridores (ERA, WHIP, H9, SO9, W, L).
 
 Para garantizar la **compatibilidad del 100% de los scripts y bases de datos aguas abajo (downstream)**:
 * Los nombres de equipos oficiales de la API se estandarizan a los códigos de 3 letras del proyecto (ej: `Cincinnati Reds` -> `CIN`, `Los Angeles Angels` -> `LAA`).
-* Se generan dinámicamente enlaces relativos sintéticos al estilo de Baseball-Reference (ej: `/boxes/PHI/PHI202605200.shtml`) en la columna `box_score_url`, permitiendo que el actualizador de resultados reales y los CLI de recuperación sigan funcionando sin cambios.
+* Se generan dinámicamente enlaces relativos sintéticos en la columna `box_score_url` (ej: `/boxes/PHI/PHI202605200.shtml`), manteniendo total compatibilidad retroactiva con la base de datos sin necesidad de reescribir esquemas o scripts downstream.
 
 ```
                   ┌─────────────────────────────────┐
@@ -122,12 +119,6 @@ Para garantizar la **compatibilidad del 100% de los scripts y bases de datos agu
                   └────────────────┬────────────────┘
                                    │
                   ┌────────────────▼────────────────┐
-                  │    ¿API de MLB disponible?      │
-                  └──────┬───────────────────┬──────┘
-                         │ Sí                │ No (Fallback)
-         ┌───────────────▼─────────────┐   ┌─▼───────────────────────────┐
-         │ MLB Stats API               │   │ Scraping HTML               │
-         │ statsapi.mlb.com            │   │ Baseball-Reference          │
          └───────────────┬─────────────┘   └─┬───────────────────────────┘
                          │                   │
                          └─────────┬─────────┘
@@ -179,7 +170,7 @@ Esta optimización dinámica ha mejorado la precisión del modelo en más de un 
 | Fuente | Temporadas | Features disponibles |
 |---|---|---|
 | CSV históricos | 2022–2024 | Features temporales (9) |
-| DB + Scraping vivo | 2026 | Set completo: 38 features |
+| DB + API oficial en vivo | 2026 | Set completo: 38 features |
 
 ### Reentrenamiento incremental automático
 
@@ -209,8 +200,8 @@ Calculadas desde el historial de la DB sin necesidad de scraping.
 | *(análogos para `away_`)* | |
 | `year` | Temporada (ajuste por cohorte) |
 
-### Layer 2 — Features de Scraping (26)
-Obtenidas en tiempo real de Baseball-Reference.
+### Layer 2 — Features de la API (26)
+Obtenidas en tiempo real de la API oficial de la MLB.
 
 | Categoría | Features clave |
 |---|---|
@@ -268,7 +259,7 @@ GET  /stats/accuracy      → Estadísticas globales de rendimiento
    ⚾ MLB PREDICTOR V3.5 - ANÁLISIS ESTADÍSTICO
 ===========================================================================
  Encuentro: NYY vs BOS
- Temporada: 2026 | Scraping: Baseball-Reference
+ Temporada: 2026 | Ingesta: API de la MLB
 
 📊 COMPARATIVA DE EQUIPOS:
  🏠  NYY: OPS: 0.782 | Bullpen WHIP: 1.234
@@ -323,7 +314,7 @@ FROM python:3.12-slim as production
 | Job | Trigger | Descripción |
 |---|---|---|
 | `update_results` | cron 16:30 UTC | Actualiza resultados reales |
-| `scrape_pipeline` | cron 17:30 UTC | Scraping + predicción del día |
+| `scrape_pipeline` | cron 17:30 UTC | Ingesta + predicción del día |
 | `post_scrape_validate` | cron 18:30 UTC | Validación + reentrenamiento si hay hito |
 | `backfill_range` | Manual | Rellena rango de fechas históricas |
 | `manual_all_pipeline` | Manual | Pipeline completo secuencial |
@@ -353,7 +344,7 @@ Los jobs de CI se omiten automáticamente en commits del bot (scraping, resultad
 El sistema implementa un ciclo de MLOps (Machine Learning Operations) continuo, auto-regulado y diseñado para mitigar la degradación del modelo (concept drift) a lo largo de la temporada.
 
 ### 1. Ingestión Continua (Data Drift Monitoring)
-El pipeline diario ingiere nuevos datos de forma híbrida. La integración de la **MLB Stats API** reduce significativamente el *data drift* y las interrupciones operativas al eliminar la dependencia de cambios estructurales en el HTML origen. Si ocurren fallos de red o de parsing en la API o en la web origen, la capa de validación (`post_scrape_validation`) y los mecanismos de Auto-Heal (`mlb_mass_healer.py`) aseguran que no queden "huecos" temporales que puedan corromper las secuencias o rachas de los equipos.
+El pipeline diario ingiere nuevos datos. La integración de la **MLB Stats API** elimina el data drift y las interrupciones operativas al eliminar la dependencia de cambios estructurales en el HTML origen. Si ocurren fallos de red o de parsing en la API, la capa de validación (`post_scrape_validation`) y los mecanismos de Auto-Heal (`mlb_mass_healer.py`) aseguran que no queden "huecos" temporales que puedan corromper las secuencias o rachas de los equipos.
 
 ### 2. Entrenamiento e Hitos Automáticos
 No requiere intervención manual para el reentrenamiento. El sistema monitorea el volumen de la base de datos y detona el entrenamiento de un nuevo modelo (Challenger) al cruzar hitos predefinidos (e.g., 486, 972 partidos).
@@ -469,10 +460,10 @@ SCRAPING_CONFIG = {
 
 | Error | Causa | Solución |
 |---|---|---|
-| `No se pudieron extraer features` | Nombre del lanzador no encontrado | Usar nombre completo exacto como aparece en Baseball-Reference |
+| `No se pudieron extraer features` | Nombre del lanzador no encontrado | Usar nombre completo exacto como aparece en la API de la MLB |
 | `Rate limit (429) detectado` | Demasiadas peticiones | El sistema espera automáticamente; aumentar `pausa_entre_bloques` |
-| Accuracy baja repentinamente | Predicciones sin scraping en histórico | Verificar que `guardar_db=False` en rutas de fallback |
-| Fallo en la MLB Stats API | Indisponibilidad o datos de lanzadores incompletos | El sistema activa automáticamente el fallback secundario de HTML Scraping (Baseball-Reference) de forma transparente |
+| Accuracy baja repentinamente | Predicciones sin API en histórico | Verificar que `guardar_db=False` en rutas de fallback |
+| Fallo en la MLB Stats API | Indisponibilidad o datos de lanzadores incompletos | El sistema reintenta automáticamente hasta 3 veces de forma transparente |
 
 ---
 
@@ -515,11 +506,11 @@ SCRAPING_CONFIG = {
 
 | Condición | Accuracy | Features usadas |
 |---|---|---|
-| Con scraping completo | **74–80%** | 38 features (todas las capas) |
-| Sin scraping (fallback) | ~33% | 9 features (solo temporales) |
-| **Diferencia** | **~45 pp** | Impacto cuantificado del live scraping |
+| Con features de la API | **74–80%** | 38 features (todas las capas) |
+| Sin features (solo básicas) | ~33% | 9 features (solo temporales) |
+| **Diferencia** | **~45 pp** | Impacto cuantificado de las features de la API |
 
-Esta diferencia de ~45 puntos porcentuales demuestra el valor de las features de scraping y las super features. Es la razón fundamental del principio Scrape-or-Nothing implementado en el sistema.
+Esta diferencia de ~45 puntos porcentuales demuestra el valor de las features avanzadas y las super features. Es la razón fundamental del principio API-or-Nothing implementado en el sistema.
 
 ### Distribución actual del histórico
 
@@ -540,7 +531,7 @@ Esta diferencia de ~45 puntos porcentuales demuestra el valor de las features de
 | Data Processing | Pandas, NumPy | ≥2.3, ≥2.4 |
 | ML Utilities | Scikit-learn | ≥1.8 |
 | Hyperparameter Tuning | Optuna | ≥3.6.0 |
-| Web Scraping | CloudScraper, BeautifulSoup4 | ≥1.2, ≥4.11 |
+| Conexión API | Requests | ≥2.32 |
 | API Backend | FastAPI + Uvicorn | ≥0.127, ≥0.40 |
 | Validación | Pydantic V2 | ≥2.12 |
 | Frontend | Streamlit | 1.52.2 |
@@ -557,9 +548,8 @@ Esta diferencia de ~45 puntos porcentuales demuestra el valor de las features de
 
 ## Créditos
 
-- **Datos:** [Baseball-Reference](https://www.baseball-reference.com)
+- **Datos:** API Oficial de la MLB (statsapi.mlb.com)
 - **ML Framework:** [XGBoost](https://xgboost.readthedocs.io/)
-- **Web Scraping:** [cloudscraper](https://github.com/VeNoMouS/cloudscraper)
 
 ---
 

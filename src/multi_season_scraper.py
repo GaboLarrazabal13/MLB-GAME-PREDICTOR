@@ -1,11 +1,18 @@
+"""
+Descargador de Temporadas MLB - VERSIÓN 3 (API-FIRST PURE)
+Extrae resultados y estadísticas de partidos históricos de la API oficial de la MLB.
+100% libre de web scraping a Baseball-Reference.
+"""
+
+import os
 import re
+import sys
+import time
 from datetime import datetime, timedelta
 
-import cloudscraper
 import pandas as pd
-from bs4 import BeautifulSoup
+import requests
 
-# --- Mapeo de Nombres Completos de Equipo a Códigos de 3 Letras (MLB) ---
 TEAM_CODES = {
     "Arizona Diamondbacks": "ARI",
     "Atlanta Braves": "ATL",
@@ -37,7 +44,7 @@ TEAM_CODES = {
     "Texas Rangers": "TEX",
     "Toronto Blue Jays": "TOR",
     "Washington Nationals": "WSN",
-    # Nombres abreviados
+    # Abreviaciones
     "Diamondbacks": "ARI",
     "Braves": "ATL",
     "Orioles": "BAL",
@@ -76,99 +83,79 @@ def obtener_codigo_equipo(nombre_completo):
     return TEAM_CODES.get(nombre_completo, "UNKNOWN")
 
 
-def extraer_datos_dia(fecha):
+def extraer_rango_fechas(fecha_inicio_str, fecha_fin_str, mostrar_progreso=True):
     """
-    Extrae los resultados de los juegos de béisbol para una fecha específica,
-    aplicando el renombre y la adición de columnas de códigos de equipo.
+    Obtiene los resultados de partidos para un rango de fechas directamente de la API oficial de la MLB.
+    Extremadamente rápido (una sola petición por temporada en lugar de peticiones diarias).
     """
+    if mostrar_progreso:
+        print(f"📊 Consultando API oficial de la MLB para el rango {fecha_inicio_str} a {fecha_fin_str}...")
 
-    url = f"https://www.baseball-reference.com/boxes/index.fcgi?date={fecha}"
-    scraper = cloudscraper.create_scraper()
-
+    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={fecha_inicio_str}&endDate={fecha_fin_str}&hydrate=probablePitcher,decisions"
+    
     try:
-        response = scraper.get(url, timeout=15)
-        if response.status_code != 200:
-            return None
+        r = requests.get(url, timeout=20)
+        if r.status_code != 200:
+            print(f"❌ Error al consultar la API: Status {r.status_code}")
+            return pd.DataFrame()
 
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        bloques_juego = soup.find_all("div", class_=re.compile(r"game_summary nohover"))
-
+        data = r.json()
         resultados = []
 
-        for bloque in bloques_juego:
-            # --- 1. EXTRAER EQUIPOS Y SCORES ---
-            tabla_equipos = bloque.find("table", class_="teams")
-            if not tabla_equipos:
-                continue
+        dates = data.get("dates", [])
+        for d in dates:
+            fecha = d.get("date")
+            games = d.get("games", [])
+            for g in games:
+                # Solo procesar juegos finalizados
+                state = g.get("status", {}).get("abstractGameState", "")
+                coded_state = g.get("status", {}).get("codedGameState", "")
+                if state != "Final" and coded_state != "F":
+                    continue
 
-            filas = tabla_equipos.find_all("tr")
+                equipo_v_name = g["teams"]["away"]["team"]["name"]
+                equipo_l_name = g["teams"]["home"]["team"]["name"]
+                
+                score_v = g["teams"]["away"].get("score", "N/A")
+                score_l = g["teams"]["home"].get("score", "N/A")
 
-            # Fila 0: Visitante | Fila 1: Local
-            equipo_v_name = filas[0].find("a").get_text(strip=True)
-            score_v_tag = filas[0].find("td", class_="right")
-            score_v = score_v_tag.get_text(strip=True) if score_v_tag else "N/A"
+                # Obtener lanzadores desde decisiones
+                decisions = g.get("decisions", {})
+                w_pitcher = decisions.get("winner", {}).get("fullName", "N/A")
+                l_pitcher = decisions.get("loser", {}).get("fullName", "N/A")
+                s_pitcher = decisions.get("save", {}).get("fullName", "NotApplyed")
 
-            equipo_l_name = filas[1].find("a").get_text(strip=True)
-            score_l_tag = filas[1].find("td", class_="right")
-            score_l = score_l_tag.get_text(strip=True) if score_l_tag else "N/A"
+                # Si no hay decisiones (ej: suspendido, empatado, etc) pero sí probable pitchers
+                if w_pitcher == "N/A":
+                    w_pitcher = g["teams"]["home"].get("probablePitcher", {}).get("fullName", "N/A")
+                if l_pitcher == "N/A":
+                    l_pitcher = g["teams"]["away"].get("probablePitcher", {}).get("fullName", "N/A")
 
-            # --- 2. EXTRACCIÓN DE LANZADORES ---
-            tablas = bloque.find_all("table")
-            tabla_pitchers = tablas[1] if len(tablas) > 1 else None
+                # Ganador
+                ganador_col = None
+                try:
+                    if score_l != "N/A" and score_v != "N/A":
+                        r_v_int = int(score_v)
+                        r_l_int = int(score_l)
+                        ganador_col = 1 if r_l_int > r_v_int else 0
+                except (ValueError, TypeError):
+                    pass
 
-            w_pitcher, l_pitcher, s_pitcher = "N/A", "N/A", "N/A"
-            if tabla_pitchers:
-                for fila_p in tabla_pitchers.find_all("tr"):
-                    celdas = fila_p.find_all("td")
-                    if len(celdas) >= 2:
-                        rol = celdas[0].get_text(strip=True)
-                        nombre_raw = celdas[1].get_text(strip=True)
-                        nombre_limpio = re.sub(r"\s*\([^)]*\)", "", nombre_raw)
-
-                        if rol == "W":
-                            w_pitcher = nombre_limpio
-                        elif rol == "L":
-                            l_pitcher = nombre_limpio
-                        elif rol == "S":
-                            s_pitcher = nombre_limpio
-
-            # --- 3. CÁLCULO DE 'ganador' ---
-            ganador_col = None
-            try:
-                r_v_clean = re.sub(r"[\s\S]*?(\d+)$", r"\1", score_v).strip()
-                r_l_clean = re.sub(r"[\s\S]*?(\d+)$", r"\1", score_l).strip()
-
-                r_v_int = int(r_v_clean)
-                r_l_int = int(r_l_clean)
-
-                if r_l_int > r_v_int:
-                    ganador_col = 1
-                elif r_v_int > r_l_int:
-                    ganador_col = 0
-            except (ValueError, TypeError):
-                pass
-
-            # --- 4. APLICACIÓN DE NUEVAS REGLAS DE COLUMNAS ---
-            resultados.append(
-                {
+                resultados.append({
                     "date": fecha,
                     "away_team": obtener_codigo_equipo(equipo_v_name),
                     "a_team_name": equipo_v_name,
-                    "R_A": score_v,
+                    "R_A": str(score_v),
                     "home_team": obtener_codigo_equipo(equipo_l_name),
                     "h_team_name": equipo_l_name,
-                    "R_H": score_l,
+                    "R_H": str(score_l),
                     "Ganador_Pitcher": w_pitcher,
                     "Perdedor_Pitcher": l_pitcher,
                     "Salvado_Pitcher": s_pitcher,
                     "ganador": ganador_col,
-                }
-            )
+                })
 
-        # Reordenamiento final
         df_temp = pd.DataFrame(resultados)
-
         columnas_ordenadas = [
             "date",
             "away_team",
@@ -188,64 +175,18 @@ def extraer_datos_dia(fecha):
         return df_temp
 
     except Exception as e:
-        print(f"⚠️ Error al procesar {fecha}: {e}")
-        return None
-
-
-def extraer_rango_fechas(fecha_inicio_str, fecha_fin_str, mostrar_progreso=True):
-    """
-    Itera sobre un rango de fechas y consolida los resultados en un solo DataFrame.
-    """
-
-    fecha_inicio = datetime.strptime(fecha_inicio_str, "%Y-%m-%d")
-    fecha_fin = datetime.strptime(fecha_fin_str, "%Y-%m-%d")
-
-    delta = timedelta(days=1)
-    fecha_actual = fecha_inicio
-
-    df_final = pd.DataFrame()
-
-    total_dias = (fecha_fin - fecha_inicio).days + 1
-    dias_procesados = 0
-
-    if mostrar_progreso:
-        print(f"⌛ Extrayendo de {fecha_inicio_str} a {fecha_fin_str} ({total_dias} días)...")
-
-    while fecha_actual <= fecha_fin:
-        fecha_str = fecha_actual.strftime("%Y-%m-%d")
-
-        df_dia = extraer_datos_dia(fecha_str)
-
-        if df_dia is not None and not df_dia.empty:
-            df_final = pd.concat([df_final, df_dia], ignore_index=True)
-
-        dias_procesados += 1
-
-        # Mostrar progreso cada 10 días
-        if mostrar_progreso and dias_procesados % 10 == 0:
-            progreso = (dias_procesados / total_dias) * 100
-            print(f"   📊 Progreso: {dias_procesados}/{total_dias} días ({progreso:.1f}%)")
-
-        fecha_actual += delta
-
-    if mostrar_progreso:
-        print(f"   ✅ Completado: {dias_procesados}/{total_dias} días procesados")
-
-    return df_final
+        print(f"⚠️ Error general extrayendo rango de fechas: {e}")
+        return pd.DataFrame()
 
 
 def solicitar_temporadas():
     """
     Solicita al usuario la cantidad de temporadas y sus rangos de fechas.
-
-    Returns:
-        list: Lista de diccionarios con información de cada temporada
     """
     print("\n" + "=" * 70)
-    print(" DESCARGA DE TEMPORADAS MLB")
+    print(" DESCARGA DE TEMPORADAS MLB (API OFICIAL)")
     print("=" * 70)
 
-    # Solicitar cantidad de temporadas
     while True:
         try:
             num_temporadas = int(input("\n📋 ¿Cuántas temporadas deseas descargar? (1-10): "))
@@ -257,13 +198,11 @@ def solicitar_temporadas():
 
     temporadas = []
 
-    # Solicitar información de cada temporada
     for i in range(num_temporadas):
         print(f"\n{'─' * 70}")
         print(f"📅 TEMPORADA {i + 1} de {num_temporadas}")
         print(f"{'─' * 70}")
 
-        # Año de la temporada
         while True:
             try:
                 año = int(input(f"\nAño para la temporada {i + 1}: "))
@@ -273,7 +212,6 @@ def solicitar_temporadas():
             except ValueError:
                 print("   ❌ Por favor, ingresa un año válido")
 
-        # Fecha de inicio
         while True:
             fecha_inicio = input(f"Fecha de inicio de temporada {año} (YYYY-MM-DD): ").strip()
             try:
@@ -282,7 +220,6 @@ def solicitar_temporadas():
             except ValueError:
                 print("   ❌ Formato incorrecto. Usa YYYY-MM-DD (ejemplo: 2023-03-27)")
 
-        # Fecha de fin
         while True:
             fecha_fin = input(f"Fecha de fin de temporada {año} (YYYY-MM-DD): ").strip()
             try:
@@ -296,7 +233,6 @@ def solicitar_temporadas():
                 print("   ❌ Formato incorrecto. Usa YYYY-MM-DD (ejemplo: 2023-10-01)")
 
         temporadas.append({"año": año, "fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin})
-
         print(f"   ✅ Temporada {año} configurada: {fecha_inicio} al {fecha_fin}")
 
     return temporadas
@@ -304,13 +240,7 @@ def solicitar_temporadas():
 
 def procesar_temporadas(temporadas):
     """
-    Procesa múltiples temporadas y las combina en un solo DataFrame.
-
-    Args:
-        temporadas: Lista de diccionarios con información de temporadas
-
-    Returns:
-        tuple: (DataFrame combinado, lista de años)
+    Procesa múltiples temporadas combinando los resultados.
     """
     print("\n" + "=" * 70)
     print(" PROCESAMIENTO DE TEMPORADAS")
@@ -326,17 +256,13 @@ def procesar_temporadas(temporadas):
         df_temporada = extraer_rango_fechas(temp["fecha_inicio"], temp["fecha_fin"], mostrar_progreso=True)
 
         if not df_temporada.empty:
-            # Reemplazar N/A en Salvado_Pitcher
             df_temporada["Salvado_Pitcher"] = df_temporada["Salvado_Pitcher"].replace("N/A", "NotApplyed")
-
             todos_los_datos.append(df_temporada)
             años_procesados.append(str(temp["año"]))
-
-            print(f"   ✅ {len(df_temporada)} juegos extraídos de temporada {temp['año']}")
+            print(f"   ✅ {len(df_temporada)} juegos extraídos para la temporada {temp['año']}")
         else:
-            print(f"   ⚠️  No se obtuvieron datos para temporada {temp['año']}")
+            print(f"   ⚠️  No se obtuvieron datos para la temporada {temp['año']}")
 
-    # Combinar todas las temporadas
     if todos_los_datos:
         df_combinado = pd.concat(todos_los_datos, ignore_index=True)
         return df_combinado, años_procesados
@@ -346,21 +272,18 @@ def procesar_temporadas(temporadas):
 
 def guardar_resultados(df, años):
     """
-    Guarda el DataFrame en un archivo CSV con nombre descriptivo.
-
-    Args:
-        df: DataFrame con los datos
-        años: Lista de años procesados
+    Guarda el DataFrame en un archivo CSV.
     """
     if df.empty:
         print("\n❌ No hay datos para guardar")
         return
 
-    # Crear nombre de archivo
+    # Crear directorio si no existe
+    os.makedirs("./data/raw", exist_ok=True)
+    
     años_str = "_".join(años)
     nombre_archivo = f"./data/raw/resultados_béisbol_season_{años_str}.csv"
 
-    # Guardar
     df.to_csv(nombre_archivo, index=False)
 
     print("\n" + "=" * 70)
@@ -380,47 +303,29 @@ def guardar_resultados(df, años):
         for año, cantidad in resumen.items():
             print(f"   {año}: {cantidad} juegos")
 
-    print("\n✅ Columnas del DataFrame:")
-    print(f"   {df.columns.tolist()}")
-
-
-# ============================================================================
-# EJECUCIÓN PRINCIPAL
-# ============================================================================
 
 if __name__ == "__main__":
     print("\n" + "=" * 70)
-    print(" DESCARGADOR DE TEMPORADAS MLB")
-    print(" Extrae resultados de partidos de Baseball Reference")
+    print(" DESCARGADOR DE TEMPORADAS MLB (API OFICIAL)")
+    print(" Extrae resultados de partidos de la API oficial de la MLB")
     print("=" * 70)
 
-    # Solicitar información de temporadas
     temporadas = solicitar_temporadas()
 
-    # Confirmar antes de procesar
     print("\n" + "=" * 70)
     print(" RESUMEN DE TEMPORADAS A DESCARGAR")
     print("=" * 70)
 
     for i, temp in enumerate(temporadas, 1):
-        dias = (
-            datetime.strptime(temp["fecha_fin"], "%Y-%m-%d") - datetime.strptime(temp["fecha_inicio"], "%Y-%m-%d")
-        ).days + 1
-        print(f"\n{i}. Temporada {temp['año']}")
-        print(f"   Desde: {temp['fecha_inicio']}")
-        print(f"   Hasta: {temp['fecha_fin']}")
-        print(f"   Días a procesar: {dias}")
+        print(f"{i}. Temporada {temp['año']}: {temp['fecha_inicio']} a {temp['fecha_fin']}")
 
     confirmar = input("\n¿Deseas continuar con la descarga? (s/n): ").strip().lower()
-
     if confirmar != "s":
         print("\n Descarga cancelada por el usuario")
-        exit()
+        sys.exit(0)
 
-    # Procesar temporadas
     df_final, años = procesar_temporadas(temporadas)
 
-    # Guardar resultados
     if not df_final.empty:
         guardar_resultados(df_final, años)
     else:

@@ -1,91 +1,53 @@
 """
-Transformador de CSV de partidos MLB
-Identifica a qué equipo pertenece cada lanzador y estructura el CSV para el modelo
+Transformador de CSV de partidos MLB - VERSIÓN 3 (API-FIRST PURE)
+Identifica a qué equipo pertenece cada lanzador y estructura el CSV para el modelo.
+100% libre de web scraping a Baseball-Reference.
 """
 
 import pickle
 import time
-
-import cloudscraper
+import os
+import sys
 import pandas as pd
-from bs4 import BeautifulSoup
+import requests
 
-# ============================================================================
-# FUNCIONES DE SCRAPING
-# ============================================================================
-
-
-def obtener_html(url):
-    """Accede a la URL usando cloudscraper."""
-    scraper = cloudscraper.create_scraper()
-    try:
-        response = scraper.get(url, timeout=15)
-        response.encoding = "utf-8"
-        if response.status_code == 200:
-            return response.text
-        return None
-    except Exception:
-        return None
-
-
-def limpiar_dataframe(df):
-    """Limpia el DataFrame eliminando filas no deseadas"""
-    if df is None or len(df) == 0:
-        return df
-
-    if "Rk" in df.columns:
-        df = df.drop("Rk", axis=1)
-
-    name_col = df.columns[0]
-    df = df.dropna(subset=[name_col])
-    df = df[~df[name_col].astype(str).str.contains(r"Team Totals|Rank in|^\s*$", case=False, na=False, regex=True)]
-    df = df.reset_index(drop=True)
-    return df
+# Importar cliente de la API oficial de la MLB
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from mlb_stats_api_client import obtener_stats_jugadores_equipo_api, TEAM_CODE_TO_ID
 
 
 def obtener_roster_equipo(team_code, year=2025):
     """
-    Obtiene la lista de lanzadores de un equipo
+    Obtiene la lista de lanzadores de un equipo a través de la API oficial de la MLB.
     Returns: lista de nombres de lanzadores
     """
-    url = f"https://www.baseball-reference.com/teams/{team_code}/{year}.shtml"
-
-    html = obtener_html(url)
-    if not html:
-        return []
-
-    soup = BeautifulSoup(html, "html.parser")
-    pitching_table = soup.find("table", {"id": "players_standard_pitching"})
-
-    if not pitching_table:
-        return []
-
     try:
-        pitching_df = pd.read_html(str(pitching_table))[0]
-        pitching_df = limpiar_dataframe(pitching_df)
-
-        if len(pitching_df) > 0:
-            name_col = pitching_df.columns[0]
-            # Obtener lista de nombres, normalizar
-            nombres = pitching_df[name_col].astype(str).str.strip().tolist()
-            return nombres
-    except Exception:
-        # Capturar excepciones e ignorar si no se puede extraer la tabla
+        splits = obtener_stats_jugadores_equipo_api(team_code, year, group="pitching")
+        if not splits:
+            return []
+        
+        nombres = []
+        for split in splits:
+            player_info = split.get("player", {})
+            full_name = player_info.get("fullName")
+            if full_name:
+                nombres.append(full_name.strip())
+        return nombres
+    except Exception as e:
+        print(f"  ⚠️ Error al obtener roster API para {team_code}: {e}")
         return []
 
-    return []
 
-
-def crear_diccionario_lanzadores(equipos, year=2025, cache_file="./cachepitcher_cache.pkl"):
+def crear_diccionario_lanzadores(equipos, year=2025, cache_file="./cache/pitcher_cache.pkl"):
     """
-    Crea un diccionario que mapea cada lanzador a su equipo
-
-    Returns:
-        dict: {nombre_lanzador: team_code}
+    Crea un diccionario que mapea cada lanzador a su equipo.
     """
     print("\n" + "=" * 70)
-    print(" CREANDO BASE DE DATOS DE LANZADORES")
+    print(f" CREANDO BASE DE DATOS DE LANZADORES ({year}) VIA MLB API")
     print("=" * 70)
+
+    # Asegurar que el directorio de cache existe
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
 
     # Intentar cargar cache
     try:
@@ -99,18 +61,16 @@ def crear_diccionario_lanzadores(equipos, year=2025, cache_file="./cachepitcher_
     pitcher_dict = {}
 
     for i, team in enumerate(equipos, 1):
-        print(f"\n[{i}/{len(equipos)}] Scrapeando roster de {team}...")
-
+        print(f"\n[{i}/{len(equipos)}] Obteniendo roster de {team}...")
         roster = obtener_roster_equipo(team, year)
 
         if roster:
             for pitcher in roster:
-                # Normalizar nombre para búsqueda flexible
                 pitcher_normalized = pitcher.lower().strip()
                 pitcher_dict[pitcher_normalized] = team
                 print(f"  + {pitcher} → {team}")
 
-        time.sleep(2)  # Ser amigable con el servidor
+        time.sleep(0.5)  # Ser amigable con la API
 
     # Guardar cache
     with open(cache_file, "wb") as f:
@@ -124,14 +84,7 @@ def crear_diccionario_lanzadores(equipos, year=2025, cache_file="./cachepitcher_
 
 def buscar_equipo_lanzador(nombre_lanzador, pitcher_dict):
     """
-    Busca a qué equipo pertenece un lanzador
-
-    Args:
-        nombre_lanzador: Nombre del lanzador a buscar
-        pitcher_dict: Diccionario de lanzadores
-
-    Returns:
-        team_code o None si no se encuentra
+    Busca a qué equipo pertenece un lanzador.
     """
     if not nombre_lanzador or nombre_lanzador == "N/A":
         return None
@@ -154,7 +107,7 @@ def buscar_equipo_lanzador(nombre_lanzador, pitcher_dict):
 
 def transformar_csv(input_csv, output_csv="datos_ml_ready.csv"):
     """
-    Versión Corregida: Extrae el año dinámicamente de la fecha del partido.
+    Transforma el CSV original extrayendo el año dinámicamente de la fecha del partido.
     """
     print("\n" + "=" * 70)
     print(" TRANSFORMACIÓN DE CSV DINÁMICA (POR AÑO)")
@@ -162,24 +115,18 @@ def transformar_csv(input_csv, output_csv="datos_ml_ready.csv"):
 
     try:
         df = pd.read_csv(input_csv)
-        # Convertimos la columna date a datetime para extraer el año real
         df["date"] = pd.to_datetime(df["date"])
         print(f"\n📂 CSV cargado: {len(df)} partidos")
     except Exception as e:
         print(f"❌ Error al cargar CSV: {e}")
         return None
 
-    # Mapeo de lanzadores por año para evitar confusiones de roster
-    # {año: {lanzador: equipo}}
     cache_lanzadores_por_anio = {}
-
     datos_transformados = []
 
     for _idx, row in df.iterrows():
-        # 1. EXTRAER EL AÑO REAL DEL PARTIDO
         anio_partido = row["date"].year
 
-        # 2. OBTENER/CREAR DICCIONARIO PARA ESE AÑO ESPECÍFICO
         if anio_partido not in cache_lanzadores_por_anio:
             print(f"\n📅 Detectado año {anio_partido}. Cargando rosters de esa temporada...")
             equipos = list(set(df["home_team"].unique()) | set(df["away_team"].unique()))
@@ -192,7 +139,6 @@ def transformar_csv(input_csv, output_csv="datos_ml_ready.csv"):
 
         pitcher_dict = cache_lanzadores_por_anio[anio_partido]
 
-        # 3. LÓGICA DE IDENTIFICACIÓN (Se mantiene tu lógica de búsqueda)
         ganador_pitcher = row["Ganador_Pitcher"]
         perdedor_pitcher = row["Perdedor_Pitcher"]
 
@@ -201,27 +147,23 @@ def transformar_csv(input_csv, output_csv="datos_ml_ready.csv"):
         home_team = row["home_team"]
         away_team = row["away_team"]
 
-        # ... (aquí va tu lógica de asignación de home_pitcher/away_pitcher) ...
-        # [Mantenemos tu bloque de IF/ELIF para asignar los pitchers]
         if equipo_ganador == home_team:
             home_pitcher, away_pitcher = ganador_pitcher, perdedor_pitcher
         elif equipo_ganador == away_team:
             away_pitcher, home_pitcher = ganador_pitcher, perdedor_pitcher
         else:
-            # Si el diccionario falla, usamos la columna 'ganador' como respaldo
             if row["ganador"] == 1:
                 home_pitcher, away_pitcher = ganador_pitcher, perdedor_pitcher
             else:
                 away_pitcher, home_pitcher = ganador_pitcher, perdedor_pitcher
 
-        # 4. CREAR REGISTRO CON EL AÑO CORRECTO
         registro = {
             "home_team": home_team,
             "away_team": away_team,
             "home_pitcher": home_pitcher,
             "away_pitcher": away_pitcher,
             "ganador": row["ganador"],
-            "year": anio_partido,  # <-- AHORA ES DINÁMICO
+            "year": anio_partido,
             "fecha": row["date"].strftime("%Y-%m-%d"),
             "score_home": row["R_H"],
             "score_away": row["R_A"],
@@ -229,13 +171,14 @@ def transformar_csv(input_csv, output_csv="datos_ml_ready.csv"):
         datos_transformados.append(registro)
 
     df_transformado = pd.DataFrame(datos_transformados)
+    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     df_transformado.to_csv(output_csv, index=False)
     return df_transformado
 
 
 def verificar_transformacion(csv_transformado):
     """
-    Verifica que el CSV transformado tenga la estructura correcta
+    Verifica que el CSV transformado tenga la estructura correcta.
     """
     print("\n" + "=" * 70)
     print(" VERIFICACIÓN DEL CSV TRANSFORMADO")
@@ -272,23 +215,16 @@ def verificar_transformacion(csv_transformado):
     print("\n✅ CSV listo para entrenamiento del modelo!")
 
 
-# ============================================================================
-# EJEMPLO DE USO
-# ============================================================================
-
 if __name__ == "__main__":
-    # PASO 1: Transformar CSV
-    print("🔄 TRANSFORMADOR DE CSV PARA MODELO ML")
-
+    print("🔄 TRANSFORMADOR DE CSV PARA MODELO ML (API OFICIAL)")
+    
     df_transformado = transformar_csv(
-        input_csv="./data/raw/resultados_béisbol_season_2022_2023_2024_2025.csv",  # Tu CSV original
-        output_csv="./data/processed/datos_ml_ready.csv",  # CSV para el modelo
+        input_csv="./data/raw/resultados_béisbol_season_2022_2023_2024_2025.csv",
+        output_csv="./data/processed/datos_ml_ready.csv",
     )
 
-    # PASO 2: Verificar resultado
     if df_transformado is not None and len(df_transformado) > 0:
         verificar_transformacion("./data/processed/datos_ml_ready.csv")
-
         print("\n" + "=" * 70)
         print("✅ PROCESO COMPLETADO")
         print("=" * 70)

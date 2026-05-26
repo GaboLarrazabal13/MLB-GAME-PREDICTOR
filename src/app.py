@@ -2708,8 +2708,7 @@ elif pagina == "🧠 Acerca del Modelo":
         <div class="stats-card">
             <h4> Fuentes de Datos</h4>
             <ul style="font-size: 1.05rem; line-height: 1.8;">
-                <li><strong>MLB Stats API (Primaria)</strong>: Ingesta ultra rápida con 2 intentos</li>
-                <li><strong>Baseball-Reference (Secundaria)</strong>: Fallback a scraping</li>
+                <li><strong>MLB Stats API Oficial</strong>: Ingesta digital ultra rápida de cartelera y rosters</li>
                 <li><strong>Histórico 2020-2026</strong>: Más de 10,000 partidos</li>
                 <li><strong>Actualización Automática</strong>: GitHub Actions</li>
                 <li><strong>Base de Datos SQLite</strong>: Almacenamiento local estructurado</li>
@@ -2776,8 +2775,6 @@ elif pagina == "🧠 Acerca del Modelo":
         "Pandas",
         "NumPy",
         "Plotly",
-        "BeautifulSoup",
-        "Cloudscraper",
         "SQLite",
         "GitHub Actions",
         "Uvicorn",
@@ -2822,7 +2819,7 @@ st.markdown(
         <strong>MLB Predictor Pro V4.0</strong> | 2026
     </p>
     <p style="margin: 0.5rem 0; font-size: 0.9rem;">
-        Datos: API de la MLB & Baseball-Reference | Powered by XGBoost, Optuna & FastAPI
+        Datos: API Oficial de la MLB (statsapi.mlb.com) | Powered by XGBoost, Optuna & FastAPI
     </p>
     <p style="margin: 0.5rem 0; font-size: 0.85rem;">
         🔄 Actualización automática vía GitHub Actions

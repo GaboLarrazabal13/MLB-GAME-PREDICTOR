@@ -188,8 +188,8 @@ def ejecutar_cli_manual():
                 print("⚠️ Debes ingresar un nombre de lanzador")
                 continue
 
-            # 4. Año para scraping
-            year_input = input("📅 Año para el scraping de stats (Enter=2026): ").strip()
+            # 4. Año para consulta de stats
+            year_input = input("📅 Año para la consulta de stats (Enter=2026): ").strip()
             year_val = validar_year(year_input)
 
             # 5. Confirmación
@@ -208,8 +208,8 @@ def ejecutar_cli_manual():
 
             print("\n" + "-" * 40)
             print(f"🚀 Iniciando Predicción: {away_code} @ {home_code} ({year_val})")
-            print("🔎 Buscando estadísticas en Baseball-Reference...")
-            print("⏳ Este proceso puede tardar 30-60 segundos...\n")
+            print("🔎 Buscando estadísticas en la API oficial de la MLB...")
+            print("⏳ Este proceso tardará unos pocos segundos...\n")
 
             # 6. Llamada al motor de predicción
             resultado = predecir_juego(
@@ -228,7 +228,7 @@ def ejecutar_cli_manual():
                 print("\n❌ Error: No se pudo completar la predicción.")
                 print("Posibles causas:")
                 print("  - Nombres de lanzadores incorrectos")
-                print("  - Problemas de conexión con Baseball-Reference")
+                print("  - Problemas de conexión con la API de la MLB")
                 print("  - Datos insuficientes para el año seleccionado")
 
             # 7. Preguntar si desea hacer otra predicción

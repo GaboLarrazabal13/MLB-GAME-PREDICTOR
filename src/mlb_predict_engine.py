@@ -249,7 +249,7 @@ def predecir_juego(
             a_p_name = features_dict.get("away_pitcher_name_real", away_pitcher)
 
             print(f" Encuentro: {home_team} vs {away_team}")
-            print(f" Temporada: {year} | Scraping: Baseball-Reference")
+            print(f" Temporada: {year} | Ingesta: API de la MLB")
 
             print("\n📊 COMPARATIVA DE EQUIPOS:")
             print(

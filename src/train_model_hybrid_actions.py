@@ -20,10 +20,8 @@ import warnings
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import cloudscraper
 import numpy as np
 import pandas as pd
-from bs4 import BeautifulSoup, Comment
 from sklearn.metrics import accuracy_score
 import optuna
 from sklearn.model_selection import StratifiedKFold, train_test_split
@@ -44,6 +42,7 @@ from mlb_config import (
     get_team_code,
 )
 from mlb_feature_engineering import calcular_super_features
+from mlb_stats_api_client import obtener_stats_completas_api, obtener_fecha_ayer
 
 warnings.filterwarnings("ignore")
 
@@ -81,312 +80,6 @@ def alinear_features_entrenamiento(X_new, model_actual=None):
     return X_new.reindex(columns=feature_names_modelo, fill_value=0)
 
 
-# ============================================================================
-# FUNCIONES DE SCRAPING CON REINTENTOS
-# ============================================================================
-
-
-def obtener_html(
-    url,
-    max_retries=None,
-    rate_limit_wait_override=None,
-    fast_fail_403=False,
-):
-    """Obtiene HTML con reintentos y backoff exponencial"""
-    if max_retries is None:
-        max_retries = SCRAPING_CONFIG["max_retries"]
-
-    scraper = cloudscraper.create_scraper(
-        browser={
-            "browser": "chrome",
-            "platform": "windows",
-            "desktop": True,
-        }
-    )
-    scraper.headers.update(
-        {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/123.0.0.0 Safari/537.36"
-            ),
-            "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
-            "Referer": "https://www.baseball-reference.com/",
-        }
-    )
-
-    for intento in range(max_retries):
-        try:
-            response = scraper.get(url, timeout=SCRAPING_CONFIG["timeout"])
-
-            if response.status_code == 200:
-                response.encoding = "utf-8"
-                return response.text
-            elif response.status_code == 429:
-                wait_time = (2**intento) * 5
-                print(f"       Rate limit (429) detectado, esperando {wait_time}s...")
-                time.sleep(wait_time)
-            elif response.status_code == 403:
-                if fast_fail_403:
-                    print("       Error 403 (Forbidden) detectado, fast-fail activado.")
-                    return None
-
-                wait_time = (
-                    rate_limit_wait_override
-                    if rate_limit_wait_override is not None
-                    else SCRAPING_CONFIG["rate_limit_wait"]
-                )
-                print(f"       Error 403 (Forbidden), esperando {wait_time}s...")
-                time.sleep(wait_time)
-            else:
-                print(f"       Error {response.status_code} al obtener URL {url}")
-                if intento < max_retries - 1:
-                    time.sleep(2**intento)
-
-        except Exception as e:
-            if intento == max_retries - 1:
-                print(f"       Error final al obtener URL {url}: {str(e)}")
-            time.sleep(2**intento)
-
-    return None
-
-
-def limpiar_dataframe(df):
-    """Limpia dataframes de Baseball-Reference eliminando basura"""
-    if df is None or len(df) == 0:
-        return df
-
-    if "Rk" in df.columns:
-        df = df.drop("Rk", axis=1)
-
-    name_col = df.columns[0]
-    df = df.dropna(subset=[name_col])
-    df = df[~df[name_col].astype(str).str.contains(r"Team Totals|Rank in|^\s*$", case=False, na=False, regex=True)]
-
-    return df.reset_index(drop=True)
-
-
-def scrape_player_stats(
-    team_code,
-    year,
-    session_cache=None,
-    max_retries_override=None,
-    fast_fail_403=False,
-):
-    """Scrapea bateo y pitcheo de un equipo con caché de sesión"""
-    team_code = str(team_code).upper().strip()
-
-    if session_cache is not None:
-        cache_key = f"{team_code}_{year}"
-        if cache_key in session_cache:
-            return session_cache[cache_key]
-
-    url = f"https://www.baseball-reference.com/teams/{team_code}/{year}.shtml"
-    if team_code == "OAK":
-        # Fallback solicitado: si OAK falla 2 veces, intentar ATH.
-        html = obtener_html(
-            url,
-            max_retries=max_retries_override if max_retries_override is not None else 2,
-            fast_fail_403=fast_fail_403,
-        )
-        if not html:
-            alt_code = "ATH"
-            alt_url = f"https://www.baseball-reference.com/teams/{alt_code}/{year}.shtml"
-            print("       OAK sin respuesta tras 2 intentos, probando ATH...")
-            html = obtener_html(
-                alt_url,
-                max_retries=max_retries_override,
-                fast_fail_403=fast_fail_403,
-            )
-            if html:
-                team_code = alt_code
-    else:
-        html = obtener_html(
-            url,
-            max_retries=max_retries_override,
-            fast_fail_403=fast_fail_403,
-        )
-
-    if not html:
-        return None, None
-
-    try:
-        soup = BeautifulSoup(html, "html.parser")
-        batting_table = soup.find("table", {"id": "players_standard_batting"})
-        pitching_table = soup.find("table", {"id": "players_standard_pitching"})
-
-        batting_df = None
-        pitching_df = None
-
-        if batting_table:
-            batting_df = pd.read_html(str(batting_table))[0]
-            batting_df = limpiar_dataframe(batting_df)
-
-        if pitching_table:
-            pitching_df = pd.read_html(str(pitching_table))[0]
-            pitching_df = limpiar_dataframe(pitching_df)
-
-        if session_cache is not None:
-            session_cache[f"{team_code}_{year}"] = (batting_df, pitching_df)
-
-        return batting_df, pitching_df
-
-    except Exception as e:
-        print(f"       Error procesando tablas para {team_code}: {e}")
-        return None, None
-
-
-def obtener_stats_pitcher_por_link(
-    pitcher_link,
-    target_year=None,
-    session_cache=None,
-    max_retries_override=None,
-    fast_fail_403=False,
-):
-    """
-    Obtiene stats de un pitcher directamente por su link individual.
-    Usa la tabla histórica del jugador para buscar una temporada específica.
-    """
-    if not pitcher_link:
-        return None
-
-    if session_cache is not None:
-        cache_key = f"pitcher::{pitcher_link}::{target_year}"
-        if cache_key in session_cache:
-            return session_cache[cache_key]
-
-    try:
-        url = str(pitcher_link).strip()
-        url = url.replace("baseball-reference.coom", "baseball-reference.com")
-        url = url.replace("baseball-reference.comm", "baseball-reference.com")
-        if pitcher_link.startswith("/"):
-            url = f"https://www.baseball-reference.com{pitcher_link}"
-
-        html = obtener_html(
-            url,
-            max_retries=max_retries_override,
-            fast_fail_403=fast_fail_403,
-        )
-
-        if not html:
-            print(f"       ⚠️ No se pudo obtener HTML del pitcher: {pitcher_link}")
-            return None
-
-        soup = BeautifulSoup(html, "html.parser")
-
-        def buscar_tabla(table_id):
-            tabla = soup.find("table", {"id": table_id})
-            if tabla:
-                return tabla
-
-            comments = soup.find_all(string=lambda text: isinstance(text, Comment))
-            for comment in comments:
-                if f'id="{table_id}"' in comment:
-                    return BeautifulSoup(str(comment), "html.parser").find("table", {"id": table_id})
-            return None
-
-        pitching_hist_table = buscar_tabla("players_standard_pitching")
-        pitching_st_table = buscar_tabla("pitching_st")
-
-        if not pitching_hist_table and not pitching_st_table:
-            print(f"       ⚠️ No se encontró tabla de pitcheo utilizable para: {pitcher_link}")
-            return None
-
-        meta_title = soup.select_one("#meta h1 span")
-        nombre_real = meta_title.get_text(strip=True) if meta_title else ""
-
-        row = None
-
-        if pitching_hist_table is not None:
-            hist_df = pd.read_html(str(pitching_hist_table))[0]
-            hist_df = limpiar_dataframe(hist_df)
-            if not hist_df.empty and "Season" in hist_df.columns:
-                season_series = pd.to_numeric(hist_df["Season"], errors="coerce")
-                hist_df = hist_df[season_series.notna()].copy()
-                if not hist_df.empty:
-                    hist_df["Season_num"] = pd.to_numeric(hist_df["Season"], errors="coerce")
-                    if target_year is not None:
-                        year_match = hist_df[hist_df["Season_num"] == int(target_year)]
-                        if not year_match.empty:
-                            row = year_match.iloc[0]
-                    if row is None and target_year is None:
-                        row = hist_df.iloc[-1]
-
-        if row is None and pitching_st_table is not None:
-            current_df = pd.read_html(str(pitching_st_table))[0]
-            current_df = limpiar_dataframe(current_df)
-            if not current_df.empty:
-                if target_year is not None and "Year" in current_df.columns:
-                    year_series = pd.to_numeric(current_df["Year"], errors="coerce")
-                    year_match = current_df[year_series == int(target_year)]
-                    if not year_match.empty:
-                        row = year_match.iloc[0]
-                if row is None and target_year is None:
-                    row = current_df.iloc[0]
-
-        if row is None:
-            return None
-
-        stats = {
-            "nombre_real": nombre_real,
-            "ERA": safe_float(row.get("ERA", 0)),
-            "WHIP": safe_float(row.get("WHIP", 0)),
-            "H9": safe_float(row.get("H9", row.get("H/9", 0))),
-            "SO9": safe_float(row.get("SO9", 0)),
-            "W": safe_int(row.get("W", 0)),
-            "L": safe_int(row.get("L", 0)),
-            "IP": safe_float(row.get("IP", 0)),
-            "G": safe_int(row.get("G", 0)),
-            "GS": safe_int(row.get("GS", row.get("GS.1", 0))),
-        }
-
-        if session_cache is not None:
-            session_cache[cache_key] = stats
-
-        return stats
-
-    except Exception as e:
-        print(f"       ⚠️ Error obteniendo stats del pitcher {pitcher_link}: {e}")
-
-    return None
-
-
-# ============================================================================
-# IDENTIFICAR TOP 3 RELEVISTAS
-# ============================================================================
-
-
-def extraer_top_relevistas(pitching_df):
-    """Identifica al Closer y los mejores Setup men basándose en Saves y Juegos Finalizados"""
-    if pitching_df is None or len(pitching_df) == 0:
-        return None
-
-    # Asegurar conversión numérica para columnas de relevo
-    cols_relevo = ["SV", "GF", "ERA", "WHIP", "IP", "SO", "G", "GS"]
-    for col in cols_relevo:
-        if col in pitching_df.columns:
-            pitching_df[col] = pd.to_numeric(pitching_df[col], errors="coerce").fillna(0)
-
-    # Filtrar relevistas: GS < 50% de sus juegos
-    bullpen = pitching_df[pitching_df["GS"] < (pitching_df["G"] * 0.5)].copy()
-    if len(bullpen) == 0:
-        return None
-
-    # Ordenar por jerarquía: Saves (Closer), Juegos Finalizados (Setup), IP
-    bullpen = bullpen.sort_values(by=["SV", "GF", "IP"], ascending=False)
-    top_3 = bullpen.head(3)
-
-    return {
-        "bullpen_ERA_mean": top_3["ERA"].mean(),
-        "bullpen_WHIP_mean": top_3["WHIP"].mean(),
-    }
-
-
-# ============================================================================
-# FUNCIONES DE EXTRACCIÓN Y CÁLCULO
-# ============================================================================
-
-
 def normalizar_texto(texto):
     """Normaliza texto para comparaciones de nombres"""
     if not texto:
@@ -415,106 +108,6 @@ def safe_int(val):
         return int(float(val))
     except (ValueError, TypeError):
         return 0
-
-
-def encontrar_lanzador(pitching_df, nombre_lanzador):
-    """Busca un lanzador específico usando normalización agresiva"""
-    if pitching_df is None or len(pitching_df) == 0:
-        return None
-
-    nombre_busqueda = normalizar_texto(nombre_lanzador)
-    name_col = pitching_df.columns[0]
-
-    mask = pitching_df[name_col].apply(
-        lambda x: (nombre_busqueda in normalizar_texto(x) or normalizar_texto(x) in nombre_busqueda)
-    )
-
-    if mask.sum() == 0:
-        return None
-
-    lanzador = pitching_df[mask].iloc[0]
-
-    return {
-        "ERA": safe_float(lanzador.get("ERA", 0)),
-        "WHIP": safe_float(lanzador.get("WHIP", 0)),
-        "H9": safe_float(lanzador.get("H9", 0)),
-        "SO9": safe_float(lanzador.get("SO9", 0)),
-        "W": safe_float(lanzador.get("W", 0)),
-        "L": safe_float(lanzador.get("L", 0)),
-        "IP": safe_float(lanzador.get("IP", 0)),
-        "G": safe_float(lanzador.get("G", 0)),
-        "GS": safe_float(lanzador.get("GS", 0)),
-        "nombre_real": str(lanzador[name_col]),
-    }
-
-
-def encontrar_mejor_bateador(batting_df):
-    """Encuentra estadísticas de los mejores bateadores del equipo"""
-    if batting_df is None or len(batting_df) == 0:
-        return None
-
-    if "OBP" not in batting_df.columns or "AB" not in batting_df.columns:
-        return None
-
-    df = batting_df.copy()
-    df["OBP"] = pd.to_numeric(df["OBP"], errors="coerce")
-    df["AB"] = pd.to_numeric(df["AB"], errors="coerce")
-    df = df.dropna(subset=["OBP", "AB"])
-
-    if len(df) == 0:
-        return None
-
-    mediana_ab = df["AB"].median()
-    df_filtrado = df[df["AB"] >= mediana_ab].copy()
-
-    if len(df_filtrado) == 0:
-        df_filtrado = df
-
-    top_3 = df_filtrado.sort_values("OBP", ascending=False).head(3)
-
-    name_col = top_3.columns[0]
-
-    detalles = []
-    for _, row in top_3.iterrows():
-        detalles.append(
-            {
-                "n": str(row[name_col]),
-                "ba": safe_float(row.get("BA", 0)),
-                "obp": safe_float(row.get("OBP", 0)),
-                "slg": safe_float(row.get("SLG", 0)),
-                "ops": safe_float(row.get("OPS", 0)),
-                "hr": safe_float(row.get("HR", 0)),
-                "rbi": safe_float(row.get("RBI", 0)),
-            }
-        )
-
-    return {
-        "best_bat_BA": pd.to_numeric(top_3["BA"], errors="coerce").mean(),
-        "best_bat_OBP": top_3["OBP"].mean(),
-        "best_bat_OPS": pd.to_numeric(top_3["OPS"], errors="coerce").mean() if "OPS" in top_3.columns else 0.750,
-        "best_bat_HR": pd.to_numeric(top_3["HR"], errors="coerce").mean(),
-        "best_bat_RBI": pd.to_numeric(top_3["RBI"], errors="coerce").mean(),
-        "detalles_visuales": detalles,
-    }
-
-
-def calcular_stats_equipo(batting_df, pitching_df):
-    """Calcula promedios generales del equipo (Bateo y Pitcheo)"""
-    stats = {}
-
-    if batting_df is not None and len(batting_df) > 0:
-        for col in ["BA", "OBP", "SLG", "OPS", "HR", "RBI"]:
-            if col in batting_df.columns:
-                val = pd.to_numeric(batting_df[col], errors="coerce").mean()
-                stats[f"team_{col}_mean"] = val if not pd.isna(val) else 0
-
-    if pitching_df is not None and len(pitching_df) > 0:
-        for col in ["ERA", "WHIP", "SO9", "H9", "BB9"]:
-            if col in pitching_df.columns:
-                val = pd.to_numeric(pitching_df[col], errors="coerce").mean()
-                stats[f"team_{col}_mean"] = val if not pd.isna(val) else 0
-
-    return stats
 
 
 # ============================================================================
@@ -737,78 +330,31 @@ def extraer_features_hibridas(row, df_historico=None, hacer_scraping=False, sess
         features["away_runs_diff"] = trend_a.get("diferencial_carreras", 0)
         features["away_season_record"] = f"{trend_a.get('wins_season', 0)}-{trend_a.get('losses_season', 0)}"
 
-    # 2. SCRAPING Y STATS DE JUGADORES
+    # 2. PETICIONES A LA API DE MLB EN LUGAR DE SCRAPING DE BASEBALL-REFERENCE
     if hacer_scraping:
-        home_code = get_team_code(row["home_team"].strip())
-        away_code = get_team_code(row["away_team"].strip())
-
-        if not home_code:
-            home_code = row["home_team"]
-        if not away_code:
-            away_code = row["away_team"]
-
-        bat1, pit1 = scrape_player_stats(home_code, row["year"], session_cache)
-        time.sleep(random.uniform(SCRAPING_CONFIG["min_delay"], SCRAPING_CONFIG["max_delay"]))
-        bat2, pit2 = scrape_player_stats(away_code, row["year"], session_cache)
-        time.sleep(random.uniform(SCRAPING_CONFIG["min_delay"], SCRAPING_CONFIG["max_delay"]))
-
-        # Stats de Equipo
-        stats_h = calcular_stats_equipo(bat1, pit1)
-        stats_a = calcular_stats_equipo(bat2, pit2)
-
-        if stats_h and stats_a:
-            features["home_team_OPS"] = stats_h.get("team_OPS_mean", 0)
-            features["away_team_OPS"] = stats_a.get("team_OPS_mean", 0)
-            features["diff_team_BA"] = stats_h.get("team_BA_mean", 0) - stats_a.get("team_BA_mean", 0)
-            features["diff_team_OPS"] = stats_h.get("team_OPS_mean", 0) - stats_a.get("team_OPS_mean", 0)
-            features["diff_team_ERA"] = stats_a.get("team_ERA_mean", 0) - stats_h.get("team_ERA_mean", 0)
-
-        # Abridores
-        sp1 = encontrar_lanzador(pit1, row["home_pitcher"])
-        sp2 = encontrar_lanzador(pit2, row["away_pitcher"])
-
-        if sp1 and sp2:
-            features["home_pitcher_name_real"] = sp1.get("nombre_real", row["home_pitcher"])
-            features["away_pitcher_name_real"] = sp2.get("nombre_real", row["away_pitcher"])
-            features["home_starter_SO9"] = sp1.get("SO9", 0)
-            features["away_starter_SO9"] = sp2.get("SO9", 0)
-            features["home_starter_WHIP"] = sp1.get("WHIP", 0)
-            features["away_starter_WHIP"] = sp2.get("WHIP", 0)
-            features["home_starter_ERA"] = sp1.get("ERA", 0)
-            features["away_starter_ERA"] = sp2.get("ERA", 0)
-            features["diff_starter_ERA"] = sp2.get("ERA", 0) - sp1.get("ERA", 0)
-            features["diff_starter_WHIP"] = sp2.get("WHIP", 0) - sp1.get("WHIP", 0)
-            features["diff_starter_SO9"] = sp1.get("SO9", 0) - sp2.get("SO9", 0)
-
-        # Mejores Bateadores
-        hb1 = encontrar_mejor_bateador(bat1)
-        hb2 = encontrar_mejor_bateador(bat2)
-
-        if hb1 and hb2:
-            features["home_top_3_batters_details"] = hb1.get("detalles_visuales", [])
-            features["away_top_3_batters_details"] = hb2.get("detalles_visuales", [])
-            features["home_best_OPS"] = hb1.get("best_bat_OPS", 0)
-            features["away_best_OPS"] = hb2.get("best_bat_OPS", 0)
-            features["diff_best_BA"] = hb1.get("best_bat_BA", 0) - hb2.get("best_bat_BA", 0)
-            features["diff_best_OPS"] = hb1.get("best_bat_OPS", 0) - hb2.get("best_bat_OPS", 0)
-            features["diff_best_HR"] = hb1.get("best_bat_HR", 0) - hb2.get("best_bat_HR", 0)
-
-        # Bullpen
-        rel_h = extraer_top_relevistas(pit1)
-        rel_a = extraer_top_relevistas(pit2)
-        if rel_h and rel_a:
-            features["home_bullpen_ERA"] = rel_h.get("bullpen_ERA_mean", 0)
-            features["away_bullpen_ERA"] = rel_a.get("bullpen_ERA_mean", 0)
-            features["home_bullpen_WHIP"] = rel_h.get("bullpen_WHIP_mean", 0)
-            features["away_bullpen_WHIP"] = rel_a.get("bullpen_WHIP_mean", 0)
-            features["diff_bullpen_ERA"] = rel_a.get("bullpen_ERA_mean", 0) - rel_h.get("bullpen_ERA_mean", 0)
-            features["diff_bullpen_WHIP"] = rel_a.get("bullpen_WHIP_mean", 0) - rel_h.get("bullpen_WHIP_mean", 0)
-
-        # Anclas
-        if sp1:
-            features["anchor_pitching_level"] = sp1.get("ERA", 0)
-        if stats_h:
-            features["anchor_offensive_level"] = stats_h.get("team_OPS_mean", 0)
+        # Convertir fecha a string YYYY-MM-DD
+        if isinstance(row["fecha"], str):
+            fecha_str = row["fecha"][:10]
+        else:
+            fecha_str = row["fecha"].strftime("%Y-%m-%d")
+        
+        ayer_str = obtener_fecha_ayer(fecha_str)
+        year_val = safe_int(row["year"])
+        if year_val == 0:
+            try:
+                year_val = int(fecha_str[:4])
+            except Exception:
+                year_val = datetime.now().year
+                
+        api_features = obtener_stats_completas_api(
+            home_team=row["home_team"],
+            away_team=row["away_team"],
+            home_pitcher=row["home_pitcher"],
+            away_pitcher=row["away_pitcher"],
+            year=year_val,
+            up_to_date=ayer_str
+        )
+        features.update(api_features)
 
     features["year"] = row["year"]
 
