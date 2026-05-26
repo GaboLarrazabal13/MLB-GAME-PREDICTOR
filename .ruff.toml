@@ -18,6 +18,7 @@ ignore = [
     "E501", # Líneas largas
     "E722", # Bare except (usado en partes del motor por simplicidad de scraping)
     "F401", # Imports no usados (común en __init__)
+    "E402", # Módulo importado no al principio del archivo (permitido por sys.path manipulation)
 ]
 
 [format]

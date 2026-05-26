@@ -98,7 +98,7 @@ def ejecutar_pipeline_diario():
     print(f"{'=' * 70}")
 
     url_api = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={fecha_db}&hydrate=probablePitcher"
-    
+
     equipos_hoy = []
     completo_api = False
 
@@ -148,7 +148,7 @@ def ejecutar_pipeline_diario():
                 print(f"  ⚠️ Intento {intento}/{max_intentos} falló con status {r.status_code}")
         except Exception as e:
             print(f"  ⚠️ Error consultando cartelera via API (intento {intento}/{max_intentos}): {e}")
-        
+
         if intento < max_intentos:
             time.sleep(espera_reintento)
 
@@ -157,7 +157,7 @@ def ejecutar_pipeline_diario():
         return False
 
     data_partidos = []
-    
+
     for i, juego_dict in enumerate(equipos_hoy, start=1):
         away_team = juego_dict["away_team"]
         home_team = juego_dict["home_team"]
@@ -184,7 +184,7 @@ def ejecutar_pipeline_diario():
         if away_pitcher_id:
             print(f"   🔍 Stats de {away_pitcher} via MLB API...")
             s_away = obtener_stats_pitcher_api(away_pitcher_id, year_val)
-        
+
         if not s_away and away_pitcher != "Anunciado":
             print(f"   🔍 Stats de {away_pitcher} via búsqueda por nombre...")
             s_away = obtener_stats_pitcher_por_nombre(away_team, away_pitcher, year_val)
@@ -193,7 +193,7 @@ def ejecutar_pipeline_diario():
         if home_pitcher_id:
             print(f"   🔍 Stats de {home_pitcher} via MLB API...")
             s_home = obtener_stats_pitcher_api(home_pitcher_id, year_val)
-        
+
         if not s_home and home_pitcher != "Anunciado":
             print(f"   🔍 Stats de {home_pitcher} via búsqueda por nombre...")
             s_home = obtener_stats_pitcher_por_nombre(home_team, home_pitcher, year_val)
@@ -251,12 +251,12 @@ def ejecutar_pipeline_diario():
                         home_starter_ERA REAL, home_starter_WHIP REAL, home_starter_H9 REAL,
                         home_starter_SO9 REAL, home_starter_W INTEGER, home_starter_L INTEGER)"""
         )
-        
+
         conn.execute(
             """CREATE TABLE IF NOT EXISTS lineup_ini
                        (fecha TEXT, game_id TEXT, team TEXT, [order] TEXT, player TEXT)"""
         )
-        
+
         conn.execute(
             """CREATE TABLE IF NOT EXISTS sync_control (
                        dataset TEXT,

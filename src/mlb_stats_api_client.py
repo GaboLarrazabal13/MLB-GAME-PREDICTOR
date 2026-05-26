@@ -4,9 +4,10 @@ Provides high-performance, date-hydrated snapshots for teams and players.
 Eliminates temporal data leakage (Hindsight Bias) by querying statistics cumulative up to the day before any past game.
 """
 
-import requests
 import time
 from datetime import datetime, timedelta
+
+import requests
 
 # ============================================================================
 # MAPEO OFICIAL DE EQUIPOS MLB A IDs DE LA API
@@ -190,7 +191,7 @@ def obtener_stats_pitcher_por_nombre(team_code, pitcher_name, year, up_to_date=N
     if not splits:
         return None
 
-    from train_model_hybrid_actions import normalizar_texto
+    from mlb_utils import normalizar_texto
     nombre_busqueda = normalizar_texto(pitcher_name)
 
     for split in splits:
@@ -224,7 +225,7 @@ def extraer_top_bateadores_api(splits):
         player = split.get("player", {})
         at_bats = safe_int(stat.get("atBats", 0))
         ops = safe_float(stat.get("ops", 0.0))
-        
+
         # Filtro de bateadores activos (mínimo 15 turnos al bate)
         if at_bats >= 15 and player.get("fullName"):
             valid_batters.append({
@@ -266,7 +267,7 @@ def extraer_top_relevistas_api(splits):
         player = split.get("player", {})
         gs = safe_int(stat.get("gamesStarted", 0))
         g = safe_int(stat.get("gamesPitched", 0))
-        
+
         # Filtro de bullpen: Games Started menor al 50% de Games Pitched
         if g > 2 and gs < (g * 0.5):
             bullpen.append({
@@ -345,7 +346,7 @@ def obtener_stats_completas_api(home_team, away_team, home_pitcher, away_pitcher
         "diff_team_BA": safe_float(team_hit_h.get("avg", 0.245)) - safe_float(team_hit_a.get("avg", 0.245)),
         "diff_team_OPS": safe_float(team_hit_h.get("ops", 0.720)) - safe_float(team_hit_a.get("ops", 0.720)),
         "diff_team_ERA": safe_float(team_pit_a.get("era", 4.20)) - safe_float(team_pit_h.get("era", 4.20)),
-        
+
         "home_starter_WHIP": sp_h["WHIP"],
         "away_starter_WHIP": sp_a["WHIP"],
         "home_starter_ERA": sp_h["ERA"],
@@ -355,23 +356,23 @@ def obtener_stats_completas_api(home_team, away_team, home_pitcher, away_pitcher
         "diff_starter_ERA": sp_a["ERA"] - sp_h["ERA"],
         "diff_starter_WHIP": sp_a["WHIP"] - sp_h["WHIP"],
         "diff_starter_SO9": sp_h["SO9"] - sp_a["SO9"],
-        
+
         "home_best_OPS": hb_h["best_bat_OPS"],
         "away_best_OPS": hb_a["best_bat_OPS"],
         "diff_best_BA": hb_h["best_bat_BA"] - hb_a["best_bat_BA"],
         "diff_best_OPS": hb_h["best_bat_OPS"] - hb_a["best_bat_OPS"],
         "diff_best_HR": hb_h["best_bat_HR"] - hb_a["best_bat_HR"],
-        
+
         "home_bullpen_ERA": rel_h["bullpen_ERA_mean"],
         "away_bullpen_ERA": rel_a["bullpen_ERA_mean"],
         "home_bullpen_WHIP": rel_h["bullpen_WHIP_mean"],
         "away_bullpen_WHIP": rel_a["bullpen_WHIP_mean"],
         "diff_bullpen_ERA": rel_a["bullpen_ERA_mean"] - rel_h["bullpen_ERA_mean"],
         "diff_bullpen_WHIP": rel_a["bullpen_WHIP_mean"] - rel_h["bullpen_WHIP_mean"],
-        
+
         "anchor_pitching_level": (sp_h["ERA"] + rel_h["bullpen_ERA_mean"]) - (sp_a["ERA"] + rel_a["bullpen_ERA_mean"]),
         "anchor_offensive_level": safe_float(team_hit_h.get("ops", 0.720)) - safe_float(team_hit_a.get("ops", 0.720)),
-        
+
         "home_pitcher_name_real": sp_h["nombre_real"],
         "away_pitcher_name_real": sp_a["nombre_real"],
         "home_top_3_batters_details": hb_h["detalles_visuales"],

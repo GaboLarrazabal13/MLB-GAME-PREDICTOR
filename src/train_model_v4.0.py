@@ -6,39 +6,41 @@ Integra MLflow SQLite persistente para registrar los experimentos del pipeline d
 """
 
 import os
-import sys
-import sqlite3
 import pickle
+import shutil
+import sqlite3
+import sys
 import time
 import warnings
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, log_loss, roc_auc_score
-from xgboost import XGBClassifier
-import optuna
+
 import mlflow
 import mlflow.xgboost
+import numpy as np
+import optuna
+import pandas as pd
+from sklearn.metrics import accuracy_score, f1_score, log_loss, precision_score, recall_score, roc_auc_score
+from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.preprocessing import StandardScaler
+from xgboost import XGBClassifier
 
 warnings.filterwarnings("ignore")
 
 # Asegurar importación de módulos centralizados
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mlb_config import (
+    CACHE_PATH,
     DB_PATH,
-    MODELO_PATH,
-    MODELO_BACKUP,
     MODEL_CONFIG,
-    TEMPORAL_FEATURES,
+    MODELO_BACKUP,
+    MODELO_PATH,
     SCRAPING_FEATURES,
     SUPER_FEATURES,
-    CACHE_PATH
+    TEMPORAL_FEATURES,
 )
 from mlb_feature_engineering import calcular_super_features
-from train_model_hybrid_actions import extraer_features_hibridas, alinear_features_entrenamiento
+from mlb_utils import alinear_features_entrenamiento, extraer_features_hibridas
 
 # MLflow SQLite Tracking URI in the project root
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,32 +53,32 @@ def cargar_dataset_produccion():
     fusionando sus estadísticas y features en una sola matriz sin leakage de datos.
     """
     print("\n🛠️ Cargando y estructurando dataset de producción (2022-2026)...")
-    
+
     with sqlite3.connect(DB_PATH) as conn:
         # 1. Cargar todos los partidos ordenados cronológicamente
         df_juegos = pd.read_sql(
             "SELECT * FROM historico_real ORDER BY fecha ASC",
             conn
         )
-        
+
         # 2. Cargar todas las features precalculadas (2022-2025)
         df_features_db = pd.read_sql(
             "SELECT * FROM features_juegos",
             conn
         )
-        
+
     if df_juegos.empty:
         raise ValueError("❌ La tabla historico_real está vacía. No hay datos para entrenar.")
-        
+
     print(f"📊 Partidos totales cargados: {len(df_juegos)}")
-    
+
     df_juegos["fecha"] = pd.to_datetime(df_juegos["fecha"])
     df_juegos["year"] = df_juegos["year"].astype(int)
     df_juegos["ganador"] = df_juegos["ganador"].astype(int)
-    
+
     # 3. Mapear las features precalculadas indexadas por game_id para un acceso rápido O(1)
     features_db_dict = {row["game_id"]: row for _, row in df_features_db.iterrows()}
-    
+
     # 4. Intentar cargar el caché local para los partidos de la temporada 2026
     cache_2026 = {}
     if os.path.exists(CACHE_PATH):
@@ -90,17 +92,17 @@ def cargar_dataset_produccion():
             print(f"📦 Caché recuperado con {len(cache_2026)} juegos ya procesados.")
         except Exception:
             print("⚠️ Caché no encontrado o corrupto para juegos nuevos.")
-            
+
     # 5. Fusionar features base (SCRAPING_FEATURES) para cada juego
     print("   🧱 Fusionando features base de partidos...")
     base_feats_list = []
-    
+
     session_cache = {}
-    
+
     for idx, row in df_juegos.iterrows():
         g_id = row["game_id"]
         yr = row["year"]
-        
+
         # Si el partido es de 2022-2025, cargamos de features_juegos en la DB
         if yr < 2026 and g_id in features_db_dict:
             feat_data = features_db_dict[g_id]
@@ -126,7 +128,7 @@ def cargar_dataset_produccion():
                     print(f"⚠️ Error extrayendo features para el juego {g_id}: {e}")
                     # Completar con ceros en caso de fallo crítico
                     base_feats_list.append({col: 0.0 for col in SCRAPING_FEATURES})
-                    
+
     # Guardar caché actualizado de 2026
     if cache_2026:
         try:
@@ -134,15 +136,15 @@ def cargar_dataset_produccion():
                 pickle.dump({"X_list": list(cache_2026.values()), "y_list": [], "indices": []}, f_pkl)
         except Exception as e:
             print(f"❌ Error guardando caché actualizado: {e}")
-            
+
     df_base_feats = pd.DataFrame(base_feats_list)
     df_dataset = pd.concat([df_juegos.reset_index(drop=True), df_base_feats.reset_index(drop=True)], axis=1)
-    
+
     # 6. Calcular Features Temporales (O(N) cronológico sin leakage)
     print("   ⏱️ Calculando tendencias temporales mediante tracking cronológico acumulativo...")
     temp_feats_list = []
     team_games = {}
-    
+
     for idx, row in df_dataset.iterrows():
         h_team = row["home_team"]
         a_team = row["away_team"]
@@ -150,10 +152,10 @@ def cargar_dataset_produccion():
         sc_h = float(row["score_home"] or 0)
         sc_a = float(row["score_away"] or 0)
         gan = int(row["ganador"] or 0)
-        
+
         hist_h = team_games.get((h_team, yr), [])
         hist_a = team_games.get((a_team, yr), [])
-        
+
         # Home Team metrics
         if not hist_h:
             h_wr10, h_wrs, h_strk, h_ravg, h_rdiff = 0.5, 0.5, 0, 4.5, 0.0
@@ -163,7 +165,7 @@ def cargar_dataset_produccion():
             h_wrs = sum(1 for g in hist_h if g["ganado"]) / len(hist_h)
             h_ravg = sum(g["runs_sc"] for g in rec_h) / len(rec_h)
             h_rdiff = (sum(g["runs_sc"] for g in rec_h) - sum(g["runs_al"] for g in rec_h)) / len(rec_h)
-            
+
             streak = 0
             ultimo_ganado = hist_h[-1]["ganado"]
             for g in reversed(hist_h):
@@ -172,7 +174,7 @@ def cargar_dataset_produccion():
                 else:
                     break
             h_strk = streak if ultimo_ganado else -streak
-            
+
         # Away Team metrics
         if not hist_a:
             a_wr10, a_wrs, a_strk, a_ravg, a_rdiff = 0.5, 0.5, 0, 4.5, 0.0
@@ -182,7 +184,7 @@ def cargar_dataset_produccion():
             a_wrs = sum(1 for g in hist_a if g["ganado"]) / len(hist_a)
             a_ravg = sum(g["runs_sc"] for g in rec_a) / len(rec_a)
             a_rdiff = (sum(g["runs_sc"] for g in rec_a) - sum(g["runs_al"] for g in rec_a)) / len(rec_a)
-            
+
             streak = 0
             ultimo_ganado = hist_a[-1]["ganado"]
             for g in reversed(hist_a):
@@ -191,7 +193,7 @@ def cargar_dataset_produccion():
                 else:
                     break
             a_strk = streak if ultimo_ganado else -streak
-            
+
         temp_feats_list.append({
             "home_win_rate_10": h_wr10,
             "home_win_rate_season": h_wrs,
@@ -204,22 +206,22 @@ def cargar_dataset_produccion():
             "away_runs_avg": a_ravg,
             "away_runs_diff": a_rdiff,
         })
-        
+
         # Actualizar historial
         h_win = (gan == 1)
         a_win = (gan == 0)
-        
+
         if (h_team, yr) not in team_games:
             team_games[(h_team, yr)] = []
         team_games[(h_team, yr)].append({"ganado": h_win, "runs_sc": sc_h, "runs_al": sc_a})
-        
+
         if (a_team, yr) not in team_games:
             team_games[(a_team, yr)] = []
         team_games[(a_team, yr)].append({"ganado": a_win, "runs_sc": sc_a, "runs_al": sc_h})
-        
+
     df_temp = pd.DataFrame(temp_feats_list)
     df_dataset = pd.concat([df_dataset.reset_index(drop=True), df_temp.reset_index(drop=True)], axis=1)
-    
+
     # 7. Calcular Super Features
     print("   🧱 Calculando Super Features...")
     super_feats_list = []
@@ -231,18 +233,18 @@ def cargar_dataset_produccion():
             "super_resistencia_era_ops": sf.get("super_resistencia_era_ops", 0.0),
             "super_muro_bullpen": sf.get("super_muro_bullpen", 0.0)
         })
-        
+
     df_sf = pd.DataFrame(super_feats_list)
     df_dataset = pd.concat([df_dataset.reset_index(drop=True), df_sf.reset_index(drop=True)], axis=1)
-    
+
     # Alinear columnas finales de features
     features_esperadas = TEMPORAL_FEATURES + SCRAPING_FEATURES + SUPER_FEATURES
     X = df_dataset[features_esperadas].fillna(0)
     y = df_dataset["ganador"].values
-    
+
     # Inyectar metadatos para ponderación de pesos
     X["year"] = df_dataset["year"].values
-    
+
     return X, y
 
 def evaluar_modelo(y_true, y_pred, y_prob):
@@ -258,29 +260,28 @@ def evaluar_modelo(y_true, y_pred, y_prob):
 def ejecutar_reentrenamiento():
     """Ejecuta el reentrenamiento completo con optimización de hiperparámetros y pesos."""
     mlflow.set_experiment("MLB-Predictor-Production-Experiment")
-    
+
     X, y = cargar_dataset_produccion()
-    
+
     # 1. Calcular pesos de entrenamiento (Sample Weights)
     # Asignar peso 1.5 a la temporada 2026 para capturar tendencias recientes, y 1.0 a la historia
     sample_weights = np.where(X["year"] == 2026, 1.5, 1.0)
-    
+
     # Quitar columna year para que no se use como feature en XGBoost
-    years_metadata = X["year"].values
     X_train_data = X.drop(columns=["year"])
-    
+
     # 2. Dividir y Escalar datos
     X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(
         X_train_data, y, sample_weights, test_size=0.20, random_state=42, stratify=y
     )
-    
+
     scaler = StandardScaler()
     X_train_scaled = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns)
     X_test_scaled = pd.DataFrame(scaler.transform(X_test), columns=X_test.columns)
-    
+
     accuracy_champion = 0
     model_champion = None
-    
+
     # 3. Cargar Champion Actual
     if os.path.exists(MODELO_PATH):
         try:
@@ -291,10 +292,10 @@ def ejecutar_reentrenamiento():
             print(f"\n🏆 Accuracy de Champion en Test: {accuracy_champion:.2%}")
         except Exception as e:
             print(f"⚠️ Error cargando Champion previo: {e}")
-            
+
     # 4. Optimización de Hiperparámetros con Optuna
     print("\n🔎 Iniciando Optimización Bayesiana de Optuna (35 trials) con pesos por recencia...")
-    
+
     def objective(trial):
         params = {
             "n_estimators": trial.suggest_int("n_estimators", 150, 450),
@@ -310,31 +311,31 @@ def ejecutar_reentrenamiento():
             "random_state": 42,
             "n_jobs": -1
         }
-        
+
         cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
         scores = []
-        
+
         for train_idx, val_idx in cv.split(X_train_scaled, y_train):
             X_tr, X_val = X_train_scaled.iloc[train_idx], X_train_scaled.iloc[val_idx]
             y_tr, y_val = y_train[train_idx], y_train[val_idx]
             w_tr = w_train[train_idx]
-            
+
             model = XGBClassifier(**params)
             # Aplicar sample_weight en el ajuste
             model.fit(X_tr, y_tr, sample_weight=w_tr)
-            
+
             y_pred = model.predict(X_val)
             scores.append(accuracy_score(y_val, y_pred))
-            
+
         return np.mean(scores)
-        
+
     study = optuna.create_study(direction="maximize")
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     study.optimize(objective, n_trials=35)
-    
+
     best_params = study.best_params
     print(f"   🏆 Optuna completado. Mejores parámetros: {best_params}")
-    
+
     # 5. Entrenar Challenger final con toda la data y pesos
     print("\n🚀 Entrenando Challenger con mejores hiperparámetros y pesos...")
     model_challenger = XGBClassifier(
@@ -343,15 +344,15 @@ def ejecutar_reentrenamiento():
         random_state=42,
         n_jobs=-1
     )
-    
-    with mlflow.start_run(run_name="V4.0_Production_Retraining") as run:
+
+    with mlflow.start_run(run_name="V4.0_Production_Retraining"):
         model_challenger.fit(X_train_scaled, y_train, sample_weight=w_train)
-        
+
         # Evaluar
         y_pred = model_challenger.predict(X_test_scaled)
         y_prob = model_challenger.predict_proba(X_test_scaled)[:, 1]
         metrics = evaluar_modelo(y_test, y_pred, y_prob)
-        
+
         # Registrar en MLflow
         mlflow.log_param("tuning_method", "Optuna")
         mlflow.log_param("reconstruction_strategy", "Option_B_Full_Retrain")
@@ -360,28 +361,28 @@ def ejecutar_reentrenamiento():
             mlflow.log_param(key, val)
         for key, val in metrics.items():
             mlflow.log_metric(key, val)
-            
+
         mlflow.xgboost.log_model(model_challenger, artifact_path="model")
-        
+
         mlflow.set_tag("version", "4.0_prod")
         mlflow.set_tag("phase", "Production upgrade Challenger")
-        
+
         accuracy_challenger = metrics["Accuracy"]
         print(f"📈 Accuracy de Challenger en Test: {accuracy_challenger:.2%}")
-        
+
         # 6. Promoción Champion vs Challenger
         if accuracy_challenger >= accuracy_champion:
             print("🟢 Challenger SUPERÓ o IGUALÓ al Champion anterior. Promocionando a Producción...")
             if os.path.exists(MODELO_PATH):
                 shutil.copy(MODELO_PATH, MODELO_BACKUP)
-            
+
             # Guardar el modelo ganador de producción
             model_challenger.get_booster().save_model(MODELO_PATH)
             print(f"✅ ¡Modelo ganador '{MODELO_PATH}' guardado exitosamente!")
-            
+
             # Registrar milestone
             try:
-                from train_model_hybrid_actions import registrar_milestone_cumplido, verificar_milestone_reentrenamiento
+                from mlb_utils import registrar_milestone_cumplido, verificar_milestone_reentrenamiento
                 _, _, next_m = verificar_milestone_reentrenamiento()
                 if next_m:
                     registrar_milestone_cumplido(next_m)

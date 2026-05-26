@@ -20,8 +20,8 @@ from mlb_feature_engineering import (
     detectar_outliers,
 )
 
-# Importar extracción de features del módulo de entrenamiento
-from train_model_hybrid_actions import extraer_features_hibridas, normalizar_texto
+# Importar extracción de features del módulo de utilidades
+from mlb_utils import extraer_features_hibridas, normalizar_texto
 
 warnings.filterwarnings("ignore")
 

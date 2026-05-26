@@ -112,7 +112,7 @@ def actualizar_resultados_reales_en_fecha(fecha_legible, fecha_db, year_val):
     completo_api = False
 
     url_api = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={fecha_db}&hydrate=probablePitcher,decisions"
-    
+
     for intento in range(1, 3):
         try:
             print(f"🔍 Consultando resultados en la API de la MLB (intento {intento}/2) para {fecha_db}...")
@@ -202,7 +202,7 @@ def actualizar_resultados_reales_en_fecha(fecha_legible, fecha_db, year_val):
                 print(f"  ⚠️ Intento {intento}/2 falló con status {r.status_code}")
         except Exception as e:
             print(f"  ⚠️ Error consultando resultados via API: {e}")
-        
+
         if not completo_api and intento < 2:
             time.sleep(2)
 

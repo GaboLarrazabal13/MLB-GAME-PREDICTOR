@@ -336,8 +336,285 @@ def verificar_estado_modelo():
 
 
 # ============================================================================
+# FUNCIONES AUXILIARES DE MACHINE LEARNING E INGENIERÍA DE FEATURES
+# ============================================================================
+
+def normalizar_texto(texto):
+    """Normaliza texto para comparaciones de nombres"""
+    import re
+    import unicodedata
+    if not texto:
+        return ""
+    texto = str(texto).lower()
+    texto = "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn")
+    texto = re.sub(r"[^a-z0-9]", "", texto)
+    return texto
+
+
+def safe_float(val):
+    """Convierte a float de forma segura manejando errores y NaNs"""
+    try:
+        if pd.isna(val):
+            return 0.0
+        return float(val)
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def safe_int(val):
+    """Convierte a int de forma segura manejando errores y NaNs"""
+    try:
+        if pd.isna(val):
+            return 0
+        return int(float(val))
+    except (ValueError, TypeError):
+        return 0
+
+
+def alinear_features_entrenamiento(X_new, model_actual=None):
+    """Asegura un esquema estable de features para reentrenamiento incremental."""
+    from mlb_config import SCRAPING_FEATURES, SUPER_FEATURES, TEMPORAL_FEATURES
+    features_esperadas = TEMPORAL_FEATURES + SCRAPING_FEATURES + SUPER_FEATURES
+
+    columnas_faltantes = [col for col in features_esperadas if col not in X_new.columns]
+    if columnas_faltantes:
+        for columna in columnas_faltantes:
+            X_new[columna] = 0
+
+    if model_actual is None:
+        return X_new
+
+    feature_names_modelo = model_actual.get_booster().feature_names or []
+    if not feature_names_modelo:
+        return X_new
+
+    columnas_faltantes_modelo = [col for col in feature_names_modelo if col not in X_new.columns]
+    if columnas_faltantes_modelo:
+        for columna in columnas_faltantes_modelo:
+            X_new[columna] = 0
+
+    return X_new.reindex(columns=feature_names_modelo, fill_value=0)
+
+
+def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
+    """Calcula rendimiento reciente (ventana) y de toda la temporada de un equipo"""
+    from mlb_config import get_team_code, get_team_name
+
+    if isinstance(fecha_limite, str):
+        fecha_limite = pd.to_datetime(fecha_limite)
+
+    # Normalizar equipo
+    t_code = get_team_code(team)
+    t_full = get_team_name(t_code)
+
+    # Normalizar columnas de equipo en el DF para evitar fallos por espacios o mayúsculas
+    df = df.copy()
+    df["home_team_norm"] = df["home_team"].astype(str).str.strip().str.upper()
+    df["away_team_norm"] = df["away_team"].astype(str).str.strip().str.upper()
+
+    t_code_u = t_code.upper()
+    t_full_u = t_full.upper()
+
+    # Filtrar todos los partidos de la misma temporada antes de la fecha límite
+    anio_partido = fecha_limite.year
+    mask_season = (
+        ((df["home_team_norm"].isin([t_code_u, t_full_u])) | (df["away_team_norm"].isin([t_code_u, t_full_u])))
+        & (pd.to_datetime(df["fecha"], errors="coerce") < fecha_limite)
+        & (pd.to_datetime(df["fecha"], errors="coerce").dt.year == anio_partido)
+    )
+
+    partidos_todos = df[mask_season].sort_values("fecha", ascending=False)
+    partidos_recientes = partidos_todos.head(ventana)
+
+    if len(partidos_todos) == 0:
+        return {
+            "victorias_recientes": 0.5,
+            "win_rate_season": 0.5,
+            "carreras_anotadas_avg": 4.5,
+            "carreras_recibidas_avg": 4.5,
+            "racha_actual": 0,
+            "diferencial_carreras": 0,
+            "total_juegos_season": 0,
+            "wins_season": 0,
+            "losses_season": 0,
+            "season_record": "0-0",
+        }
+
+    # Estadísticas Ventana (L10)
+    victorias_l10 = 0
+    carreras_f_l10 = 0
+    carreras_c_l10 = 0
+
+    for _, p in partidos_recientes.iterrows():
+        es_home = p["home_team_norm"] in [t_code_u, t_full_u]
+        ganador_val = p.get("ganador", 0)
+        if ganador_val is None:
+            ganador_val = 0
+        ganado = (ganador_val == 1) if es_home else (ganador_val == 0)
+        if ganado:
+            victorias_l10 += 1
+        carreras_f_l10 += float(p.get("score_home", 0) if es_home else p.get("score_away", 0) or 0)
+        carreras_c_l10 += float(p.get("score_away", 0) if es_home else p.get("score_home", 0) or 0)
+
+    # Estadísticas Temporada
+    victorias_season = 0
+    for _, p in partidos_todos.iterrows():
+        es_home = p["home_team_norm"] in [t_code_u, t_full_u]
+        ganador_val = p.get("ganador", 0)
+        if ganador_val is None:
+            ganador_val = 0
+        ganado = (ganador_val == 1) if es_home else (ganador_val == 0)
+        if ganado:
+            victorias_season += 1
+
+    win_rate_season = victorias_season / len(partidos_todos)
+
+    # Cálculo de racha
+    racha = 0
+    for _, p in partidos_recientes.iterrows():
+        es_home = p["home_team_norm"] in [t_code_u, t_full_u]
+        ganado = (p["ganador"] == 1) if es_home else (p["ganador"] == 0)
+        if racha == 0:
+            racha = 1 if ganado else -1
+        elif (racha > 0 and ganado) or (racha < 0 and not ganado):
+            racha += 1 if ganado else -1
+        else:
+            break
+
+    n_win = len(partidos_recientes)
+    return {
+        "victorias_recientes": victorias_l10 / n_win if n_win > 0 else 0.5,
+        "win_rate_season": win_rate_season,
+        "carreras_anotadas_avg": carreras_f_l10 / n_win if n_win > 0 else 4.5,
+        "carreras_recibidas_avg": carreras_c_l10 / n_win if n_win > 0 else 4.5,
+        "racha_actual": racha,
+        "diferencial_carreras": (carreras_f_l10 - carreras_c_l10) / n_win if n_win > 0 else 0,
+        "total_juegos_season": len(partidos_todos),
+        "wins_season": victorias_season,
+        "losses_season": len(partidos_todos) - victorias_season,
+        "season_record": f"{victorias_season}-{len(partidos_todos) - victorias_season}",
+    }
+
+
+def verificar_milestone_reentrenamiento():
+    """
+    Comprueba si el total de registros en historico_real alcanzó el próximo milestone
+    de la temporada (486 / 972 / 1458 / 1944 / 2430).
+    Devuelve (should_train: bool, total: int, next_milestone: int | None).
+    """
+    import sqlite3
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    MILESTONES_TEMPORADA = [486, 972, 1458, 1944, 2430]
+    temporada_objetivo = int(os.getenv("TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year))
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
+                   key TEXT PRIMARY KEY,
+                   value TEXT
+               )"""
+        )
+        total = conn.execute(
+            "SELECT COUNT(*) FROM historico_real WHERE substr(fecha,1,4) = ?",
+            (str(temporada_objetivo),),
+        ).fetchone()[0]
+
+        row = conn.execute("SELECT value FROM metadata_entrenamiento WHERE key = 'last_retrain_milestone'").fetchone()
+        try:
+            last_milestone = int(row[0]) if row and row[0] else 0
+        except Exception:
+            last_milestone = 0
+
+    next_milestone = next((m for m in MILESTONES_TEMPORADA if m > last_milestone), None)
+
+    if next_milestone is None:
+        return False, total, None
+
+    should_train = total >= next_milestone
+    return should_train, total, next_milestone
+
+
+def registrar_milestone_cumplido(milestone):
+    """Registra que el milestone fue procesado (con o sin mejora de accuracy)."""
+    import sqlite3
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
+                   key TEXT PRIMARY KEY,
+                   value TEXT
+               )"""
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
+            ("last_retrain_milestone", str(milestone)),
+        )
+        conn.commit()
+    print(f"🎯 Milestone {milestone}/2430 registrado como completado.")
+
+
+def extraer_features_hibridas(row, df_historico=None, hacer_scraping=False, session_cache=None):
+    """Extrae features combinando tendencias temporales y scraping"""
+    from mlb_stats_api_client import obtener_fecha_ayer, obtener_stats_completas_api
+
+    features = {}
+
+    # 1. TENDENCIAS TEMPORALES
+    if df_historico is not None:
+        fecha_dt = pd.to_datetime(row["fecha"])
+
+        trend_h = calcular_tendencias_equipo(df_historico, row["home_team"], fecha_dt, ventana=10)
+        trend_a = calcular_tendencias_equipo(df_historico, row["away_team"], fecha_dt, ventana=10)
+
+        features["home_win_rate_10"] = trend_h.get("victorias_recientes", 0.5)
+        features["home_win_rate_season"] = trend_h.get("win_rate_season", 0.5)
+        features["home_racha"] = trend_h.get("racha_actual", 0)
+        features["home_runs_avg"] = trend_h.get("carreras_anotadas_avg", 4.5)
+        features["home_runs_diff"] = trend_h.get("diferencial_carreras", 0)
+        features["home_season_record"] = f"{trend_h.get('wins_season', 0)}-{trend_h.get('losses_season', 0)}"
+
+        features["away_win_rate_10"] = trend_a.get("victorias_recientes", 0.5)
+        features["away_win_rate_season"] = trend_a.get("win_rate_season", 0.5)
+        features["away_racha"] = trend_a.get("racha_actual", 0)
+        features["away_runs_avg"] = trend_a.get("carreras_anotadas_avg", 4.5)
+        features["away_runs_diff"] = trend_a.get("diferencial_carreras", 0)
+        features["away_season_record"] = f"{trend_a.get('wins_season', 0)}-{trend_a.get('losses_season', 0)}"
+
+    # 2. PETICIONES A LA API DE MLB EN LUGAR DE SCRAPING DE BASEBALL-REFERENCE
+    if hacer_scraping:
+        if isinstance(row["fecha"], str):
+            fecha_str = row["fecha"][:10]
+        else:
+            fecha_str = row["fecha"].strftime("%Y-%m-%d")
+
+        ayer_str = obtener_fecha_ayer(fecha_str)
+        year_val = safe_int(row["year"])
+        if year_val == 0:
+            try:
+                year_val = int(fecha_str[:4])
+            except Exception:
+                year_val = datetime.now().year
+
+        api_features = obtener_stats_completas_api(
+            home_team=row["home_team"],
+            away_team=row["away_team"],
+            home_pitcher=row["home_pitcher"],
+            away_pitcher=row["away_pitcher"],
+            year=year_val,
+            up_to_date=ayer_str
+        )
+        features.update(api_features)
+
+    features["year"] = row["year"]
+
+    return features
+
+
+# ============================================================================
 # EJECUCIÓN DE UTILIDADES
 # ============================================================================
+
 
 if __name__ == "__main__":
     import sys
