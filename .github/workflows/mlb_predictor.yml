@@ -324,7 +324,7 @@ jobs:
         if: steps.check_training_all.outputs.should_train == 'true'
         run: |
           cd src
-          python train_model_hybrid_actions.py
+          python train_model_v4.0.py
 
       - name: Ejecutar scraping diario
         id: scrape_all

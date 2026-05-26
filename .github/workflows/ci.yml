@@ -135,7 +135,7 @@ jobs:
       - name: Create necessary directories
         run: |
           mkdir -p models cache
-          echo '{}' > models/modelo_mlb_v3.5.json
+          echo '{}' > models/modelo_mlb_v4.0.json
 
       - name: Run pytest
         run: pytest tests/ -v --cov=src --cov-report=xml --cov-report=html
