@@ -2232,10 +2232,20 @@ elif pagina == "📊 Comparación & Historial":
                             _a_logo = get_team_logo_html(_at, 32)
                             _score_a = partido.get("score_away", "-")
                             _score_h = partido.get("score_home", "-")
-                            _badge_icon = "✅" if acierto else "❌"
-                            _badge_text = "ACIERTO" if acierto else "ERROR"
-                            _badge_color = "#dcfce7" if acierto else "#fee2e2"
-                            _text_color = "#166534" if acierto else "#991b1b"
+                            
+                            tipo_pred = partido.get("tipo") or ""
+                            es_fallback = "FALLBACK" in str(tipo_pred).upper()
+                            
+                            if es_fallback:
+                                _badge_icon = "⚠️"
+                                _badge_text = "PRECAUCIÓN: SIN DATOS COMPLETOS"
+                                _badge_color = "#fef3c7"  # Amarillo/Ámbar suave
+                                _text_color = "#b45309"   # Marrón/Naranja oscuro
+                            else:
+                                _badge_icon = "✅" if acierto else "❌"
+                                _badge_text = "ACIERTO" if acierto else "ERROR"
+                                _badge_color = "#dcfce7" if acierto else "#fee2e2"
+                                _text_color = "#166534" if acierto else "#991b1b"
 
                             # Renderizado de Tarjeta
                             st.markdown(
