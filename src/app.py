@@ -37,7 +37,15 @@ st.set_page_config(
 )
 
 # API Configuration
-API_URL = os.getenv("API_URL") or st.secrets.get("API_URL", "http://localhost:8000")
+API_URL = os.getenv("API_URL")
+has_secrets_api = False
+if not API_URL:
+    try:
+        API_URL = st.secrets.get("API_URL", "http://localhost:8000")
+        has_secrets_api = "API_URL" in st.secrets
+    except Exception:
+        API_URL = "http://localhost:8000"
+
 
 # Logos MLB oficiales
 EQUIPOS_MLB = {
@@ -574,7 +582,7 @@ def ejecutar_scraper_manual():
 
 def render_system_status_panel(api_ok, api_data):
     """Muestra el estado operativo dentro de la sección informativa."""
-    entorno = "Producción" if (os.getenv("API_URL") or st.secrets.get("API_URL")) else "Local"
+    entorno = "Producción" if (os.getenv("API_URL") or has_secrets_api) else "Local"
 
     col1, col2, col3 = st.columns(3)
 
