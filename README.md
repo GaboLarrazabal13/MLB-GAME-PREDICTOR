@@ -1,3 +1,12 @@
+---
+title: MLB Game Predictor Pro
+emoji: ⚾
+colorFrom: blue
+colorTo: red
+sdk: docker
+pinned: false
+---
+
 # ⚾ MLB Game Predictor V4.1
 
 > Sistema de Machine Learning de grado de producción para la predicción de partidos de la Major League Baseball (MLB). Cuenta con un pipeline de datos 100% automatizado mediante la API Oficial de la MLB, API REST con FastAPI, dashboard interactivo con Streamlit, torneo local de modelos SOTA optimizados por Optuna, y un ciclo de vida MLOps robusto instrumentado localmente con MLflow (SQLite) promocionando a CatBoost como Champion definitivo.
