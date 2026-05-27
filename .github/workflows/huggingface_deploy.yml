@@ -1,0 +1,49 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Permite ejecución manual
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Git LFS
+        run: |
+          git lfs install
+
+      - name: Configure Git LFS Tracking
+        run: |
+          git lfs track "*.db"
+          git lfs track "*.bin"
+          git lfs track "*.pkl"
+          git lfs track "*.png"
+
+      - name: Create Clean Deploy Commit
+        run: |
+          # Configurar identidad de Git
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          
+          # Crear y cambiarse a la rama huérfana hf-deploy
+          git checkout --orphan hf-deploy
+          
+          # Agregar configuración de LFS y todos los archivos
+          git add .gitattributes
+          git add .
+          
+          # Crear el commit de despliegue limpio
+          git commit -m "deploy: automated deployment from GitHub Actions with LFS"
+
+      - name: Push to Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git push -f https://GaboLarrazabal:$HF_TOKEN@huggingface.co/spaces/GaboLarrazabal/mlb-game-predictor hf-deploy:main
