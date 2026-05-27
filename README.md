@@ -161,9 +161,9 @@ Estadísticas oficiales de rendimiento absoluto y relativo extraídas directamen
 
 ### Capa 3: Super Features (3)
 Métricas avanzadas no lineales que capturan la interacción cruzada entre el pitcheo de un equipo y la ofensiva del rival:
-$$\text{super\_neutralización\_whip\_ops} = (\text{home\_WHIP} \times \text{away\_OPS}) - (\text{away\_WHIP} \times \text{home\_OPS})$$
-$$\text{super\_resistencia\_era\_ops} = \left(\frac{\text{home\_ERA}}{\text{away\_OPS} + 0.01}\right) - \left(\frac{\text{away\_ERA}}{\text{home\_OPS} + 0.01}\right)$$
-$$\text{super\_muro\_bullpen} = (\text{home\_bullpen\_WHIP} \times \text{away\_best\_OPS}) - (\text{away\_bullpen\_WHIP} \times \text{home\_best\_OPS})$$
+$$\text{Super Neutralización (WHIP vs OPS)} = (\text{home WHIP} \times \text{away OPS}) - (\text{away WHIP} \times \text{home OPS})$$
+$$\text{Super Resistencia (ERA vs OPS)} = \left(\frac{\text{home ERA}}{\text{away OPS} + 0.01}\right) - \left(\frac{\text{away ERA}}{\text{home OPS} + 0.01}\right)$$
+$$\text{Super Muro de Bullpen} = (\text{home bullpen WHIP} \times \text{away best OPS}) - (\text{away bullpen WHIP} \times \text{home best OPS})$$
 
 ---
 
