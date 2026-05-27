@@ -10,7 +10,7 @@ import time
 import warnings
 
 import pandas as pd
-import xgboost as xgb
+from catboost import CatBoostClassifier
 
 # Importar módulos centralizados
 from mlb_config import DB_PATH, MODELO_PATH, get_team_name
@@ -114,9 +114,9 @@ def predecir_juego(
     # 2. Cargar modelo
     try:
         stage_start = time.perf_counter()
-        model = xgb.Booster()
+        model = CatBoostClassifier()
         model.load_model(MODELO_PATH)
-        expected_features = model.feature_names
+        expected_features = model.feature_names_
         _debug_stage("model_load", stage_start)
     except Exception as e:
         print(f"❌ Error cargando modelo: {e}")
@@ -225,8 +225,7 @@ def predecir_juego(
 
         # 10. Realizar predicción
         stage_start = time.perf_counter()
-        dmatrix = xgb.DMatrix(X_df)
-        prob_home = model.predict(dmatrix)[0]
+        prob_home = model.predict_proba(X_df)[0][1]
         _debug_stage("predict", stage_start)
 
         prob_home_pct = round(float(prob_home) * 100, 2)

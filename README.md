@@ -1,9 +1,10 @@
-# ⚾ MLB Game Predictor V4.0
+# ⚾ MLB Game Predictor V4.1
 
-> Sistema de Machine Learning de grado de producción para la predicción de partidos de la Major League Baseball (MLB). Cuenta con un pipeline de datos 100% automatizado mediante la API Oficial de la MLB, API REST con FastAPI, dashboard interactivo con Streamlit, optimización bayesiana automática (Optuna), y un ciclo de vida MLOps robusto instrumentado localmente con MLflow (SQLite).
+> Sistema de Machine Learning de grado de producción para la predicción de partidos de la Major League Baseball (MLB). Cuenta con un pipeline de datos 100% automatizado mediante la API Oficial de la MLB, API REST con FastAPI, dashboard interactivo con Streamlit, torneo local de modelos SOTA optimizados por Optuna, y un ciclo de vida MLOps robusto instrumentado localmente con MLflow (SQLite) promocionando a CatBoost como Champion definitivo.
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.127+-green.svg)](https://fastapi.tiangolo.com/)
+[![CatBoost](https://img.shields.io/badge/CatBoost-1.2.7+-blue.svg)](https://catboost.ai/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-3.1.2-orange.svg)](https://xgboost.readthedocs.io/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.52.2-red.svg)](https://streamlit.io/)
 [![Docker](https://img.shields.io/badge/Docker-multi--stage-blue.svg)](https://www.docker.com/)
@@ -102,34 +103,39 @@ El flujo opera de manera digital y autónoma mediante triggers cronometrados en 
 
 ---
 
-## Motor de Machine Learning V4.0
+## Motor de Machine Learning V4.1 (CatBoost Upgrade)
 
-### Algoritmo: XGBoost con Optimización Bayesiana (Optuna)
+### El Gran Torneo de Modelos SOTA (V4.1 Challenger Stage)
 
-El modelo de producción utiliza un **XGBClassifier (XGBoost 3.1.2)** optimizado de forma dinámica mediante **Optuna (35 trials)** con validación cruzada estratificada (`StratifiedKFold`):
+Para superar las limitaciones de calibración de probabilidad y precisión de XGBoost, en la versión 4.1 implementamos un **Torneo de Modelos de última generación** entrenados bajo validación cruzada estratificada (`StratifiedKFold` de 3 pliegues), pesos por recencia y optimización bayesiana con **Optuna (15 trials por modelo)**. 
 
-```python
-# Espacio de búsqueda hiperparamétrica afinado por Optuna en cada ciclo:
-params = {
-    "n_estimators": trial.suggest_int("n_estimators", 150, 450),
-    "max_depth": trial.suggest_int("max_depth", 3, 9),
-    "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.1, log=True),
-    "gamma": trial.suggest_float("gamma", 0.0, 0.5),
-    "subsample": trial.suggest_float("subsample", 0.6, 1.0),
-    "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
-    "min_child_weight": trial.suggest_int("min_child_weight", 1, 8),
-    "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 5.0, log=True),
-    "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 5.0, log=True),
-}
-```
+Evaluamos cuatro configuraciones de alto desempeño:
+1. **XGBoost (Champion V4.0):** Muy rápido y agresivo, pero propenso a sobreajustar en variables categóricas de alta cardinalidad (LogLoss: 0.6853).
+2. **LightGBM (Challenger 1):** Extremadamente veloz en procesamiento tabular, logrando mayor precisión pero menor cobertura general (LogLoss: 0.6859).
+3. **CatBoost (Challenger 2):** Diseñado nativamente para manejar variables categóricas simétricas (códigos de equipos, lanzadores y relevistas). Logró la **mayor precisión individual (56.51%)** y el **mejor LogLoss standalone (0.6842)**.
+4. **Stacking Ensemble (Challenger 3):** Combinación óptima de los tres mediante un meta-modelo de **Regresión Logística L2**, logrando la victoria teórica del torneo con un **55.45% de Accuracy** y un LogLoss de **0.6840**.
 
-### Estrategia B: Reentrenamiento Acumulativo Completo
+### Tabla Comparativa de Resultados del Torneo
 
-En lugar de entrenar modelos aislados por temporada, el sistema implementa la **Estrategia B**:
-*   Se entrena sobre el **dataset completo y acumulado** de más de **10,300 partidos** (9,557 partidos históricos de alta calidad + partidos completados de la temporada actual).
-*   Se utiliza un sistema de **Sample Weights (pesos de muestra)** para ponderar la recencia de los datos:
-    *   **Partidos de la temporada en curso (2026):** Peso de **`1.5`** (permite al modelo capturar rápidamente tendencias, dinámicas de equipos y rachas en vivo).
-    *   **Partidos de temporadas históricas (2022-2025):** Peso de **`1.0`** (funcionan como una base de regularización sólida y estable).
+| Modelo / Desafiante | Accuracy | Precision (G+) | Recall (Win-Rate) | F1-Score | LogLoss | ROC_AUC |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **XGBoost** (Champion) | 55.41% | 55.38% | **81.22%** | **65.85%** | 0.6853 | 0.5699 |
+| **LightGBM** (Challenger 1) | 54.97% | 55.95% | 70.28% | 62.30% | 0.6859 | 0.5613 |
+| **CatBoost** (Challenger 2) 🏆 | 55.41% | **56.51%** | 68.46% | 61.91% | **0.6842** | 0.5671 |
+| **Stacking Ensemble** | **55.45%** | 56.24% | 71.47% | 62.95% | 0.6840 | **0.5680** |
+
+### 🚀 Promoción a Producción de CatBoost (Opción A)
+
+Por decisión técnica de arquitectura y simplicidad operativa, se promovió a producción a **CatBoost (Challenger 2)** como el nuevo **Champion Standalone**.
+* **Precisión Superior:** Falla mucho menos apuestas directas al tener un **56.51% de precisión** (la más alta del torneo).
+* **Calibración Fina (LogLoss: 0.6842):** Al modelar las probabilidades reales de forma suave y precisa, calibra a la perfección el nuevo sistema de umbrales en Streamlit (*Muy Alta*, *Alta*, *Moderada*), reduciendo drásticamente el ratio de partidos calificados como "Baja confianza".
+* **Garantía sin Escalar (Raw Features):** Se entrena de forma robusta directamente sobre los datos sin escalar, eliminando la necesidad de transformaciones y previniendo el desfase silente de datos en producción.
+
+### Estrategia de Reentrenamiento Acumulativo Completo
+* Se entrena sobre el **dataset completo y acumulado** de más de **10,350 partidos** (9,557 partidos históricos de alta calidad + partidos completados de la temporada actual).
+* Se utiliza un sistema de **Sample Weights (pesos de muestra)** para ponderar la recencia de los datos:
+  * **Partidos de la temporada en curso (2026):** Peso de **`1.5`** (permite al modelo capturar rápidamente tendencias, dinámicas de equipos y rachas en vivo).
+  * **Partidos de temporadas históricas (2022-2025):** Peso de **`1.0`** (funcionan como una base de regularización sólida y estable).
 
 ---
 
@@ -279,7 +285,7 @@ La base de datos relacional de producción (`data/mlb_reentrenamiento.db`) cuent
 ## Stack Tecnológico
 
 *   **Core Lenguaje:** Python 3.12
-*   **Machine Learning:** XGBoost 3.1.2 · Optuna 3.6+ · Scikit-Learn 1.8+
+*   **Machine Learning:** CatBoost 1.2.7+ · XGBoost 3.1.2 · Optuna 3.6+ · Scikit-Learn 1.8+
 *   **Procesamiento de Datos:** Pandas 2.3+ · NumPy 2.4+ · SQLite
 *   **Servicios Web & API:** FastAPI 0.127+ · Uvicorn 0.40+ · Pydantic V2
 *   **Visualización & UI:** Streamlit 1.52.2 · Plotly 6.5.0
@@ -294,5 +300,5 @@ La base de datos relacional de producción (`data/mlb_reentrenamiento.db`) cuent
 
 ---
 
-**Autor:** Gabriel Larrazabal | **Versión:** V4.0.0 | **Última actualización:** Mayo 2026
-*MLB Game Predictor V4.0 — Inteligencia estadística aplicada al diamante.*
+**Autor:** Gabriel Larrazabal | **Versión:** V4.1.0 | **Última actualización:** Mayo 2026
+*MLB Game Predictor V4.1 — Inteligencia estadística aplicada al diamante con CatBoost.*

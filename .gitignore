@@ -87,6 +87,7 @@ src/.streamlit/config.toml
 *.temp
 logs/
 temp/
+catboost_info/
 reports/*.log
 reports/*.tmp
 
@@ -140,6 +141,7 @@ src/test_*.py
 
 # Scratch files (temporary tools)
 scratch/
+src/train_model_tournament.py
 
 # ============================================================================
 # AGENTS & MLOPS (MLFLOW)
