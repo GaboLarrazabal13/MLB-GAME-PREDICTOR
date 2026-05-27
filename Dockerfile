@@ -50,9 +50,12 @@ COPY --chown=appuser:appgroup .streamlit/ .streamlit/
 # Copiar archivos de configuración
 COPY --chown=appuser:appgroup requirements.txt .
 COPY --chown=appuser:appgroup .streamlit/config.toml .
+COPY --chown=appuser:appgroup start.sh .
 
-# Crear directorios necesarios
-RUN mkdir -p /app/logs && chown appuser:appgroup /app/logs
+# Crear directorios necesarios y dar permisos
+RUN mkdir -p /app/logs && \
+    chmod +x /app/start.sh && \
+    chown -R appuser:appgroup /app/logs /app/start.sh
 
 # Cambiar a usuario no-root
 USER appuser
@@ -60,7 +63,7 @@ USER appuser
 # -----------------------------------------------------------------------------
 # Configuración de puerto y health check
 # -----------------------------------------------------------------------------
-EXPOSE 8000
+EXPOSE 8000 7860
 
 # Health check para Docker
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
@@ -69,5 +72,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # -----------------------------------------------------------------------------
 # Comandos de inicio
 # -----------------------------------------------------------------------------
-# Por defecto ejecuta la API
-CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Ejecuta el script de inicio que levanta la API y el frontend Streamlit
+CMD ["/bin/bash", "/app/start.sh"]
