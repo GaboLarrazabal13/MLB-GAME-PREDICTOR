@@ -1010,6 +1010,7 @@ async def comparar_predicciones_resultados(fecha: str):
                     p.confianza,
                     p.tipo,
                     CASE
+                        WHEN r.ganador IS NULL THEN NULL
                         WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
                              (r.ganador = 0 AND p.prediccion = r.away_team)
                         THEN 1
@@ -1107,6 +1108,17 @@ async def comparar_predicciones_resultados(fecha: str):
         total = len(df)
         df_con_pred = df.dropna(subset=["prediccion"]) if "prediccion" in df.columns else df
         total_con_pred = len(df_con_pred)
+
+        # Determinar si solo son predicciones (resultados reales ausentes)
+        # Si todos los juegos tienen score_home o ganador_real como nulo, son solo predicciones.
+        solo_predicciones = False
+        if "ganador_real" in df.columns:
+            if df["ganador_real"].isna().all():
+                solo_predicciones = True
+        elif "score_home" in df.columns:
+            if df["score_home"].isna().all():
+                solo_predicciones = True
+
         aciertos = int(df_con_pred["acierto"].fillna(0).sum()) if "acierto" in df_con_pred.columns else 0
         accuracy = (aciertos / total_con_pred * 100) if total_con_pred > 0 else 0.0
 
@@ -1130,6 +1142,7 @@ async def comparar_predicciones_resultados(fecha: str):
                 "aciertos": int(aciertos),
                 "accuracy": round(accuracy, 2),
                 "por_confianza": por_confianza,
+                "solo_predicciones": solo_predicciones,
             },
         }
 

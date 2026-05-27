@@ -2203,11 +2203,27 @@ elif pagina == "📊 Comparación & Historial":
             solo_predicciones = stats.get("solo_predicciones", False)
 
             if solo_predicciones:
-                st.info("📋 Predicciones del día — Los resultados reales aún no están disponibles.")
-                st.markdown("### Predicciones")
-                col1 = st.columns(1)[0]
-                with col1:
-                    st.metric("Total Partidos", stats["total"])
+                st.markdown(
+                    f"""
+                    <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: 'Inter', sans-serif;">
+                        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
+                            <span style="font-size: 1.5rem; margin-right: 0.75rem;">📅</span>
+                            <span style="color: #1e3a8a; font-weight: 700; font-size: 1.15rem; font-family: 'Outfit', sans-serif;">
+                                Resultados Reales Aún No Disponibles
+                            </span>
+                        </div>
+                        <p style="color: #1e40af; font-size: 0.975rem; line-height: 1.6; margin: 0;">
+                            Los resultados reales para la fecha <b>{fecha_str}</b> aún no han sido registrados en la base de datos o los partidos están en desarrollo/programados para jugarse hoy.
+                        </p>
+                        <hr style="border: 0; border-top: 1px solid #bfdbfe; margin: 1rem 0;">
+                        <p style="color: #1d4ed8; font-size: 0.925rem; line-height: 1.5; margin: 0; font-weight: 500;">
+                            💡 <b>¿Quieres ver la cartelera y predicciones de hoy?</b><br>
+                            Dirígete a la sección <b>📅 Partidos de Hoy</b> en el menú lateral izquierdo para ver lineups oficiales y análisis detallados en tiempo real.
+                        </p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
             else:
                 st.markdown("### Rendimiento del Día")
                 col1, col2, col3, col4 = st.columns(4)
@@ -2221,43 +2237,43 @@ elif pagina == "📊 Comparación & Historial":
                     errores = stats["total"] - stats["aciertos"]
                     st.metric("Errores", errores)
 
-            st.markdown("### Resultados Detallados" if not solo_predicciones else "### Partidos")
+                st.markdown("### Resultados Detallados")
 
-            # Grid de Tarjetas estilo MLB
-            num_cols = 2
-            for i in range(0, len(partidos), num_cols):
-                grid_cols = st.columns(num_cols)
-                for j in range(num_cols):
-                    if i + j < len(partidos):
-                        partido = partidos[i + j]
-                        with grid_cols[j]:
-                            acierto = partido.get("acierto", 0)
-                            _ht = partido["home_team"]
-                            _at = partido["away_team"]
-                            _hn = get_team_display_name(_ht)
-                            _an = get_team_display_name(_at)
-                            _h_logo = get_team_logo_html(_ht, 32)
-                            _a_logo = get_team_logo_html(_at, 32)
-                            _score_a = partido.get("score_away", "-")
-                            _score_h = partido.get("score_home", "-")
+                # Grid de Tarjetas estilo MLB
+                num_cols = 2
+                for i in range(0, len(partidos), num_cols):
+                    grid_cols = st.columns(num_cols)
+                    for j in range(num_cols):
+                        if i + j < len(partidos):
+                            partido = partidos[i + j]
+                            with grid_cols[j]:
+                                acierto = partido.get("acierto", 0)
+                                _ht = partido["home_team"]
+                                _at = partido["away_team"]
+                                _hn = get_team_display_name(_ht)
+                                _an = get_team_display_name(_at)
+                                _h_logo = get_team_logo_html(_ht, 32)
+                                _a_logo = get_team_logo_html(_at, 32)
+                                _score_a = partido.get("score_away", "-")
+                                _score_h = partido.get("score_home", "-")
 
-                            tipo_pred = partido.get("tipo") or ""
-                            es_fallback = "FALLBACK" in str(tipo_pred).upper()
+                                tipo_pred = partido.get("tipo") or ""
+                                es_fallback = "FALLBACK" in str(tipo_pred).upper()
 
-                            if es_fallback:
-                                _badge_icon = "⚠️"
-                                _badge_text = "PRECAUCIÓN: SIN DATOS COMPLETOS"
-                                _badge_color = "#fef3c7"  # Amarillo/Ámbar suave
-                                _text_color = "#b45309"   # Marrón/Naranja oscuro
-                            else:
-                                _badge_icon = "✅" if acierto else "❌"
-                                _badge_text = "ACIERTO" if acierto else "ERROR"
-                                _badge_color = "#dcfce7" if acierto else "#fee2e2"
-                                _text_color = "#166534" if acierto else "#991b1b"
+                                if es_fallback:
+                                    _badge_icon = "⚠️"
+                                    _badge_text = "PRECAUCIÓN: SIN DATOS COMPLETOS"
+                                    _badge_color = "#fef3c7"  # Amarillo/Ámbar suave
+                                    _text_color = "#b45309"   # Marrón/Naranja oscuro
+                                else:
+                                    _badge_icon = "✅" if acierto else "❌"
+                                    _badge_text = "ACIERTO" if acierto else "ERROR"
+                                    _badge_color = "#dcfce7" if acierto else "#fee2e2"
+                                    _text_color = "#166534" if acierto else "#991b1b"
 
-                            # Renderizado de Tarjeta
-                            st.markdown(
-                                f"""
+                                # Renderizado de Tarjeta
+                                st.markdown(
+                                    f"""
 <div class="mlb-scoreboard-card">
     <div class="mlb-card-header">
         <span>FINAL</span>
@@ -2289,35 +2305,35 @@ elif pagina == "📊 Comparación & Historial":
     </div>
 </div>
 """,
-                                unsafe_allow_html=True,
-                            )
-                            # Botón de detalles opcional
-                            with st.expander("🔍 Ver Análisis Detallado", expanded=False):
-                                prob_h = normalizar_probabilidad(partido.get("prob_home", 0.5))
-                                prob_a = normalizar_probabilidad(partido.get("prob_away", 0.5))
-
-                                # Confianza
-                                confianza = partido.get("confianza", "N/A")
-                                color_conf = {
-                                    "MUY ALTA": "#ef4444",
-                                    "ALTA": "#f59e0b",
-                                    "MODERADA": "#22c55e",
-                                    "BAJA": "#64748b",
-                                }.get(confianza, "#64748b")
-
-                                st.markdown(
-                                    f"**Confianza:** <span style='color:{color_conf}; font-weight:bold;'>{confianza}</span>",
                                     unsafe_allow_html=True,
                                 )
+                                # Botón de detalles opcional
+                                with st.expander("🔍 Ver Análisis Detallado", expanded=False):
+                                    prob_h = normalizar_probabilidad(partido.get("prob_home", 0.5))
+                                    prob_a = normalizar_probabilidad(partido.get("prob_away", 0.5))
 
-                                col_p1, col_p2 = st.columns(2)
-                                with col_p1:
-                                    st.metric(f"Prob. {_at}", f"{prob_a * 100:.1f}%")
-                                with col_p2:
-                                    st.metric(f"Prob. {_ht}", f"{prob_h * 100:.1f}%")
+                                    # Confianza
+                                    confianza = partido.get("confianza", "N/A")
+                                    color_conf = {
+                                        "MUY ALTA": "#ef4444",
+                                        "ALTA": "#f59e0b",
+                                        "MODERADA": "#22c55e",
+                                        "BAJA": "#64748b",
+                                    }.get(confianza, "#64748b")
 
-                                if "stats_detalladas" in partido:
-                                    st.json(partido["stats_detalladas"], expanded=False)
+                                    st.markdown(
+                                        f"**Confianza:** <span style='color:{color_conf}; font-weight:bold;'>{confianza}</span>",
+                                        unsafe_allow_html=True,
+                                    )
+
+                                    col_p1, col_p2 = st.columns(2)
+                                    with col_p1:
+                                        st.metric(f"Prob. {_at}", f"{prob_a * 100:.1f}%")
+                                    with col_p2:
+                                        st.metric(f"Prob. {_ht}", f"{prob_h * 100:.1f}%")
+
+                                    if "stats_detalladas" in partido:
+                                        st.json(partido["stats_detalladas"], expanded=False)
         else:
             st.info(f" No hay datos disponibles para {fecha_str}")
 
