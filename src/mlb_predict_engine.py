@@ -32,13 +32,17 @@ warnings.filterwarnings("ignore")
 
 
 def obtener_nivel_confianza(prob_pct):
-    """Determina el nivel de confianza basado en la probabilidad"""
+    """
+    Determina el nivel de confianza basado en la probabilidad.
+    Ajustado científicamente para la volatilidad y rango de distribución del béisbol (MLB),
+    donde las probabilidades se concentran naturalmente cerca del base-rate (~50-55%).
+    """
     confianza = max(prob_pct, 100 - prob_pct) / 100
-    if confianza > 0.70:
+    if confianza > 0.58:
         return "MUY ALTA"
-    if confianza > 0.60:
+    if confianza > 0.54:
         return "ALTA"
-    if confianza > 0.55:
+    if confianza > 0.515:
         return "MODERADA"
     return "BAJA (Partido muy parejo)"
 
