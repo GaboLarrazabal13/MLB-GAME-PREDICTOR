@@ -11,6 +11,9 @@ import pandas as pd
 
 from mlb_config import CACHE_PATH, DB_PATH, MODELO_PATH, get_team_name
 
+# Global cache for speeding up bulk predictions
+_global_cache_data = None
+
 # ============================================================================
 # ANÁLISIS DE RENDIMIENTO DEL MODELO
 # ============================================================================
@@ -559,6 +562,36 @@ def extraer_features_hibridas(row, df_historico=None, hacer_scraping=False, sess
     from mlb_stats_api_client import obtener_fecha_ayer, obtener_stats_completas_api
 
     features = {}
+
+    # Check CACHE_PATH first if game_id is in row or can be constructed
+    game_id = row.get("game_id")
+    if not game_id and "fecha" in row and "away_team" in row and "home_team" in row:
+        if isinstance(row["fecha"], str):
+            f_str = row["fecha"][:10]
+        else:
+            f_str = row["fecha"].strftime("%Y-%m-%d")
+        game_id = f"{f_str}_{row['away_team']}_{row['home_team']}"
+
+    global _global_cache_data
+    if hacer_scraping and game_id:
+        if _global_cache_data is None and os.path.exists(CACHE_PATH):
+            try:
+                import pickle
+                with open(CACHE_PATH, "rb") as f_pkl:
+                    cache_dict = pickle.load(f_pkl)
+                    _global_cache_data = cache_dict.get("X_list", [])
+            except Exception:
+                _global_cache_data = []
+
+        if _global_cache_data:
+            for x in _global_cache_data:
+                if x.get("game_id") == game_id:
+                    for col, val in x.items():
+                        if col != "game_id" and col != "year":
+                            features[col] = val
+                    # Bypass live scraping
+                    hacer_scraping = False
+                    break
 
     # 1. TENDENCIAS TEMPORALES
     if df_historico is not None:

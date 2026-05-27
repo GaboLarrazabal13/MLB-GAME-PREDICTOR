@@ -80,9 +80,6 @@ def repredecir_temporada_2026():
             errores += 1
             print(f"   ❌ Error procesando partido: {e}")
 
-        # Pequeño delay de cortesía para no saturar la API de la MLB
-        time.sleep(0.5)
-
     elapsed = time.time() - inicio_ts
     print("\n" + "=" * 80)
     print(f"🏁 PROCESO COMPLETADO EN {elapsed/60:.1f} MINUTOS")
