@@ -123,6 +123,7 @@ def cargar_dataset_produccion():
                     )
                     base_feats_list.append({col: f.get(col, 0.0) for col in SCRAPING_FEATURES})
                     # Guardar en caché para futuras ejecuciones
+                    f["game_id"] = g_id
                     cache_2026[g_id] = f
                 except Exception as e:
                     print(f"⚠️ Error extrayendo features para el juego {g_id}: {e}")
