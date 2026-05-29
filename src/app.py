@@ -19,10 +19,12 @@ import streamlit as st
 # Importar configuración del proyecto
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
-    from mlb_config import DB_PATH, TEAM_CODE_TO_NAME
+    from mlb_config import DB_PATH, TEAM_CODE_TO_NAME, get_team_code
 except Exception as e:
     TEAM_CODE_TO_NAME = {}
     DB_PATH = "./data/mlb_reentrenamiento.db"
+    def get_team_code(name):
+        return name
     st.warning(f"Config fallback due to error: {e}")
 
 # ============================================================================
@@ -2172,60 +2174,8 @@ def calculate_and_save_elo_on_the_fly():
             HOME_ADVANTAGE = 24.0
 
             for home, away, ganador in games:
-                home_code = None
-                away_code = None
-
-                home_clean = str(home).strip().lower()
-                away_clean = str(away).strip().lower()
-
-                for code in EQUIPOS_MLB.keys():
-                    if code.lower() == home_clean:
-                        home_code = code
-                    if code.lower() == away_clean:
-                        away_code = code
-
-                # Nombres completos
-                if not home_code:
-                    for code, info in EQUIPOS_MLB.items():
-                        name = info.get("nombre", "").lower()
-                        if name == home_clean or name.split()[-1].lower() == home_clean:
-                            home_code = code
-                            break
-                if not away_code:
-                    for code, info in EQUIPOS_MLB.items():
-                        name = info.get("nombre", "").lower()
-                        if name == away_clean or name.split()[-1].lower() == away_clean:
-                            away_code = code
-                            break
-
-                # Casos especiales
-                if not home_code:
-                    if "d'backs" in home_clean or "diamondbacks" in home_clean:
-                        home_code = "ARI"
-                    elif "guardians" in home_clean:
-                        home_code = "CLE"
-                    elif "white sox" in home_clean:
-                        home_code = "CHW"
-                    elif "red sox" in home_clean:
-                        home_code = "BOS"
-                    elif "blue jays" in home_clean:
-                        home_code = "TOR"
-                    elif "athletics" in home_clean or "oakland" in home_clean:
-                        home_code = "ATH"
-
-                if not away_code:
-                    if "d'backs" in away_clean or "diamondbacks" in away_clean:
-                        away_code = "ARI"
-                    elif "guardians" in away_clean:
-                        away_code = "CLE"
-                    elif "white sox" in away_clean:
-                        away_code = "CHW"
-                    elif "red sox" in away_clean:
-                        away_code = "BOS"
-                    elif "blue jays" in away_clean:
-                        away_code = "TOR"
-                    elif "athletics" in away_clean or "oakland" in away_clean:
-                        away_code = "ATH"
+                home_code = get_team_code(home)
+                away_code = get_team_code(away)
 
                 if not home_code or not away_code:
                     continue
