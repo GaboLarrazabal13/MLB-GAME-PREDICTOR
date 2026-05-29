@@ -3231,6 +3231,68 @@ def render_tendencias_html(
     l_a = 10 - w_a
     record_l10_a = f"{w_a}-{l_a}"
 
+    # Cargar ELO dinámico desde la DB
+    elo_dict = {}
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='team_elo'")
+            if cursor.fetchone():
+                cursor.execute("SELECT team_code, elo FROM team_elo")
+                elo_dict = {row[0]: float(row[1]) for row in cursor.fetchall()}
+    except Exception:
+        pass
+
+    elo_h = elo_dict.get(home_team, 1500.0)
+    elo_a = elo_dict.get(away_team, 1500.0)
+
+    elo_vals = list(elo_dict.values()) if elo_dict else [1500.0]
+    max_elo = max(elo_vals) if elo_vals else 1650
+    min_elo = min(elo_vals) if elo_vals else 1350
+    elo_range = max(1.0, max_elo - min_elo)
+
+    pct_h = max(5.0, min(100.0, (elo_h - min_elo) / elo_range * 100.0))
+    pct_a = max(5.0, min(100.0, (elo_a - min_elo) / elo_range * 100.0))
+
+    theme_act = "Oscuro" if "theme_selector" in st.session_state and "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
+
+    if theme_act == "Oscuro":
+        if elo_h >= 1580:
+            bar_color_h = "linear-gradient(90deg, #00e676, #bbf7d0)"
+        elif elo_h >= 1520:
+            bar_color_h = "linear-gradient(90deg, #0055aa, #00c8ff)"
+        elif elo_h >= 1480:
+            bar_color_h = "linear-gradient(90deg, #d97706, #fbbf24)"
+        else:
+            bar_color_h = "linear-gradient(90deg, #475569, #94a3b8)"
+            
+        if elo_a >= 1580:
+            bar_color_a = "linear-gradient(90deg, #00e676, #bbf7d0)"
+        elif elo_a >= 1520:
+            bar_color_a = "linear-gradient(90deg, #0055aa, #00c8ff)"
+        elif elo_a >= 1480:
+            bar_color_a = "linear-gradient(90deg, #d97706, #fbbf24)"
+        else:
+            bar_color_a = "linear-gradient(90deg, #475569, #94a3b8)"
+    else:
+        if elo_h >= 1580:
+            bar_color_h = "#10b981"
+        elif elo_h >= 1520:
+            bar_color_h = "#3b82f6"
+        elif elo_h >= 1480:
+            bar_color_h = "#f59e0b"
+        else:
+            bar_color_h = "#64748b"
+            
+        if elo_a >= 1580:
+            bar_color_a = "#10b981"
+        elif elo_a >= 1520:
+            bar_color_a = "#3b82f6"
+        elif elo_a >= 1480:
+            bar_color_a = "#f59e0b"
+        else:
+            bar_color_a = "#64748b"
+
     html = f"""
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
         <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
@@ -3238,7 +3300,7 @@ def render_tendencias_html(
                 {get_team_logo_html(home_team, 32)}
                 <strong style="font-size:1.1rem">{home_team}</strong>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:0.5rem;text-align:center">
+            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:0.5rem;text-align:center;margin-bottom:1rem">
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">W% SEASON</div>
                     <div style="font-size:1.1rem;font-weight:700;color:{"#10b981" if win_rate_s_h >= 50 else "#ef4444"}">{win_rate_s_h:.0f}%</div>
@@ -3256,13 +3318,26 @@ def render_tendencias_html(
                     <div style="margin-top:2px">{_racha_badge(racha_h)}</div>
                 </div>
             </div>
+            <hr style="border:0;border-top:1px solid rgba(255,255,255,0.1);margin:0.8rem 0">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">ELO</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#00c8ff">{elo_h:.1f}</div>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px;text-align:right;">FUERZA</div>
+                    <div class="elo-bar-bg" style="background:#050c1a !important;border-radius:4px !important;height:8px !important;width:100px !important;overflow:hidden !important;display:inline-block !important;vertical-align:middle !important;border:1px solid rgba(255,255,255,0.15)">
+                        <div class="elo-bar-fill" style="height:100% !important;border-radius:4px !important;width:{pct_h:.1f}% !important;background:{bar_color_h} !important;"></div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
             <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
                 {get_team_logo_html(away_team, 32)}
                 <strong style="font-size:1.1rem">{away_team}</strong>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:0.5rem;text-align:center">
+            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:0.5rem;text-align:center;margin-bottom:1rem">
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">W% SEASON</div>
                     <div style="font-size:1.1rem;font-weight:700;color:{"#10b981" if win_rate_s_a >= 50 else "#ef4444"}">{win_rate_s_a:.0f}%</div>
@@ -3280,6 +3355,113 @@ def render_tendencias_html(
                     <div style="margin-top:2px">{_racha_badge(racha_a)}</div>
                 </div>
             </div>
+            <hr style="border:0;border-top:1px solid rgba(255,255,255,0.1);margin:0.8rem 0">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">ELO</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#00c8ff">{elo_a:.1f}</div>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px;text-align:right;">FUERZA</div>
+                    <div class="elo-bar-bg" style="background:#050c1a !important;border-radius:4px !important;height:8px !important;width:100px !important;overflow:hidden !important;display:inline-block !important;vertical-align:middle !important;border:1px solid rgba(255,255,255,0.15)">
+                        <div class="elo-bar-fill" style="height:100% !important;border-radius:4px !important;width:{pct_a:.1f}% !important;background:{bar_color_a} !important;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """
+    return html
+
+
+def render_lanzadores_html(home_team, away_team, home_pitcher, away_pitcher, home_pitcher_stats, away_pitcher_stats):
+    """Genera HTML premium para la sección de Lanzadores Iniciales en forma de cajas"""
+    
+    # 1. Home Pitcher Card
+    if home_pitcher_stats and isinstance(home_pitcher_stats, dict):
+        nombre_h = home_pitcher_stats.get("nombre", home_pitcher)
+        era_h = home_pitcher_stats.get("ERA", 0.0)
+        whip_h = home_pitcher_stats.get("WHIP", 0.0)
+        so9_h = home_pitcher_stats.get("SO9", 0.0)
+        
+        # Color del ERA
+        color_era_h = "#10b981" if era_h < 3.5 else ("#ef4444" if era_h > 4.5 else "#fbbf24")
+        # Color del WHIP
+        color_whip_h = "#10b981" if whip_h < 1.20 else ("#ef4444" if whip_h > 1.40 else "#fbbf24")
+        
+        inner_html_h = f"""
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.5rem;text-align:center">
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">ERA</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:{color_era_h}">{era_h:.2f}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">WHIP</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:{color_whip_h}">{whip_h:.3f}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">SO9</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:#10b981">{so9_h:.2f}</div>
+                </div>
+            </div>
+        """
+    else:
+        inner_html_h = f"""
+            <div style="text-align:center;padding:1rem;color:#94a3b8;font-size:0.8rem;font-style:italic">
+                ⚠️ Sin estadísticas para {home_pitcher}
+            </div>
+        """
+        nombre_h = home_pitcher
+
+    # 2. Away Pitcher Card
+    if away_pitcher_stats and isinstance(away_pitcher_stats, dict):
+        nombre_a = away_pitcher_stats.get("nombre", away_pitcher)
+        era_a = away_pitcher_stats.get("ERA", 0.0)
+        whip_a = away_pitcher_stats.get("WHIP", 0.0)
+        so9_a = away_pitcher_stats.get("SO9", 0.0)
+        
+        color_era_a = "#10b981" if era_a < 3.5 else ("#ef4444" if era_a > 4.5 else "#fbbf24")
+        color_whip_a = "#10b981" if whip_a < 1.20 else ("#ef4444" if whip_a > 1.40 else "#fbbf24")
+        
+        inner_html_a = f"""
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.5rem;text-align:center">
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">ERA</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:{color_era_a}">{era_a:.2f}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">WHIP</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:{color_whip_a}">{whip_a:.3f}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">SO9</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:#10b981">{so9_a:.2f}</div>
+                </div>
+            </div>
+        """
+    else:
+        inner_html_a = f"""
+            <div style="text-align:center;padding:1rem;color:#94a3b8;font-size:0.8rem;font-style:italic">
+                ⚠️ Sin estadísticas para {away_pitcher}
+            </div>
+        """
+        nombre_a = away_pitcher
+
+    html = f"""
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                {get_team_logo_html(home_team, 32)}
+                <strong style="font-size:1.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{home_team} — {nombre_h}</strong>
+            </div>
+            {inner_html_h}
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                {get_team_logo_html(away_team, 32)}
+                <strong style="font-size:1.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{away_team} — {nombre_a}</strong>
+            </div>
+            {inner_html_a}
         </div>
     </div>
     """
@@ -3541,43 +3723,19 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
         st.markdown("## Estadísticas Detalladas")
         st.markdown("### Lanzadores Iniciales")
 
-        pcol1, pcol2 = st.columns(2)
-
-        with pcol1:
-            home_pitcher_stats = stats_det.get("home_pitcher")
-            if home_pitcher_stats and isinstance(home_pitcher_stats, dict):
-                nombre_real = home_pitcher_stats.get("nombre", home_pitcher)
-                st.markdown(
-                    get_team_logo_html(home_team, 40) + f" {home_team} - {nombre_real}",
-                    unsafe_allow_html=True,
-                )
-                s1, s2, s3 = st.columns(3)
-                with s1:
-                    st.metric("ERA", f"{home_pitcher_stats.get('ERA', 0):.2f}")
-                with s2:
-                    st.metric("WHIP", f"{home_pitcher_stats.get('WHIP', 0):.3f}")
-                with s3:
-                    st.metric("SO9", f"{home_pitcher_stats.get('SO9', 0):.2f}")
-            else:
-                st.warning(f"⚠️ No se encontraron estadísticas para {home_pitcher}")
-
-        with pcol2:
-            away_pitcher_stats = stats_det.get("away_pitcher")
-            if away_pitcher_stats and isinstance(away_pitcher_stats, dict):
-                nombre_real = away_pitcher_stats.get("nombre", away_pitcher)
-                st.markdown(
-                    get_team_logo_html(away_team, 40) + f"{away_team} - {nombre_real}",
-                    unsafe_allow_html=True,
-                )
-                s1, s2, s3 = st.columns(3)
-                with s1:
-                    st.metric("ERA", f"{away_pitcher_stats.get('ERA', 0):.2f}")
-                with s2:
-                    st.metric("WHIP", f"{away_pitcher_stats.get('WHIP', 0):.3f}")
-                with s3:
-                    st.metric("SO9", f"{away_pitcher_stats.get('SO9', 0):.2f}")
-            else:
-                st.warning(f"⚠️ No se encontraron estadísticas para {away_pitcher}")
+        home_pitcher_stats = stats_det.get("home_pitcher")
+        away_pitcher_stats = stats_det.get("away_pitcher")
+        st.markdown(
+            render_lanzadores_html(
+                home_team,
+                away_team,
+                home_pitcher,
+                away_pitcher,
+                home_pitcher_stats,
+                away_pitcher_stats,
+            ),
+            unsafe_allow_html=True,
+        )
 
         st.markdown("---")
         st.markdown("### Top 3 Bateadores")
@@ -4025,65 +4183,19 @@ if pagina == "⚾ Predicción Manual":
 
                             st.markdown("### Lanzadores Iniciales")
 
-                            col1, col2 = st.columns(2)
-
-                            with col1:
-                                home_pitcher_stats = stats_det.get("home_pitcher")
-                                if home_pitcher_stats and isinstance(home_pitcher_stats, dict):
-                                    pitcher_nombre_real = home_pitcher_stats.get("nombre", home_pitcher)
-
-                                    st.markdown(
-                                        get_team_logo_html(home_team, 40) + f" {home_team} - {pitcher_nombre_real}",
-                                        unsafe_allow_html=True,
-                                    )
-
-                                    subcol1, subcol2, subcol3 = st.columns(3)
-                                    with subcol1:
-                                        st.metric(
-                                            "ERA",
-                                            f"{home_pitcher_stats.get('ERA', 0):.2f}",
-                                        )
-                                    with subcol2:
-                                        st.metric(
-                                            "WHIP",
-                                            f"{home_pitcher_stats.get('WHIP', 0):.3f}",
-                                        )
-                                    with subcol3:
-                                        st.metric(
-                                            "SO9",
-                                            f"{home_pitcher_stats.get('SO9', 0):.2f}",
-                                        )
-                                else:
-                                    st.warning(f"⚠️ No se encontraron estadísticas para {home_pitcher}")
-
-                            with col2:
-                                away_pitcher_stats = stats_det.get("away_pitcher")
-                                if away_pitcher_stats and isinstance(away_pitcher_stats, dict):
-                                    pitcher_nombre_real = away_pitcher_stats.get("nombre", away_pitcher)
-
-                                    st.markdown(
-                                        get_team_logo_html(away_team, 40) + f" {away_team} - {pitcher_nombre_real}",
-                                        unsafe_allow_html=True,
-                                    )
-
-                                    subcol1, subcol2, subcol3 = st.columns(3)
-                                    with subcol1:
-                                        st.metric(
-                                            "ERA",
-                                            f"{away_pitcher_stats.get('ERA', 0):.2f}",
-                                        )
-                                    with subcol2:
-                                        st.metric(
-                                            "WHIP",
-                                            f"{away_pitcher_stats.get('WHIP', 0):.3f}",
-                                        )
-                                    with subcol3:
-                                        st.metric(
-                                            "SO9",
-                                            f"{away_pitcher_stats.get('SO9', 0):.2f}",
-                                        )
-                                else:
-                                    st.warning(f" No se encontraron estadísticas para {away_pitcher}")
+                            home_pitcher_stats = stats_det.get("home_pitcher")
+                            away_pitcher_stats = stats_det.get("away_pitcher")
+                            st.markdown(
+                                render_lanzadores_html(
+                                    home_team,
+                                    away_team,
+                                    home_pitcher,
+                                    away_pitcher,
+                                    home_pitcher_stats,
+                                    away_pitcher_stats,
+                                ),
+                                unsafe_allow_html=True,
+                            )
 
                             st.markdown("---")
                             st.markdown("### Top 3 Bateadores")
