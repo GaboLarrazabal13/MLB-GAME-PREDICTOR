@@ -3371,7 +3371,7 @@ def render_tendencias_html(
         </div>
     </div>
     """
-    return html
+    return "\n".join(line.strip() for line in html.splitlines())
 
 
 def render_lanzadores_html(home_team, away_team, home_pitcher, away_pitcher, home_pitcher_stats, away_pitcher_stats):
@@ -3465,7 +3465,7 @@ def render_lanzadores_html(home_team, away_team, home_pitcher, away_pitcher, hom
         </div>
     </div>
     """
-    return html
+    return "\n".join(line.strip() for line in html.splitlines())
 
 
 def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_team, home_pitcher, away_pitcher):
