@@ -7,7 +7,7 @@ sdk: docker
 pinned: false
 ---
 
-# ⚾ MLB Game Predictor V4.1
+# ⚾ MLB Game Predictor V4.5
 
 > Sistema de Machine Learning de grado de producción para la predicción de partidos de la Major League Baseball (MLB). Cuenta con un pipeline de datos 100% automatizado mediante la API Oficial de la MLB, API REST con FastAPI, dashboard interactivo con Streamlit, torneo local de modelos SOTA optimizados por Optuna, y un ciclo de vida MLOps robusto instrumentado localmente con MLflow (SQLite) promocionando a CatBoost como Champion definitivo.
 
@@ -112,7 +112,7 @@ El flujo opera de manera digital y autónoma mediante triggers cronometrados en 
 
 ---
 
-## Motor de Machine Learning V4.1 (CatBoost Upgrade)
+## Motor de Machine Learning V4.5 (CatBoost Upgrade)
 
 ### El Gran Torneo de Modelos SOTA (V4.1 Challenger Stage)
 
@@ -191,11 +191,13 @@ GET  /results             → Historial acumulado con accuracy
 GET  /stats/accuracy      → Métricas e indicadores globales de desempeño
 ```
 
-### Dashboard Interactivo Streamlit
+### Dashboard Interactivo Streamlit (V4.5 UI Redesign)
 
 *   **Identidad Visual Premium:** Logos e insignias oficiales en tiempo real vía CDN para los 30 equipos de la MLB.
-*   **Visualización Dinámica:** Gráficos Plotly de la evolución temporal de la precisión del modelo y distribución del nivel de confianza.
-*   **Segmentación del Nivel de Confianza:** Clasificación matemática en cuatro niveles: `MUY ALTA` (probabilidad >70%), `ALTA` (>60%), `MODERADA` (>55%) o `BAJA`.
+*   **Arquitectura Sidebar Modular:** Separación física y modular de las secciones en el menú lateral. Aislamiento completo de la vista de **Power Rankings (Sistema ELO)** respecto al **Rendimiento del Modelo** para optimizar la carga cognitiva y la usabilidad.
+*   **Visualización Dinámica y Estética:** Gráficos interactivos de Plotly rediseñados a un formato altamente estético y compacto (altura de 280px), optimizando el espacio visual. Integración de gridlines de alta transparencia adaptables a temas visuales (Claro/Oscuro).
+*   **Cuatro Niveles Detallados de Confianza:** Clasificación estadística de la confianza en cuatro buckets refinados: `"Muy Alta (≥ 75%)"`, `"Alta (65% - 75%)"`, `"Media (55% - 65%)"` y `"Baja (< 55%)"`.
+*   **Banners de Alerta Adaptativos:** Módulos de advertencia y mensajes del sistema dinámicos que cambian su paleta tipográfica y tonalidades de fondo según el tema activo para integrarse fluidamente con el modo Oscuro.
 
 ---
 
@@ -309,5 +311,5 @@ La base de datos relacional de producción (`data/mlb_reentrenamiento.db`) cuent
 
 ---
 
-**Autor:** Gabriel Larrazabal | **Versión:** V4.1.0 | **Última actualización:** Mayo 2026
-*MLB Game Predictor V4.1 — Inteligencia estadística aplicada al diamante con CatBoost.*
+**Autor:** Gabriel Larrazabal | **Versión:** V4.5.0 | **Última actualización:** Mayo 2026
+*MLB Game Predictor V4.5 — Inteligencia estadística aplicada al diamante con CatBoost y UI Premium.*

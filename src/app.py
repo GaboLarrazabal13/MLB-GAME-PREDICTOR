@@ -5302,10 +5302,12 @@ elif pagina == "📈 Rendimiento del Modelo":
                             val_pct = val * 100 if val <= 1.0 else val
                             if val_pct < 55:
                                 return "Baja (< 55%)"
-                            elif val_pct <= 65:
+                            elif val_pct < 65:
                                 return "Media (55% - 65%)"
+                            elif val_pct < 75:
+                                return "Alta (65% - 75%)"
                             else:
-                                return "Alta (> 65%)"
+                                return "Muy Alta (≥ 75%)"
 
                         df_conf["Nivel"] = df_conf["Conf_Pct"].apply(categorize_conf)
 
@@ -5321,9 +5323,22 @@ elif pagina == "📈 Rendimiento del Modelo":
                         )
 
                         # Ordenar las categorías lógicamente
-                        cat_order = {"Baja (< 55%)": 0, "Media (55% - 65%)": 1, "Alta (> 65%)": 2}
+                        cat_order = {
+                            "Baja (< 55%)": 0,
+                            "Media (55% - 65%)": 1,
+                            "Alta (65% - 75%)": 2,
+                            "Muy Alta (≥ 75%)": 3
+                        }
                         df_conf_grouped["Order"] = df_conf_grouped["Nivel"].map(cat_order)
                         df_conf_grouped = df_conf_grouped.sort_values("Order")
+
+                        colors_map = {
+                            "Baja (< 55%)": "#94a3b8",
+                            "Media (55% - 65%)": "#fbbf24",
+                            "Alta (65% - 75%)": "#3b82f6",
+                            "Muy Alta (≥ 75%)": "#10b981"
+                        }
+                        bar_colors = [colors_map.get(n, "#94a3b8") for n in df_conf_grouped["Nivel"]]
 
                         fig_conf = go.Figure()
                         fig_conf.add_trace(
@@ -5331,20 +5346,33 @@ elif pagina == "📈 Rendimiento del Modelo":
                                 x=df_conf_grouped["Nivel"],
                                 y=df_conf_grouped["Tasa (%)"],
                                 text=df_conf_grouped["Tasa (%)"].round(1).astype(str) + "%",
-                                textposition="auto",
-                                marker_color=["#94a3b8", "#fbbf24", "#10b981"],
+                                textposition="inside",
+                                marker_color=bar_colors,
                                 hovertemplate="<b>%{x}</b><br>Aciertos: %{customdata[0]} de %{customdata[1]}<extra></extra>",
                                 customdata=df_conf_grouped[["Aciertos", "Total"]],
                             )
                         )
 
+                        theme_act = "Oscuro" if "theme_selector" in st.session_state and "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
+                        grid_color = "rgba(255, 255, 255, 0.07)" if theme_act == "Oscuro" else "rgba(0, 0, 0, 0.07)"
+                        text_color = "#90cce8" if theme_act == "Oscuro" else "#1e293b"
+
                         fig_conf.update_layout(
                             yaxis_title="Tasa de Aciertos (%)",
-                            yaxis=dict(range=[0, 115]),
+                            yaxis=dict(
+                                range=[0, 115],
+                                gridcolor=grid_color,
+                                showgrid=True,
+                                tickfont=dict(color=text_color, size=9)
+                            ),
+                            xaxis=dict(
+                                tickfont=dict(color=text_color, size=9)
+                            ),
                             plot_bgcolor="rgba(0,0,0,0)",
                             paper_bgcolor="rgba(0,0,0,0)",
-                            margin=dict(l=20, r=20, t=30, b=20),
-                            height=350,
+                            margin=dict(l=10, r=10, t=10, b=10),
+                            height=280,
+                            font=dict(family="'Inter', sans-serif", color=text_color),
                         )
                         st.plotly_chart(fig_conf, use_container_width=True)
 
@@ -5389,7 +5417,7 @@ elif pagina == "📈 Rendimiento del Modelo":
                                 x=df_show["Tasa (%)"],
                                 orientation="h",
                                 text=df_show["Tasa (%)"].round(1).astype(str) + "% (" + df_show["Total"].astype(str) + "J)",
-                                textposition="auto",
+                                textposition="inside",
                                 marker_color=colors,
                                 hovertemplate="<b>%{y}</b><br>Tasa: %{x:.1f}%<br>Partidos: %{customdata[0]}<extra></extra>",
                                 customdata=df_show[["Total"]],
@@ -5398,11 +5426,20 @@ elif pagina == "📈 Rendimiento del Modelo":
 
                         fig_team.update_layout(
                             xaxis_title="Tasa de Aciertos (%)",
-                            xaxis=dict(range=[0, 115]),
+                            xaxis=dict(
+                                range=[0, 115],
+                                gridcolor=grid_color,
+                                showgrid=True,
+                                tickfont=dict(color=text_color, size=9)
+                            ),
+                            yaxis=dict(
+                                tickfont=dict(color=text_color, size=9)
+                            ),
                             plot_bgcolor="rgba(0,0,0,0)",
                             paper_bgcolor="rgba(0,0,0,0)",
-                            margin=dict(l=20, r=20, t=30, b=20),
-                            height=350,
+                            margin=dict(l=10, r=10, t=10, b=10),
+                            height=280,
+                            font=dict(family="'Inter', sans-serif", color=text_color),
                         )
                         st.plotly_chart(fig_team, use_container_width=True)
                 else:
