@@ -4,11 +4,16 @@ on:
   push:
     branches:
       - main
+  workflow_run:
+    workflows: ["MLB Predictor Automation"]
+    types:
+      - completed
   workflow_dispatch: # Permite ejecución manual
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,4 +51,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git push -f https://GaboLarrazabal:$HF_TOKEN@huggingface.co/spaces/GaboLarrazabal/mlb-game-predictor hf-deploy:main
+          git push -f https://GaboLarrazabal13:$HF_TOKEN@huggingface.co/spaces/GaboLarrazabal13/mlb-game-predictor hf-deploy:main

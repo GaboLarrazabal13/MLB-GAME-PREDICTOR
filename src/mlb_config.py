@@ -138,6 +138,9 @@ TEMPORAL_FEATURES = [
     "away_racha",
     "away_runs_avg",
     "away_runs_diff",
+    "home_elo",
+    "away_elo",
+    "diff_elo",
     "year",
 ]
 

@@ -37,7 +37,9 @@ from mlb_config import (
     MODELO_PATH,
     SCRAPING_FEATURES,
     SUPER_FEATURES,
+    TEAM_CODE_TO_NAME,
     TEMPORAL_FEATURES,
+    get_team_code,
 )
 from mlb_feature_engineering import calcular_super_features
 from mlb_utils import alinear_features_entrenamiento, extraer_features_hibridas
@@ -141,10 +143,15 @@ def cargar_dataset_produccion():
     df_base_feats = pd.DataFrame(base_feats_list)
     df_dataset = pd.concat([df_juegos.reset_index(drop=True), df_base_feats.reset_index(drop=True)], axis=1)
 
-    # 6. Calcular Features Temporales (O(N) cronológico sin leakage)
-    print("   ⏱️ Calculando tendencias temporales mediante tracking cronológico acumulativo...")
+    # 6. Calcular Features Temporales y ELO (O(N) cronológico sin leakage)
+    print("   ⏱️ Calculando tendencias temporales y ELO mediante tracking cronológico acumulativo...")
     temp_feats_list = []
     team_games = {}
+
+    # Inicializar ELOs
+    elo_dict = {code: 1500.0 for code in TEAM_CODE_TO_NAME.keys()}
+    K = 20.0
+    HOME_ADVANTAGE = 24.0
 
     for idx, row in df_dataset.iterrows():
         h_team = row["home_team"]
@@ -153,6 +160,9 @@ def cargar_dataset_produccion():
         sc_h = float(row["score_home"] or 0)
         sc_a = float(row["score_away"] or 0)
         gan = int(row["ganador"] or 0)
+
+        h_code = get_team_code(h_team)
+        a_code = get_team_code(a_team)
 
         hist_h = team_games.get((h_team, yr), [])
         hist_a = team_games.get((a_team, yr), [])
@@ -195,6 +205,16 @@ def cargar_dataset_produccion():
                     break
             a_strk = streak if ultimo_ganado else -streak
 
+        # Obtener ELO antes de que inicie el juego (sin leakage)
+        if h_code and a_code:
+            h_elo_before = elo_dict[h_code]
+            a_elo_before = elo_dict[a_code]
+            diff_elo_before = h_elo_before - a_elo_before
+        else:
+            h_elo_before = 1500.0
+            a_elo_before = 1500.0
+            diff_elo_before = 0.0
+
         temp_feats_list.append({
             "home_win_rate_10": h_wr10,
             "home_win_rate_season": h_wrs,
@@ -206,6 +226,9 @@ def cargar_dataset_produccion():
             "away_racha": a_strk,
             "away_runs_avg": a_ravg,
             "away_runs_diff": a_rdiff,
+            "home_elo": h_elo_before,
+            "away_elo": a_elo_before,
+            "diff_elo": diff_elo_before,
         })
 
         # Actualizar historial
@@ -219,6 +242,13 @@ def cargar_dataset_produccion():
         if (a_team, yr) not in team_games:
             team_games[(a_team, yr)] = []
         team_games[(a_team, yr)].append({"ganado": a_win, "runs_sc": sc_a, "runs_al": sc_h})
+
+        # Actualizar ELO para futuros partidos
+        if h_code and a_code:
+            e_home = 1.0 / (10.0 ** (-(h_elo_before + HOME_ADVANTAGE - a_elo_before) / 400.0) + 1.0)
+            s_home = 1.0 if gan == 1 else 0.0
+            elo_dict[h_code] = h_elo_before + K * (s_home - e_home)
+            elo_dict[a_code] = a_elo_before + K * ((1.0 - s_home) - (1.0 - e_home))
 
     df_temp = pd.DataFrame(temp_feats_list)
     df_dataset = pd.concat([df_dataset.reset_index(drop=True), df_temp.reset_index(drop=True)], axis=1)

@@ -9,8 +9,6 @@ on:
     - cron: '0 12 * * *'
     # Reintento y confirmación de juegos diurnos (6:00 PM España / 12:00 PM ET)
     - cron: '0 16 * * *'
-    # Cierre nocturno y confirmación definitiva de juegos nocturnos (10:30 PM España / 4:30 PM ET)
-    - cron: '30 20 * * *'
 
   
   workflow_dispatch:  # Permite ejecución manual
@@ -453,7 +451,6 @@ jobs:
     if: |
       github.event.schedule == '0 12 * * *' ||
       github.event.schedule == '0 16 * * *' ||
-      github.event.schedule == '30 20 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scrape')
     
     steps:
@@ -618,7 +615,6 @@ jobs:
   post_scrape_validation:
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '30 20 * * *' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'post_scrape_validate')
 
     steps:

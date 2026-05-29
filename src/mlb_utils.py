@@ -593,6 +593,34 @@ def extraer_features_hibridas(row, df_historico=None, hacer_scraping=False, sess
                     hacer_scraping = False
                     break
 
+    # 1.1 Ingestar ELO ratings dinámicamente desde SQLite (Siempre disponible)
+    from mlb_config import get_team_code
+    h_code = get_team_code(row["home_team"])
+    a_code = get_team_code(row["away_team"])
+
+    h_elo = 1500.0
+    a_elo = 1500.0
+
+    if os.path.exists(DB_PATH):
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='team_elo'")
+                if cursor.fetchone():
+                    cursor.execute("SELECT team_code, elo FROM team_elo")
+                    elo_rows = cursor.fetchall()
+                    elo_map = {r[0]: r[1] for r in elo_rows}
+                    if h_code in elo_map:
+                        h_elo = elo_map[h_code]
+                    if a_code in elo_map:
+                        a_elo = elo_map[a_code]
+        except Exception:
+            pass
+
+    features["home_elo"] = h_elo
+    features["away_elo"] = a_elo
+    features["diff_elo"] = h_elo - a_elo
+
     # 1. TENDENCIAS TEMPORALES
     if df_historico is not None:
         fecha_dt = pd.to_datetime(row["fecha"])
