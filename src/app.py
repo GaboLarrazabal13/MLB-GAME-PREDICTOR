@@ -4695,14 +4695,50 @@ elif pagina == "📊 Comparación & Historial":
 
         # 2. Caja de Desglose por Nivel de Confianza
         if _por_conf:
-            # Crear las cajas para cada nivel de confianza
+            # Crear las cajas para cada nivel de confianza ordenadas
             boxes_html = ""
-            _iconos = { "MODERADA": "🟢", "BAJA": "🔵", "ALTA": "🟡", "MUY ALTA": "🔴"}
-            _colores = {"MODERADA": "#10b981", "BAJA": "#3b82f6", "ALTA": "#eab308", "MUY ALTA": "#ef4444"}
+            _iconos = {
+                "MUY ALTA": "🔴",
+                "ALTA": "🟡",
+                "MODERADA": "🟢",
+                "BAJA": "🟣",
+                "BAJA (Partido muy parejo)": "🟣",
+                "BAJA (PARTIDO MUY PAREJO)": "🟣",
+            }
+            _colores = {
+                "MUY ALTA": "#ef4444",
+                "ALTA": "#eab308",
+                "MODERADA": "#10b981",
+                "BAJA": "#b388ff",
+                "BAJA (Partido muy parejo)": "#b388ff",
+                "BAJA (PARTIDO MUY PAREJO)": "#b388ff",
+            }
 
-            for _nivel, _datos in _por_conf.items():
+            # Ordenar claves de manera robusta: MUY ALTA, ALTA, MODERADA, BAJA
+            ordered_keys = []
+            for k in _por_conf.keys():
+                if k.upper() == "MUY ALTA":
+                    ordered_keys.append(k)
+            for k in _por_conf.keys():
+                if k.upper() == "ALTA":
+                    ordered_keys.append(k)
+            for k in _por_conf.keys():
+                if k.upper() == "MODERADA":
+                    ordered_keys.append(k)
+            for k in _por_conf.keys():
+                if "BAJA" in k.upper():
+                    ordered_keys.append(k)
+            for k in _por_conf.keys():
+                if k not in ordered_keys:
+                    ordered_keys.append(k)
+
+            for _nivel in ordered_keys:
+                _datos = _por_conf[_nivel]
                 _icono = _iconos.get(_nivel, "⚪")
                 _color = _colores.get(_nivel, "#64748b")
+                if _icono == "⚪" and "BAJA" in _nivel.upper():
+                    _icono = "🟣"
+                    _color = "#b388ff"
                 _acc_nivel = _datos.get('accuracy', 0)
                 _aciertos_nivel = _datos.get('aciertos', 0)
                 _total_nivel = _datos.get('total', 0)
@@ -4911,6 +4947,16 @@ elif pagina == "📊 Comparación & Historial":
                                     )
 
                                     col_p1, col_p2 = st.columns(2)
+                                    with col_p1:
+                                        st.metric(
+                                            label=f"Prob. {get_team_display_name(partido.get('away_team', 'Visitante'))}",
+                                            value=f"{prob_a * 100:.1f}%"
+                                        )
+                                    with col_p2:
+                                        st.metric(
+                                            label=f"Prob. {get_team_display_name(partido.get('home_team', 'Home'))}",
+                                            value=f"{prob_h * 100:.1f}%"
+                                        )
                                     if "stats_detalladas" in partido:
                                         st.json(partido["stats_detalladas"], expanded=False)
         else:
