@@ -291,7 +291,7 @@ if theme == "Oscuro":
         color: #d8eef8 !important;
         background-color: transparent !important;
     }
-    
+
     /* Comprehensive override for selectboxes and dropdowns in Dark Mode to prevent white background */
     div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
@@ -302,7 +302,7 @@ if theme == "Oscuro":
         border-radius: 8px !important;
         color: #d8eef8 !important;
     }
-    
+
     /* Inner text and inputs in selectbox */
     div[data-baseweb="select"] div,
     div[data-baseweb="select"] span,
@@ -310,7 +310,7 @@ if theme == "Oscuro":
         background-color: transparent !important;
         color: #d8eef8 !important;
     }
-    
+
     /* Opened dropdown options popup/popover menu */
     div[data-baseweb="popover"],
     ul[role="listbox"],
@@ -319,7 +319,7 @@ if theme == "Oscuro":
         color: #d8eef8 !important;
         border: 1px solid #1e3f6a !important;
     }
-    
+
     /* Hover and active selections in the dropdown options list */
     li[role="option"]:hover,
     li[role="option"][aria-selected="true"] {
@@ -2162,8 +2162,8 @@ def calculate_and_save_elo_on_the_fly():
             losses_dict = {code: 0 for code in EQUIPOS_MLB.keys()}
 
             cursor.execute("""
-                SELECT home_team, away_team, ganador 
-                FROM historico_real 
+                SELECT home_team, away_team, ganador
+                FROM historico_real
                 ORDER BY fecha ASC, game_id ASC
             """)
             games = cursor.fetchall()
@@ -4982,7 +4982,7 @@ elif pagina == "📈 Dashboard's Interactivos":
 <h4 style="margin: 0; color: #00c8ff; font-weight: 700; font-size: 1.05rem;">Leyenda y Funcionamiento del Sistema ELO</h4>
 </div>
 <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: #d8eef8; line-height: 1.45;">
-El <strong>Sistema ELO</strong> es un método matemático de clasificación que calcula la fuerza competitiva relativa de cada equipo de forma dinámica. 
+El <strong>Sistema ELO</strong> es un método matemático de clasificación que calcula la fuerza competitiva relativa de cada equipo de forma dinámica.
 Todos los equipos inician con una base neutral de <strong>1500 puntos</strong>. Tras cada partido, el equipo ganador sustrae puntos al perdedor según la expectativa previa de victoria (vencer a un rival más fuerte otorga más puntos). Se incluye una ventaja de localía de <strong>+24 puntos</strong> para el equipo de casa en la evaluación de cada encuentro.
 </p>
 <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.75rem; font-weight: 700;">
@@ -4993,7 +4993,7 @@ Todos los equipos inician con una base neutral de <strong>1500 puntos</strong>. 
 <span style="background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); padding: 4px 8px; border-radius: 6px;">📉 En Reconstrucción (&lt; 1420)</span>
 </div>
 </div>"""
-        st.markdown("".join([l.strip() for l in legend_html.splitlines()]), unsafe_allow_html=True)
+        st.markdown("".join([line.strip() for line in legend_html.splitlines()]), unsafe_allow_html=True)
 
         elo_list = get_elo_power_rankings()
         if elo_list:
@@ -5006,12 +5006,12 @@ Todos los equipos inician con una base neutral de <strong>1500 puntos</strong>. 
         with st.expander("📚 ¿Cómo interpretar la clasificación ELO y sus niveles?"):
             st.markdown("""
             El **Sistema ELO** es un método matemático para calcular la fuerza competitiva relativa de los equipos:
-            
+
             * **Puntuación Base (1500):** Es el punto de partida neutral. Un equipo con ELO de 1500 tiene un rendimiento equilibrado.
             * **Cálculo Dinámico:** Tras cada partido, el equipo ganador toma puntos del perdedor. La cantidad de puntos ganados depende de la expectativa del partido.
             * **Calidad de Oposición:** Si un equipo de bajo nivel vence a uno de nivel alto (sorpresa), la transferencia de puntos es mucho mayor.
             * **Ventaja de Localía (+24 pts):** Al evaluar un partido, al equipo de casa se le suman artificialmente 24 puntos de ELO para representar la ventaja estadística de jugar en su estadio.
-            
+
             #### 🎖️ Niveles de Clasificación (Tiers):
             * 🔥 **Elite (≥ 1580):** Contendientes indiscutibles al campeonato. Rendimiento dominante y rachas de victorias constantes.
             * 💪 **Fuerte (1520 - 1579):** Equipos muy sólidos con altas probabilidades de clasificar a postemporada.
