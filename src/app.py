@@ -3264,6 +3264,23 @@ def render_tendencias_html(
             bar_color_a = "#64748b"
 
     html = f"""
+    <style>
+    .elo-bar-bg {{
+        background: {"#050c1a" if theme_act == "Oscuro" else "#e2e8f0"} !important;
+        border-radius: 4px !important;
+        height: 8px !important;
+        width: 180px !important;
+        overflow: hidden !important;
+        display: inline-block !important;
+        vertical-align: middle !important;
+        border: 1px solid {"rgba(255,255,255,0.15)" if theme_act == "Oscuro" else "rgba(0,0,0,0.1)"} !important;
+    }}
+    .elo-bar-fill {{
+        height: 100% !important;
+        display: block !important;
+        border-radius: 4px !important;
+    }}
+    </style>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
         <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:1.2rem;border:1px solid rgba(255,255,255,0.1)">
             <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
@@ -3297,7 +3314,7 @@ def render_tendencias_html(
                 <div style="text-align:right">
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px;text-align:right;">FUERZA</div>
                     <div class="elo-bar-bg" style="background:#050c1a !important;border-radius:4px !important;height:8px !important;width:180px !important;overflow:hidden !important;display:inline-block !important;vertical-align:middle !important;border:1px solid rgba(255,255,255,0.15)">
-                        <div class="elo-bar-fill" style="height:100% !important;border-radius:4px !important;width:{pct_h:.1f}% !important;background:{bar_color_h} !important;"></div>
+                        <div class="elo-bar-fill" style="height:100% !important;display:block !important;border-radius:4px !important;width:{pct_h:.1f}% !important;background:{bar_color_h} !important;"></div>
                     </div>
                 </div>
             </div>
@@ -3334,7 +3351,7 @@ def render_tendencias_html(
                 <div style="text-align:right">
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px;text-align:right;">FUERZA</div>
                     <div class="elo-bar-bg" style="background:#050c1a !important;border-radius:4px !important;height:8px !important;width:180px !important;overflow:hidden !important;display:inline-block !important;vertical-align:middle !important;border:1px solid rgba(255,255,255,0.15)">
-                        <div class="elo-bar-fill" style="height:100% !important;border-radius:4px !important;width:{pct_a:.1f}% !important;background:{bar_color_a} !important;"></div>
+                        <div class="elo-bar-fill" style="height:100% !important;display:block !important;border-radius:4px !important;width:{pct_a:.1f}% !important;background:{bar_color_a} !important;"></div>
                     </div>
                 </div>
             </div>
