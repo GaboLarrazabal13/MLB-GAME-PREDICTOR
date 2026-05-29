@@ -3712,8 +3712,8 @@ with st.sidebar:
         [
             "📅 Partidos de Hoy",
             "📊 Comparación & Historial",
-            # "⚾ Predicción Manual",
-            "📈 Dashboard's Interactivos",
+            "🔮 Power Rankings",
+            "📈 Rendimiento del Modelo",
             "🧠 Acerca del Modelo",
         ],
         index=0,
@@ -4747,8 +4747,8 @@ elif pagina == "📊 Comparación & Historial":
         if _por_conf:
             # Crear las cajas para cada nivel de confianza
             boxes_html = ""
-            _iconos = {"ALTA": "🟡", "MODERADA": "🟢", "BAJA": "🔵", "MUY ALTA": "🔴"}
-            _colores = {"ALTA": "#eab308", "MODERADA": "#10b981", "BAJA": "#3b82f6", "MUY ALTA": "#ef4444"}
+            _iconos = { "MODERADA": "🟢", "BAJA": "🔵", "ALTA": "🟡", "MUY ALTA": "🔴"}
+            _colores = {"MODERADA": "#10b981", "BAJA": "#3b82f6", "ALTA": "#eab308", "MUY ALTA": "#ef4444"}
 
             for _nivel, _datos in _por_conf.items():
                 _icono = _iconos.get(_nivel, "⚪")
@@ -4800,20 +4800,35 @@ elif pagina == "📊 Comparación & Historial":
             solo_predicciones = stats.get("solo_predicciones", False)
 
             if solo_predicciones:
+                if theme == "Oscuro":
+                    bg_color = "#050c1a"
+                    border_style = "border: 1px solid #1e3f6a; border-left: 4px solid #00c8ff;"
+                    text_color = "#d8eef8"
+                    title_color = "#00c8ff"
+                    hr_color = "#1e3f6a"
+                    link_color = "#00c8ff"
+                else:
+                    bg_color = "#eff6ff"
+                    border_style = "border-left: 4px solid #3b82f6;"
+                    text_color = "#1e40af"
+                    title_color = "#1e3a8a"
+                    hr_color = "#bfdbfe"
+                    link_color = "#1d4ed8"
+
                 st.markdown(
                     f"""
-                    <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: 'Inter', sans-serif;">
+                    <div style="background-color: {bg_color}; {border_style} padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: 'Inter', sans-serif;">
                         <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
                             <span style="font-size: 1.5rem; margin-right: 0.75rem;">📅</span>
-                            <span style="color: #1e3a8a; font-weight: 700; font-size: 1.15rem; font-family: 'Outfit', sans-serif;">
+                            <span style="color: {title_color}; font-weight: 700; font-size: 1.15rem; font-family: 'Outfit', sans-serif;">
                                 Resultados Reales Aún No Disponibles
                             </span>
                         </div>
-                        <p style="color: #1e40af; font-size: 0.975rem; line-height: 1.6; margin: 0;">
+                        <p style="color: {text_color}; font-size: 0.975rem; line-height: 1.6; margin: 0;">
                             Los resultados reales para la fecha <b>{fecha_str}</b> aún no han sido registrados en la base de datos o los partidos están en desarrollo/programados para jugarse hoy.
                         </p>
-                        <hr style="border: 0; border-top: 1px solid #bfdbfe; margin: 1rem 0;">
-                        <p style="color: #1d4ed8; font-size: 0.925rem; line-height: 1.5; margin: 0; font-weight: 500;">
+                        <hr style="border: 0; border-top: 1px solid {hr_color}; margin: 1rem 0;">
+                        <p style="color: {link_color}; font-size: 0.925rem; line-height: 1.5; margin: 0; font-weight: 500;">
                             💡 <b>¿Quieres ver la cartelera y predicciones de hoy?</b><br>
                             Dirígete a la sección <b>📅 Partidos de Hoy</b> en el menú lateral izquierdo para ver lineups oficiales y análisis detallados en tiempo real.
                         </p>
@@ -4946,37 +4961,29 @@ elif pagina == "📊 Comparación & Historial":
                                     )
 
                                     col_p1, col_p2 = st.columns(2)
-                                    with col_p1:
-                                        st.metric(f"Prob. {_at}", f"{prob_a * 100:.1f}%")
-                                    with col_p2:
-                                        st.metric(f"Prob. {_ht}", f"{prob_h * 100:.1f}%")
-
                                     if "stats_detalladas" in partido:
                                         st.json(partido["stats_detalladas"], expanded=False)
         else:
             st.info(f" No hay datos disponibles para {fecha_str}")
 
 # ============================================================================
-# PÁGINA: DASHBOARDS INTERACTIVOS
+# PÁGINA: POWER RANKINGS
 # ============================================================================
 
-elif pagina == "📈 Dashboard's Interactivos":
+elif pagina == "🔮 Power Rankings":
     st.markdown(
-        '<div class="main-title">Dashboard\'s Interactivos</div>',
+        '<div class="main-title">Power Rankings (Sistema ELO)</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="subtitle">Análisis visual del rendimiento histórico del modelo</div>',
+        '<div class="subtitle">Clasificación dinámica de fuerza y probabilidad relativa de equipos</div>',
         unsafe_allow_html=True,
     )
 
-    tab_elo, tab_model = st.tabs(["🔮 Power Rankings (Sistema ELO)", "📈 Rendimiento del Modelo"])
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### 🏆 Clasificación de Fuerza de Equipos (ELO)")
 
-    with tab_elo:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 🏆 Clasificación de Fuerza de Equipos (ELO)")
-
-        legend_html = """<div class="elo-legend-container" style="background: rgba(0, 200, 255, 0.04); border: 1px solid rgba(0, 200, 255, 0.15); border-radius: 12px; padding: 16px; margin-bottom: 20px; font-family: 'Inter', sans-serif;">
+    legend_html = """<div class="elo-legend-container" style="background: rgba(0, 200, 255, 0.04); border: 1px solid rgba(0, 200, 255, 0.15); border-radius: 12px; padding: 16px; margin-bottom: 20px; font-family: 'Inter', sans-serif;">
 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
 <span style="font-size: 1.3rem;">📚</span>
 <h4 style="margin: 0; color: #00c8ff; font-weight: 700; font-size: 1.05rem;">Leyenda y Funcionamiento del Sistema ELO</h4>
@@ -4993,71 +5000,84 @@ Todos los equipos inician con una base neutral de <strong>1500 puntos</strong>. 
 <span style="background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); padding: 4px 8px; border-radius: 6px;">📉 En Reconstrucción (&lt; 1420)</span>
 </div>
 </div>"""
-        st.markdown("".join([line.strip() for line in legend_html.splitlines()]), unsafe_allow_html=True)
+    st.markdown("".join([line.strip() for line in legend_html.splitlines()]), unsafe_allow_html=True)
 
-        elo_list = get_elo_power_rankings()
-        if elo_list:
-            elo_table_html = render_power_rankings_table_html(elo_list)
-            st.markdown(elo_table_html, unsafe_allow_html=True)
-        else:
-            st.warning("⚠️ No se pudieron cargar los Power Rankings ELO.")
+    elo_list = get_elo_power_rankings()
+    if elo_list:
+        elo_table_html = render_power_rankings_table_html(elo_list)
+        st.markdown(elo_table_html, unsafe_allow_html=True)
+    else:
+        st.warning("⚠️ No se pudieron cargar los Power Rankings ELO.")
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander("📚 ¿Cómo interpretar la clasificación ELO y sus niveles?"):
-            st.markdown("""
-            El **Sistema ELO** es un método matemático para calcular la fuerza competitiva relativa de los equipos:
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.expander("📚 ¿Cómo interpretar la clasificación ELO y sus niveles?"):
+        st.markdown("""
+        El **Sistema ELO** es un método matemático para calcular la fuerza competitiva relativa de los equipos:
 
-            * **Puntuación Base (1500):** Es el punto de partida neutral. Un equipo con ELO de 1500 tiene un rendimiento equilibrado.
-            * **Cálculo Dinámico:** Tras cada partido, el equipo ganador toma puntos del perdedor. La cantidad de puntos ganados depende de la expectativa del partido.
-            * **Calidad de Oposición:** Si un equipo de bajo nivel vence a uno de nivel alto (sorpresa), la transferencia de puntos es mucho mayor.
-            * **Ventaja de Localía (+24 pts):** Al evaluar un partido, al equipo de casa se le suman artificialmente 24 puntos de ELO para representar la ventaja estadística de jugar en su estadio.
+        * **Puntuación Base (1500):** Es el punto de partida neutral. Un equipo con ELO de 1500 tiene un rendimiento equilibrado.
+        * **Cálculo Dinámico:** Tras cada partido, el equipo ganador toma puntos del perdedor. La cantidad de puntos ganados depende de la expectativa del partido.
+        * **Calidad de Oposición:** Si un equipo de bajo nivel vence a uno de nivel alto (sorpresa), la transferencia de puntos es mucho mayor.
+        * **Ventaja de Localía (+24 pts):** Al evaluar un partido, al equipo de casa se le suman artificialmente 24 puntos de ELO para representar la ventaja estadística de jugar en su estadio.
 
-            #### 🎖️ Niveles de Clasificación (Tiers):
-            * 🔥 **Elite (≥ 1580):** Contendientes indiscutibles al campeonato. Rendimiento dominante y rachas de victorias constantes.
-            * 💪 **Fuerte (1520 - 1579):** Equipos muy sólidos con altas probabilidades de clasificar a postemporada.
-            * 📊 **Competitivo (1480 - 1519):** Equipos de nivel medio, capaces de pelear por puestos de comodín (*Wild Card*).
-            * ⚠️ **En Desarrollo (1420 - 1479):** Equipos en transición con problemas de consistencia o rachas negativas.
-            * 📉 **En Reconstrucción (< 1420):** Equipos en la parte baja de la tabla, enfocados en desarrollar talento joven.
-            """)
+        #### 🎖️ Niveles de Clasificación (Tiers):
+        * 🔥 **Elite (≥ 1580):** Contendientes indiscutibles al campeonato. Rendimiento dominante y rachas de victorias constantes.
+        * 💪 **Fuerte (1520 - 1579):** Equipos muy sólidos con altas probabilidades de clasificar a postemporada.
+        * 📊 **Competitivo (1480 - 1519):** Equipos de nivel medio, capaces de pelear por puestos de comodín (*Wild Card*).
+        * ⚠️ **En Desarrollo (1420 - 1479):** Equipos en transición con problemas de consistencia o rachas negativas.
+        * 📉 **En Reconstrucción (< 1420):** Equipos en la parte baja de la tabla, enfocados en desarrollar talento joven.
+        """)
 
-    with tab_model:
-        try:
-            with sqlite3.connect(DB_PATH) as conn:
-                # Consulta a la base de datos
-                df_dash = pd.read_sql(
-                    """
-                    SELECT
-                        r.fecha as Fecha,
-                        r.home_team as Home,
-                        r.away_team as Away,
-                        p.prediccion as Prediccion,
-                        p.prob_home as Prob_Home,
-                        p.prob_away as Prob_Away,
-                        CASE
-                            WHEN r.ganador = 1 THEN r.home_team
-                            ELSE r.away_team
-                        END as Resultado_Real,
-                        CASE
-                            WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
-                                 (r.ganador = 0 AND p.prediccion = r.away_team)
-                            THEN '✅ Acertado'
-                            ELSE '❌ Error'
-                        END as Estado,
-                        CASE
-                            WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
-                                 (r.ganador = 0 AND p.prediccion = r.away_team)
-                            THEN 1
-                            ELSE 0
-                        END as Acierto_Num
-                    FROM historico_real r
-                    INNER JOIN predicciones_historico p
-                        ON r.fecha = p.fecha
-                        AND r.home_team = p.home_team
-                        AND r.away_team = p.away_team
-                    ORDER BY r.fecha DESC
-                    """,
-                    conn,
-                )
+# ============================================================================
+# PÁGINA: RENDIMIENTO DEL MODELO
+# ============================================================================
+
+elif pagina == "📈 Rendimiento del Modelo":
+    st.markdown(
+        '<div class="main-title">Rendimiento del Modelo</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="subtitle">Análisis visual del rendimiento histórico del modelo</div>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            # Consulta a la base de datos
+            df_dash = pd.read_sql(
+                """
+                SELECT
+                    r.fecha as Fecha,
+                    r.home_team as Home,
+                    r.away_team as Away,
+                    p.prediccion as Prediccion,
+                    p.prob_home as Prob_Home,
+                    p.prob_away as Prob_Away,
+                    CASE
+                        WHEN r.ganador = 1 THEN r.home_team
+                        ELSE r.away_team
+                    END as Resultado_Real,
+                    CASE
+                        WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
+                             (r.ganador = 0 AND p.prediccion = r.away_team)
+                        THEN '✅ Acertado'
+                        ELSE '❌ Error'
+                    END as Estado,
+                    CASE
+                        WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
+                             (r.ganador = 0 AND p.prediccion = r.away_team)
+                        THEN 1
+                        ELSE 0
+                    END as Acierto_Num
+                FROM historico_real r
+                INNER JOIN predicciones_historico p
+                    ON r.fecha = p.fecha
+                    AND r.home_team = p.home_team
+                    AND r.away_team = p.away_team
+                ORDER BY r.fecha DESC
+                """,
+                conn,
+            )
 
             if not df_dash.empty:
                 # Calcular confianza numérica como el máximo de las dos probabilidades
@@ -5390,8 +5410,8 @@ Todos los equipos inician con una base neutral de <strong>1500 puntos</strong>. 
 
             else:
                 st.info("ℹ️ No hay datos históricos disponibles en la base de datos para mostrar los dashboards.")
-        except Exception as e:
-            st.error(f"❌ Error al cargar los datos para los dashboards: {str(e)}")
+    except Exception as e:
+        st.error(f"❌ Error al cargar los datos para los dashboards: {str(e)}")
 
     # ============================================================================
     # PÁGINA: ACERCA DEL MODELO
