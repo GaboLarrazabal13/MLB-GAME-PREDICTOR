@@ -2155,14 +2155,15 @@ DIVISION_MAP = {
     "ARI": "NLO", "COL": "NLO", "LAD": "NLO", "SDP": "NLO", "SFG": "NLO"
 }
 
-def calculate_and_save_elo_on_the_fly():
+@st.cache_data(ttl=3600)
+def get_elo_data_in_memory():
+    elo_dict = {code: 1500.0 for code in EQUIPOS_MLB.keys()}
+    wins_dict = {code: 0 for code in EQUIPOS_MLB.keys()}
+    losses_dict = {code: 0 for code in EQUIPOS_MLB.keys()}
+
     try:
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
-            elo_dict = {code: 1500.0 for code in EQUIPOS_MLB.keys()}
-            wins_dict = {code: 0 for code in EQUIPOS_MLB.keys()}
-            losses_dict = {code: 0 for code in EQUIPOS_MLB.keys()}
-
             cursor.execute("""
                 SELECT home_team, away_team, ganador
                 FROM historico_real
@@ -2180,11 +2181,19 @@ def calculate_and_save_elo_on_the_fly():
                 if not home_code or not away_code:
                     continue
 
+                if home_code not in elo_dict:
+                    elo_dict[home_code] = 1500.0
+                    wins_dict[home_code] = 0
+                    losses_dict[home_code] = 0
+                if away_code not in elo_dict:
+                    elo_dict[away_code] = 1500.0
+                    wins_dict[away_code] = 0
+                    losses_dict[away_code] = 0
+
                 r_home = elo_dict[home_code]
                 r_away = elo_dict[away_code]
 
                 e_home = 1.0 / (10.0 ** (-(r_home + HOME_ADVANTAGE - r_away) / 400.0) + 1.0)
-
                 s_home = 1.0 if ganador == 1 else 0.0
 
                 elo_dict[home_code] = r_home + K * (s_home - e_home)
@@ -2196,58 +2205,24 @@ def calculate_and_save_elo_on_the_fly():
                 else:
                     wins_dict[away_code] += 1
                     losses_dict[home_code] += 1
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS team_elo (
-                    team_code TEXT PRIMARY KEY,
-                    elo REAL,
-                    wins INTEGER,
-                    losses INTEGER,
-                    last_updated TEXT
-                )
-            """)
-
-            import datetime
-            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            for code in EQUIPOS_MLB.keys():
-                cursor.execute("""
-                    INSERT INTO team_elo (team_code, elo, wins, losses, last_updated)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON CONFLICT(team_code) DO UPDATE SET
-                        elo=excluded.elo,
-                        wins=excluded.wins,
-                        losses=excluded.losses,
-                        last_updated=excluded.last_updated
-                """, (code, elo_dict[code], wins_dict[code], losses_dict[code], now_str))
-            conn.commit()
     except Exception as e:
-        print(f"Error calculating ELO on the fly: {e}")
+        print(f"Error calculating ELO in memory: {e}")
+
+    rankings = []
+    for code in elo_dict.keys():
+        rankings.append((code, elo_dict[code], wins_dict.get(code, 0), losses_dict.get(code, 0)))
+    rankings.sort(key=lambda x: x[1], reverse=True)
+
+    return elo_dict, rankings
+
 
 def get_elo_power_rankings():
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='team_elo'")
-            if not cursor.fetchone():
-                calculate_and_save_elo_on_the_fly()
-
-            cursor.execute("SELECT team_code, elo, wins, losses FROM team_elo ORDER BY elo DESC")
-            data = cursor.fetchall()
-            if not data:
-                calculate_and_save_elo_on_the_fly()
-                cursor.execute("SELECT team_code, elo, wins, losses FROM team_elo ORDER BY elo DESC")
-                data = cursor.fetchall()
-            return data
-    except Exception:
-        try:
-            calculate_and_save_elo_on_the_fly()
-            with sqlite3.connect(DB_PATH) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT team_code, elo, wins, losses FROM team_elo ORDER BY elo DESC")
-                return cursor.fetchall()
-        except Exception as ex:
-            st.error(f"Error cargando Power Rankings ELO: {ex}")
-            return []
+        elo_dict, rankings = get_elo_data_in_memory()
+        return rankings
+    except Exception as ex:
+        st.error(f"Error cargando Power Rankings ELO: {ex}")
+        return []
 
 def render_power_rankings_table_html(elo_list):
     """Genera HTML para tabla premium de Power Rankings ELO"""
@@ -3231,15 +3206,10 @@ def render_tendencias_html(
     l_a = 10 - w_a
     record_l10_a = f"{w_a}-{l_a}"
 
-    # Cargar ELO dinámico desde la DB
+    # Cargar ELO dinámico en memoria
     elo_dict = {}
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='team_elo'")
-            if cursor.fetchone():
-                cursor.execute("SELECT team_code, elo FROM team_elo")
-                elo_dict = {row[0]: float(row[1]) for row in cursor.fetchall()}
+        elo_dict, _ = get_elo_data_in_memory()
     except Exception:
         pass
 
@@ -3326,7 +3296,7 @@ def render_tendencias_html(
                 </div>
                 <div style="text-align:right">
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px;text-align:right;">FUERZA</div>
-                    <div class="elo-bar-bg" style="background:#050c1a !important;border-radius:4px !important;height:8px !important;width:100px !important;overflow:hidden !important;display:inline-block !important;vertical-align:middle !important;border:1px solid rgba(255,255,255,0.15)">
+                    <div class="elo-bar-bg" style="background:#050c1a !important;border-radius:4px !important;height:8px !important;width:180px !important;overflow:hidden !important;display:inline-block !important;vertical-align:middle !important;border:1px solid rgba(255,255,255,0.15)">
                         <div class="elo-bar-fill" style="height:100% !important;border-radius:4px !important;width:{pct_h:.1f}% !important;background:{bar_color_h} !important;"></div>
                     </div>
                 </div>
@@ -3363,7 +3333,7 @@ def render_tendencias_html(
                 </div>
                 <div style="text-align:right">
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px;text-align:right;">FUERZA</div>
-                    <div class="elo-bar-bg" style="background:#050c1a !important;border-radius:4px !important;height:8px !important;width:100px !important;overflow:hidden !important;display:inline-block !important;vertical-align:middle !important;border:1px solid rgba(255,255,255,0.15)">
+                    <div class="elo-bar-bg" style="background:#050c1a !important;border-radius:4px !important;height:8px !important;width:180px !important;overflow:hidden !important;display:inline-block !important;vertical-align:middle !important;border:1px solid rgba(255,255,255,0.15)">
                         <div class="elo-bar-fill" style="height:100% !important;border-radius:4px !important;width:{pct_a:.1f}% !important;background:{bar_color_a} !important;"></div>
                     </div>
                 </div>
