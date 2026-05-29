@@ -1,11 +1,8 @@
 name: Deploy to Hugging Face Spaces
 
 on:
-  push:
-    branches:
-      - main
   workflow_run:
-    workflows: ["MLB Predictor Automation"]
+    workflows: ["CI", "MLB Predictor Automation"]
     types:
       - completed
   workflow_dispatch: # Permite ejecución manual
@@ -13,7 +10,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
