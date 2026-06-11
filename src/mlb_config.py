@@ -141,7 +141,6 @@ TEMPORAL_FEATURES = [
     "home_elo",
     "away_elo",
     "diff_elo",
-    "year",
 ]
 
 SCRAPING_FEATURES = [

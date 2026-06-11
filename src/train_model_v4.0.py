@@ -16,14 +16,12 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import mlflow
-import mlflow.xgboost
 import numpy as np
 import optuna
 import pandas as pd
+from catboost import CatBoostClassifier
 from sklearn.metrics import accuracy_score, f1_score, log_loss, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from sklearn.preprocessing import StandardScaler
-from xgboost import XGBClassifier
 
 warnings.filterwarnings("ignore")
 
@@ -298,61 +296,52 @@ def ejecutar_reentrenamiento():
     # Asignar peso 1.5 a la temporada 2026 para capturar tendencias recientes, y 1.0 a la historia
     sample_weights = np.where(X["year"] == 2026, 1.5, 1.0)
 
-    # Quitar columna year para que no se use como feature en XGBoost
+    # Quitar columna year para que no se use como feature
     X_train_data = X.drop(columns=["year"])
 
-    # 2. Dividir y Escalar datos
+    # 2. Dividir datos (sin escalar: CatBoost no lo requiere y el motor de predicción tampoco lo aplica)
     X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(
         X_train_data, y, sample_weights, test_size=0.20, random_state=42, stratify=y
     )
 
-    scaler = StandardScaler()
-    X_train_scaled = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns)
-    X_test_scaled = pd.DataFrame(scaler.transform(X_test), columns=X_test.columns)
-
     accuracy_champion = 0
     model_champion = None
 
-    # 3. Cargar Champion Actual
+    # 3. Cargar Champion Actual (CatBoost)
     if os.path.exists(MODELO_PATH):
         try:
-            model_champion = XGBClassifier()
+            model_champion = CatBoostClassifier()
             model_champion.load_model(MODELO_PATH)
-            y_pred_champ = model_champion.predict(X_test_scaled)
+            y_pred_champ = model_champion.predict(X_test)
             accuracy_champion = accuracy_score(y_test, y_pred_champ)
             print(f"\n🏆 Accuracy de Champion en Test: {accuracy_champion:.2%}")
         except Exception as e:
             print(f"⚠️ Error cargando Champion previo: {e}")
 
-    # 4. Optimización de Hiperparámetros con Optuna
+    # 4. Optimización de Hiperparámetros con Optuna (CatBoost)
     print("\n🔎 Iniciando Optimización Bayesiana de Optuna (35 trials) con pesos por recencia...")
 
     def objective(trial):
         params = {
-            "n_estimators": trial.suggest_int("n_estimators", 150, 450),
-            "max_depth": trial.suggest_int("max_depth", 3, 9),
+            "iterations": trial.suggest_int("iterations", 150, 450),
+            "depth": trial.suggest_int("depth", 3, 9),
             "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.1, log=True),
-            "gamma": trial.suggest_float("gamma", 0.0, 0.5),
+            "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1e-3, 10.0, log=True),
             "subsample": trial.suggest_float("subsample", 0.6, 1.0),
-            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
-            "min_child_weight": trial.suggest_int("min_child_weight", 1, 8),
-            "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 5.0, log=True),
-            "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 5.0, log=True),
-            "eval_metric": "logloss",
-            "random_state": 42,
-            "n_jobs": -1
+            "random_seed": 42,
+            "thread_count": -1,
+            "verbose": False,
         }
 
         cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
         scores = []
 
-        for train_idx, val_idx in cv.split(X_train_scaled, y_train):
-            X_tr, X_val = X_train_scaled.iloc[train_idx], X_train_scaled.iloc[val_idx]
+        for train_idx, val_idx in cv.split(X_train, y_train):
+            X_tr, X_val = X_train.iloc[train_idx], X_train.iloc[val_idx]
             y_tr, y_val = y_train[train_idx], y_train[val_idx]
             w_tr = w_train[train_idx]
 
-            model = XGBClassifier(**params)
-            # Aplicar sample_weight en el ajuste
+            model = CatBoostClassifier(**params)
             model.fit(X_tr, y_tr, sample_weight=w_tr)
 
             y_pred = model.predict(X_val)
@@ -368,20 +357,20 @@ def ejecutar_reentrenamiento():
     print(f"   🏆 Optuna completado. Mejores parámetros: {best_params}")
 
     # 5. Entrenar Challenger final con toda la data y pesos
-    print("\n🚀 Entrenando Challenger con mejores hiperparámetros y pesos...")
-    model_challenger = XGBClassifier(
+    print("\n🚀 Entrenando Challenger CatBoost con mejores hiperparámetros y pesos...")
+    model_challenger = CatBoostClassifier(
         **best_params,
-        eval_metric="logloss",
-        random_state=42,
-        n_jobs=-1
+        random_seed=42,
+        thread_count=-1,
+        verbose=False,
     )
 
     with mlflow.start_run(run_name="V4.0_Production_Retraining"):
-        model_challenger.fit(X_train_scaled, y_train, sample_weight=w_train)
+        model_challenger.fit(X_train, y_train, sample_weight=w_train)
 
         # Evaluar
-        y_pred = model_challenger.predict(X_test_scaled)
-        y_prob = model_challenger.predict_proba(X_test_scaled)[:, 1]
+        y_pred = model_challenger.predict(X_test)
+        y_prob = model_challenger.predict_proba(X_test)[:, 1]
         metrics = evaluar_modelo(y_test, y_pred, y_prob)
 
         # Registrar en MLflow
@@ -393,7 +382,7 @@ def ejecutar_reentrenamiento():
         for key, val in metrics.items():
             mlflow.log_metric(key, val)
 
-        mlflow.xgboost.log_model(model_challenger, artifact_path="model")
+        mlflow.log_dict(best_params, "catboost_params.json")
 
         mlflow.set_tag("version", "4.0_prod")
         mlflow.set_tag("phase", "Production upgrade Challenger")
@@ -407,8 +396,7 @@ def ejecutar_reentrenamiento():
             if os.path.exists(MODELO_PATH):
                 shutil.copy(MODELO_PATH, MODELO_BACKUP)
 
-            # Guardar el modelo ganador de producción
-            model_challenger.get_booster().save_model(MODELO_PATH)
+            model_challenger.save_model(MODELO_PATH)
             print(f"✅ ¡Modelo ganador '{MODELO_PATH}' guardado exitosamente!")
 
             # Registrar milestone

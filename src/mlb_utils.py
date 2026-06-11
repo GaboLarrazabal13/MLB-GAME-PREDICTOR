@@ -387,7 +387,15 @@ def alinear_features_entrenamiento(X_new, model_actual=None):
     if model_actual is None:
         return X_new
 
-    feature_names_modelo = model_actual.get_booster().feature_names or []
+    # Compatible con CatBoost y XGBoost
+    try:
+        feature_names_modelo = model_actual.feature_names_  # CatBoost
+    except AttributeError:
+        try:
+            feature_names_modelo = model_actual.get_booster().feature_names  # XGBoost
+        except AttributeError:
+            feature_names_modelo = None
+
     if not feature_names_modelo:
         return X_new
 
