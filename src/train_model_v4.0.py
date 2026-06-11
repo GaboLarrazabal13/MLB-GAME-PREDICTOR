@@ -62,10 +62,11 @@ def cargar_dataset_produccion():
         )
 
         # 2. Cargar todas las features precalculadas (2022-2025)
-        df_features_db = pd.read_sql(
-            "SELECT * FROM features_juegos",
-            conn
-        )
+        try:
+            df_features_db = pd.read_sql("SELECT * FROM features_juegos", conn)
+        except Exception:
+            print("⚠️ Tabla features_juegos no encontrada; partidos históricos usarán ceros para scraping features.")
+            df_features_db = pd.DataFrame()
 
     if df_juegos.empty:
         raise ValueError("❌ La tabla historico_real está vacía. No hay datos para entrenar.")
@@ -103,17 +104,19 @@ def cargar_dataset_produccion():
         g_id = row["game_id"]
         yr = row["year"]
 
-        # Si el partido es de 2022-2025, cargamos de features_juegos en la DB
-        if yr < 2026 and g_id in features_db_dict:
-            feat_data = features_db_dict[g_id]
-            base_feats_list.append({col: feat_data.get(col, 0.0) for col in SCRAPING_FEATURES})
-        # Si es de 2026, cargamos del caché o extraemos usando la API
+        if yr < 2026:
+            # Partidos históricos: usar features precalculadas o ceros si no están disponibles
+            if g_id in features_db_dict:
+                feat_data = features_db_dict[g_id]
+                base_feats_list.append({col: feat_data.get(col, 0.0) for col in SCRAPING_FEATURES})
+            else:
+                base_feats_list.append({col: 0.0 for col in SCRAPING_FEATURES})
         else:
+            # Partidos de 2026: intentar caché y luego API
             if g_id in cache_2026:
                 feat_data = cache_2026[g_id]
                 base_feats_list.append({col: feat_data.get(col, 0.0) for col in SCRAPING_FEATURES})
             else:
-                # Fallback: extraer features vía API en tiempo real
                 try:
                     f = extraer_features_hibridas(
                         row,
@@ -122,12 +125,10 @@ def cargar_dataset_produccion():
                         session_cache=session_cache,
                     )
                     base_feats_list.append({col: f.get(col, 0.0) for col in SCRAPING_FEATURES})
-                    # Guardar en caché para futuras ejecuciones
                     f["game_id"] = g_id
                     cache_2026[g_id] = f
                 except Exception as e:
                     print(f"⚠️ Error extrayendo features para el juego {g_id}: {e}")
-                    # Completar con ceros en caso de fallo crítico
                     base_feats_list.append({col: 0.0 for col in SCRAPING_FEATURES})
 
     # Guardar caché actualizado de 2026
