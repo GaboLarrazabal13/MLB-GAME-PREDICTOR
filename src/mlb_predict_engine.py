@@ -9,11 +9,13 @@ import sqlite3
 import time
 import warnings
 
+import joblib
 import pandas as pd
 from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
 
 # Importar módulos centralizados
-from mlb_config import DB_PATH, MODELO_PATH, get_team_name
+from mlb_config import DB_PATH, MODELO_LGBM_PATH, MODELO_PATH, get_team_name
 from mlb_feature_engineering import (
     calcular_estadisticas_agregadas,
     calcular_super_features,
@@ -99,7 +101,7 @@ def predecir_juego(
 
     total_start = time.perf_counter()
 
-    # 1. Validar que existe el modelo
+    # 1. Validar que existe el modelo base
     stage_start = time.perf_counter()
     if not os.path.exists(MODELO_PATH):
         print(f"❌ Error: No existe el modelo en {MODELO_PATH}")
@@ -111,21 +113,30 @@ def predecir_juego(
         return None
     _debug_stage("model_exists", stage_start)
 
-    # 2. Cargar modelo
+    # 2. Cargar modelos del ensemble (CatBoost obligatorio + LightGBM opcional)
     try:
         stage_start = time.perf_counter()
-        model = CatBoostClassifier()
-        model.load_model(MODELO_PATH)
-        expected_features = model.feature_names_
-        _debug_stage("model_load", stage_start)
+        model_cb = CatBoostClassifier()
+        model_cb.load_model(MODELO_PATH)
+        expected_features = model_cb.feature_names_
+        _debug_stage("model_load_catboost", stage_start)
     except Exception as e:
-        print(f"❌ Error cargando modelo: {e}")
-        _debug_stage("model_load", stage_start, ok=False, extra={"error": str(e)})
-        debug_info["error"] = f"Error cargando modelo: {e}"
+        print(f"❌ Error cargando modelo CatBoost: {e}")
+        _debug_stage("model_load_catboost", stage_start, ok=False, extra={"error": str(e)})
+        debug_info["error"] = f"Error cargando modelo CatBoost: {e}"
         _debug_stage("total", total_start, ok=False)
         if debug:
             return {"error": debug_info["error"], "_debug": debug_info}
         return None
+
+    model_lgbm = None
+    if os.path.exists(MODELO_LGBM_PATH):
+        try:
+            stage_start = time.perf_counter()
+            model_lgbm = joblib.load(MODELO_LGBM_PATH)
+            _debug_stage("model_load_lgbm", stage_start)
+        except Exception as e:
+            _debug_stage("model_load_lgbm", stage_start, ok=False, extra={"error": str(e)})
 
     # 3. Normalizar nombres de lanzadores y validación de calidad
     stage_start = time.perf_counter()
@@ -223,10 +234,20 @@ def predecir_juego(
             extra={"feature_columns": int(len(X_df.columns))},
         )
 
-        # 10. Realizar predicción
+        # 10. Realizar predicción con ensemble
         stage_start = time.perf_counter()
-        prob_home = model.predict_proba(X_df)[0][1]
-        _debug_stage("predict", stage_start)
+        prob_home_cb = model_cb.predict_proba(X_df)[0][1]
+        if model_lgbm is not None:
+            try:
+                lgbm_features = model_lgbm.feature_name_
+                X_lgbm = X_df.reindex(columns=lgbm_features, fill_value=0)
+                prob_home_lgbm = model_lgbm.predict_proba(X_lgbm)[0][1]
+                prob_home = (prob_home_cb + prob_home_lgbm) / 2
+            except Exception:
+                prob_home = prob_home_cb
+        else:
+            prob_home = prob_home_cb
+        _debug_stage("predict", stage_start, extra={"ensemble": model_lgbm is not None})
 
         prob_home_pct = round(float(prob_home) * 100, 2)
         prob_away_pct = round(100 - prob_home_pct, 2)

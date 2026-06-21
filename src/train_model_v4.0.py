@@ -15,11 +15,13 @@ import warnings
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import joblib
 import mlflow
 import numpy as np
 import optuna
 import pandas as pd
 from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
 from sklearn.metrics import accuracy_score, f1_score, log_loss, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 
@@ -32,6 +34,8 @@ from mlb_config import (
     DB_PATH,
     MODEL_CONFIG,
     MODELO_BACKUP,
+    MODELO_LGBM_BACKUP,
+    MODELO_LGBM_PATH,
     MODELO_PATH,
     SCRAPING_FEATURES,
     SUPER_FEATURES,
@@ -294,8 +298,10 @@ def ejecutar_reentrenamiento():
     X, y = cargar_dataset_produccion()
 
     # 1. Calcular pesos de entrenamiento (Sample Weights)
-    # Asignar peso 1.5 a la temporada 2026 para capturar tendencias recientes, y 1.0 a la historia
-    sample_weights = np.where(X["year"] == 2026, 1.5, 1.0)
+    # 2026 (temporada actual): peso 2.5 — patrones recientes son los más relevantes
+    # 2025 (temporada anterior): peso 1.3 — contexto cercano útil
+    # 2023-2024: peso 1.0 — base histórica de patrones
+    sample_weights = np.where(X["year"] == 2026, 2.5, np.where(X["year"] == 2025, 1.3, 1.0))
 
     # Quitar columna year para que no se use como feature
     X_train_data = X.drop(columns=["year"])
@@ -305,24 +311,39 @@ def ejecutar_reentrenamiento():
         X_train_data, y, sample_weights, test_size=0.20, random_state=42, stratify=y
     )
 
-    accuracy_champion = 0
-    model_champion = None
+    accuracy_champion_ensemble = 0
+    model_champion_cb = None
+    model_champion_lgbm = None
 
-    # 3. Cargar Champion Actual (CatBoost)
+    # 3. Cargar Champions actuales (CatBoost + LightGBM)
     if os.path.exists(MODELO_PATH):
         try:
-            model_champion = CatBoostClassifier()
-            model_champion.load_model(MODELO_PATH)
-            y_pred_champ = model_champion.predict(X_test)
-            accuracy_champion = accuracy_score(y_test, y_pred_champ)
-            print(f"\n🏆 Accuracy de Champion en Test: {accuracy_champion:.2%}")
+            model_champion_cb = CatBoostClassifier()
+            model_champion_cb.load_model(MODELO_PATH)
         except Exception as e:
-            print(f"⚠️ Error cargando Champion previo: {e}")
+            print(f"⚠️ Error cargando Champion CatBoost: {e}")
 
-    # 4. Optimización de Hiperparámetros con Optuna (CatBoost)
-    print("\n🔎 Iniciando Optimización Bayesiana de Optuna (35 trials) con pesos por recencia...")
+    if os.path.exists(MODELO_LGBM_PATH):
+        try:
+            model_champion_lgbm = joblib.load(MODELO_LGBM_PATH)
+        except Exception as e:
+            print(f"⚠️ Error cargando Champion LightGBM: {e}")
 
-    def objective(trial):
+    if model_champion_cb:
+        prob_cb = model_champion_cb.predict_proba(X_test)[:, 1]
+        if model_champion_lgbm:
+            prob_lgbm = model_champion_lgbm.predict_proba(X_test)[:, 1]
+            prob_ensemble = (prob_cb + prob_lgbm) / 2
+        else:
+            prob_ensemble = prob_cb
+        y_pred_champ = (prob_ensemble >= 0.5).astype(int)
+        accuracy_champion_ensemble = accuracy_score(y_test, y_pred_champ)
+        print(f"\n🏆 Accuracy de Champion Ensemble en Test: {accuracy_champion_ensemble:.2%}")
+
+    # 4a. Optimización de Hiperparámetros con Optuna (CatBoost)
+    print("\n🔎 [CatBoost] Optimización Bayesiana Optuna (30 trials)...")
+
+    def objective_cb(trial):
         params = {
             "iterations": trial.suggest_int("iterations", 150, 450),
             "depth": trial.suggest_int("depth", 3, 9),
@@ -333,74 +354,108 @@ def ejecutar_reentrenamiento():
             "thread_count": -1,
             "verbose": False,
         }
-
         cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
         scores = []
-
         for train_idx, val_idx in cv.split(X_train, y_train):
             X_tr, X_val = X_train.iloc[train_idx], X_train.iloc[val_idx]
             y_tr, y_val = y_train[train_idx], y_train[val_idx]
             w_tr = w_train[train_idx]
-
-            model = CatBoostClassifier(**params)
-            model.fit(X_tr, y_tr, sample_weight=w_tr)
-
-            y_pred = model.predict(X_val)
-            scores.append(accuracy_score(y_val, y_pred))
-
+            m = CatBoostClassifier(**params)
+            m.fit(X_tr, y_tr, sample_weight=w_tr)
+            scores.append(accuracy_score(y_val, m.predict(X_val)))
         return np.mean(scores)
 
-    study = optuna.create_study(direction="maximize")
+    study_cb = optuna.create_study(direction="maximize")
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    study.optimize(objective, n_trials=35)
+    study_cb.optimize(objective_cb, n_trials=30)
+    best_params_cb = study_cb.best_params
+    print(f"   ✅ CatBoost mejores params: {best_params_cb}")
 
-    best_params = study.best_params
-    print(f"   🏆 Optuna completado. Mejores parámetros: {best_params}")
+    # 4b. Optimización de Hiperparámetros con Optuna (LightGBM)
+    print("\n🔎 [LightGBM] Optimización Bayesiana Optuna (30 trials)...")
 
-    # 5. Entrenar Challenger final con toda la data y pesos
-    print("\n🚀 Entrenando Challenger CatBoost con mejores hiperparámetros y pesos...")
-    model_challenger = CatBoostClassifier(
-        **best_params,
-        random_seed=42,
-        thread_count=-1,
-        verbose=False,
-    )
+    def objective_lgbm(trial):
+        params = {
+            "n_estimators": trial.suggest_int("n_estimators", 150, 500),
+            "max_depth": trial.suggest_int("max_depth", 3, 9),
+            "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.1, log=True),
+            "num_leaves": trial.suggest_int("num_leaves", 20, 80),
+            "min_child_samples": trial.suggest_int("min_child_samples", 10, 50),
+            "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+            "reg_alpha": trial.suggest_float("reg_alpha", 1e-4, 5.0, log=True),
+            "reg_lambda": trial.suggest_float("reg_lambda", 1e-4, 5.0, log=True),
+            "random_state": 42,
+            "n_jobs": -1,
+            "verbosity": -1,
+        }
+        cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+        scores = []
+        for train_idx, val_idx in cv.split(X_train, y_train):
+            X_tr, X_val = X_train.iloc[train_idx], X_train.iloc[val_idx]
+            y_tr, y_val = y_train[train_idx], y_train[val_idx]
+            w_tr = w_train[train_idx]
+            m = LGBMClassifier(**params)
+            m.fit(X_tr, y_tr, sample_weight=w_tr)
+            scores.append(accuracy_score(y_val, m.predict(X_val)))
+        return np.mean(scores)
 
-    with mlflow.start_run(run_name="V4.0_Production_Retraining"):
-        model_challenger.fit(X_train, y_train, sample_weight=w_train)
+    study_lgbm = optuna.create_study(direction="maximize")
+    study_lgbm.optimize(objective_lgbm, n_trials=30)
+    best_params_lgbm = study_lgbm.best_params
+    print(f"   ✅ LightGBM mejores params: {best_params_lgbm}")
 
-        # Evaluar
-        y_pred = model_challenger.predict(X_test)
-        y_prob = model_challenger.predict_proba(X_test)[:, 1]
-        metrics = evaluar_modelo(y_test, y_pred, y_prob)
+    # 5. Entrenar Challengers finales
+    print("\n🚀 Entrenando Challengers CatBoost + LightGBM con pesos por recencia...")
+    model_challenger_cb = CatBoostClassifier(**best_params_cb, random_seed=42, thread_count=-1, verbose=False)
+    model_challenger_cb.fit(X_train, y_train, sample_weight=w_train)
 
-        # Registrar en MLflow
+    model_challenger_lgbm = LGBMClassifier(**best_params_lgbm, random_state=42, n_jobs=-1, verbosity=-1)
+    model_challenger_lgbm.fit(X_train, y_train, sample_weight=w_train)
+
+    # 6. Evaluar Ensemble Challenger
+    prob_cb_ch = model_challenger_cb.predict_proba(X_test)[:, 1]
+    prob_lgbm_ch = model_challenger_lgbm.predict_proba(X_test)[:, 1]
+    prob_ensemble_ch = (prob_cb_ch + prob_lgbm_ch) / 2
+    y_pred_ensemble = (prob_ensemble_ch >= 0.5).astype(int)
+    metrics_ensemble = evaluar_modelo(y_test, y_pred_ensemble, prob_ensemble_ch)
+    metrics_cb = evaluar_modelo(y_test, (prob_cb_ch >= 0.5).astype(int), prob_cb_ch)
+    metrics_lgbm = evaluar_modelo(y_test, (prob_lgbm_ch >= 0.5).astype(int), prob_lgbm_ch)
+
+    accuracy_challenger_ensemble = metrics_ensemble["Accuracy"]
+    print(f"   📊 CatBoost solo:   {metrics_cb['Accuracy']:.2%}")
+    print(f"   📊 LightGBM solo:   {metrics_lgbm['Accuracy']:.2%}")
+    print(f"   📊 Ensemble (avg):  {accuracy_challenger_ensemble:.2%}")
+
+    with mlflow.start_run(run_name="V4.0_Ensemble_Retraining"):
         mlflow.log_param("tuning_method", "Optuna")
-        mlflow.log_param("reconstruction_strategy", "Option_B_Full_Retrain")
-        mlflow.log_param("weight_season_2026", 1.5)
-        for key, val in best_params.items():
-            mlflow.log_param(key, val)
-        for key, val in metrics.items():
-            mlflow.log_metric(key, val)
+        mlflow.log_param("ensemble", "CatBoost+LightGBM_avg")
+        mlflow.log_param("weight_2026", 2.5)
+        mlflow.log_param("weight_2025", 1.3)
+        mlflow.log_dict(best_params_cb, "catboost_params.json")
+        mlflow.log_dict(best_params_lgbm, "lgbm_params.json")
+        for key, val in metrics_ensemble.items():
+            mlflow.log_metric(f"ensemble_{key}", val)
+        for key, val in metrics_cb.items():
+            mlflow.log_metric(f"catboost_{key}", val)
+        for key, val in metrics_lgbm.items():
+            mlflow.log_metric(f"lgbm_{key}", val)
+        mlflow.set_tag("version", "4.1_ensemble")
+        mlflow.set_tag("phase", "Production Ensemble Challenger")
 
-        mlflow.log_dict(best_params, "catboost_params.json")
-
-        mlflow.set_tag("version", "4.0_prod")
-        mlflow.set_tag("phase", "Production upgrade Challenger")
-
-        accuracy_challenger = metrics["Accuracy"]
-        print(f"📈 Accuracy de Challenger en Test: {accuracy_challenger:.2%}")
-
-        # 6. Promoción Champion vs Challenger
-        if accuracy_challenger >= accuracy_champion:
-            print("🟢 Challenger SUPERÓ o IGUALÓ al Champion anterior. Promocionando a Producción...")
+        # 7. Promoción: ensemble challenger vs ensemble champion
+        if accuracy_challenger_ensemble >= accuracy_champion_ensemble:
+            print("\n🟢 Ensemble Challenger SUPERÓ al Champion. Promocionando a Producción...")
             if os.path.exists(MODELO_PATH):
                 shutil.copy(MODELO_PATH, MODELO_BACKUP)
+            if os.path.exists(MODELO_LGBM_PATH):
+                shutil.copy(MODELO_LGBM_PATH, MODELO_LGBM_BACKUP)
 
-            model_challenger.save_model(MODELO_PATH)
-            print(f"✅ ¡Modelo ganador '{MODELO_PATH}' guardado exitosamente!")
+            model_challenger_cb.save_model(MODELO_PATH)
+            joblib.dump(model_challenger_lgbm, MODELO_LGBM_PATH)
+            print(f"   ✅ CatBoost guardado: {MODELO_PATH}")
+            print(f"   ✅ LightGBM guardado: {MODELO_LGBM_PATH}")
 
-            # Registrar milestone
             try:
                 from mlb_utils import registrar_milestone_cumplido, verificar_milestone_reentrenamiento
                 _, _, next_m = verificar_milestone_reentrenamiento()
@@ -409,7 +464,7 @@ def ejecutar_reentrenamiento():
             except Exception as e:
                 print(f"⚠️ No se pudo registrar el milestone: {e}")
         else:
-            print("🔴 Champion anterior retuvo un mejor rendimiento en test. Manteniendo Champion actual en producción.")
+            print("\n🔴 Champion Ensemble retuvo mejor rendimiento. Manteniendo modelos actuales en producción.")
 
 if __name__ == "__main__":
     ejecutar_reentrenamiento()

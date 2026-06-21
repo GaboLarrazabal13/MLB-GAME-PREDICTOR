@@ -19,6 +19,8 @@ else:
 
 MODELO_PATH = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.1_catboost.bin")
 MODELO_BACKUP = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.1_catboost_backup.bin")
+MODELO_LGBM_PATH = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.1_lgbm.pkl")
+MODELO_LGBM_BACKUP = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.1_lgbm_backup.pkl")
 DB_PATH = os.path.join(BASE_DIR, "data", "mlb_reentrenamiento.db")
 CACHE_PATH = os.path.join(BASE_DIR, "cache", "features_hibridas_v4.0_cache.pkl")
 
