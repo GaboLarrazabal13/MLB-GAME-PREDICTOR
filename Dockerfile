@@ -36,6 +36,11 @@ RUN groupadd --gid 1000 appgroup && \
 
 WORKDIR /app
 
+# Instalar libgomp1 requerida por LightGBM (no incluida en python:slim)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copiar entorno virtual del builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
