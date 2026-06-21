@@ -14,9 +14,9 @@ API_PID=$!
 
 # Esperar a que la API esté respondiendo
 echo "⚾ [2/3] Esperando a que la API de predicción esté lista..."
-for i in {1..15}; do
+for i in $(seq 1 30); do
     if python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')" > /dev/null 2>&1; then
-        echo "✅ API de predicción levantada con éxito en PID: $API_PID!"
+        echo "✅ API de predicción levantada con éxito en PID: $API_PID (${i}s)"
         break
     fi
     sleep 1

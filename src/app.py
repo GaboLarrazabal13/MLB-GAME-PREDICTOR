@@ -3235,7 +3235,7 @@ def render_tendencias_html(
             bar_color_h = "linear-gradient(90deg, #d97706, #fbbf24)"
         else:
             bar_color_h = "linear-gradient(90deg, #475569, #94a3b8)"
-            
+
         if elo_a >= 1580:
             bar_color_a = "linear-gradient(90deg, #00e676, #bbf7d0)"
         elif elo_a >= 1520:
@@ -3253,7 +3253,7 @@ def render_tendencias_html(
             bar_color_h = "#f59e0b"
         else:
             bar_color_h = "#64748b"
-            
+
         if elo_a >= 1580:
             bar_color_a = "#10b981"
         elif elo_a >= 1520:
@@ -3346,19 +3346,19 @@ def render_tendencias_html(
 
 def render_lanzadores_html(home_team, away_team, home_pitcher, away_pitcher, home_pitcher_stats, away_pitcher_stats):
     """Genera HTML premium para la sección de Lanzadores Iniciales en forma de cajas"""
-    
+
     # 1. Home Pitcher Card
     if home_pitcher_stats and isinstance(home_pitcher_stats, dict):
         nombre_h = home_pitcher_stats.get("nombre", home_pitcher)
         era_h = home_pitcher_stats.get("ERA", 0.0)
         whip_h = home_pitcher_stats.get("WHIP", 0.0)
         so9_h = home_pitcher_stats.get("SO9", 0.0)
-        
+
         # Color del ERA
         color_era_h = "#10b981" if era_h < 3.5 else ("#ef4444" if era_h > 4.5 else "#fbbf24")
         # Color del WHIP
         color_whip_h = "#10b981" if whip_h < 1.20 else ("#ef4444" if whip_h > 1.40 else "#fbbf24")
-        
+
         inner_html_h = f"""
             <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.5rem;text-align:center">
                 <div>
@@ -3389,10 +3389,10 @@ def render_lanzadores_html(home_team, away_team, home_pitcher, away_pitcher, hom
         era_a = away_pitcher_stats.get("ERA", 0.0)
         whip_a = away_pitcher_stats.get("WHIP", 0.0)
         so9_a = away_pitcher_stats.get("SO9", 0.0)
-        
+
         color_era_a = "#10b981" if era_a < 3.5 else ("#ef4444" if era_a > 4.5 else "#fbbf24")
         color_whip_a = "#10b981" if whip_a < 1.20 else ("#ef4444" if whip_a > 1.40 else "#fbbf24")
-        
+
         inner_html_a = f"""
             <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.5rem;text-align:center">
                 <div>

@@ -182,8 +182,21 @@ jobs:
       - name: Run health check
         run: |
           docker run -d --name test-container -p 8001:8000 mlb-predictor:test
-          sleep 10
-          docker exec test-container python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+          echo "Esperando que la API arranque (máx 90s)..."
+          for i in $(seq 1 18); do
+            sleep 5
+            if docker exec test-container python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" > /dev/null 2>&1; then
+              echo "✅ API saludable tras $((i*5))s"
+              break
+            fi
+            echo "  Intento $i/18 ($((i*5))s)..."
+            if [ "$i" -eq 18 ]; then
+              echo "❌ API no arrancó en 90s. Logs del contenedor:"
+              docker logs test-container
+              docker stop test-container && docker rm test-container
+              exit 1
+            fi
+          done
           docker stop test-container
           docker rm test-container
 
