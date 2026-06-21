@@ -9,10 +9,15 @@ import sqlite3
 import time
 import warnings
 
-import joblib
 import pandas as pd
 from catboost import CatBoostClassifier
-from lightgbm import LGBMClassifier
+
+try:
+    import joblib
+    from lightgbm import LGBMClassifier
+    _LGBM_AVAILABLE = True
+except ImportError:
+    _LGBM_AVAILABLE = False
 
 # Importar módulos centralizados
 from mlb_config import DB_PATH, MODELO_LGBM_PATH, MODELO_PATH, get_team_name
@@ -130,7 +135,7 @@ def predecir_juego(
         return None
 
     model_lgbm = None
-    if os.path.exists(MODELO_LGBM_PATH):
+    if _LGBM_AVAILABLE and os.path.exists(MODELO_LGBM_PATH):
         try:
             stage_start = time.perf_counter()
             model_lgbm = joblib.load(MODELO_LGBM_PATH)
