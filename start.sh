@@ -9,7 +9,7 @@ mkdir -p /app/logs
 
 # Iniciar la API en segundo plano
 echo "⚾ [1/3] Iniciando la API de FastAPI en localhost:8000..."
-python -m uvicorn src.api:app --host 127.0.0.1 --port 8000 > /app/logs/api.log 2>&1 &
+python -m uvicorn src.api:app --host 127.0.0.1 --port 8000 2>&1 | tee /app/logs/api.log &
 API_PID=$!
 
 # Esperar a que la API esté respondiendo

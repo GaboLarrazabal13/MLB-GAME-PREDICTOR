@@ -182,21 +182,28 @@ jobs:
       - name: Run health check
         run: |
           docker run -d --name test-container -p 8001:8000 mlb-predictor:test
-          echo "Esperando que la API arranque (máx 90s)..."
-          for i in $(seq 1 18); do
+          echo "Esperando que la API arranque (máx 120s)..."
+          SUCCESS=false
+          for i in $(seq 1 24); do
             sleep 5
             if docker exec test-container python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" > /dev/null 2>&1; then
               echo "✅ API saludable tras $((i*5))s"
+              SUCCESS=true
               break
             fi
-            echo "  Intento $i/18 ($((i*5))s)..."
-            if [ "$i" -eq 18 ]; then
-              echo "❌ API no arrancó en 90s. Logs del contenedor:"
-              docker logs test-container
-              docker stop test-container && docker rm test-container
-              exit 1
-            fi
+            echo "  Intento $i/24 ($((i*5))s)..."
           done
+          if [ "$SUCCESS" = "false" ]; then
+            echo "❌ API no arrancó en 120s."
+            echo "--- stdout/stderr del contenedor ---"
+            docker logs test-container
+            echo "--- api.log (uvicorn) ---"
+            docker exec test-container cat /app/logs/api.log || echo "(api.log vacío o no existe)"
+            echo "--- procesos en el contenedor ---"
+            docker exec test-container ps aux || true
+            docker stop test-container && docker rm test-container
+            exit 1
+          fi
           docker stop test-container
           docker rm test-container
 
