@@ -19,6 +19,7 @@ import streamlit as st
 # Importar configuración del proyecto
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
+    import mlb_live
     from mlb_config import DB_PATH, TEAM_CODE_TO_NAME, get_team_code
 except Exception as e:
     TEAM_CODE_TO_NAME = {}
@@ -1469,6 +1470,361 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
                 st.info(f"No hay datos de bateadores disponibles para {away_team}")
 
 
+
+# ============================================================================
+# SEGUIMIENTO DE PARTIDOS (MLB Stats API): en vivo, qué pasó y repetición
+# ============================================================================
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def resolver_game_pk(fecha, home_team, away_team):
+    """Id oficial (gamePk) de un partido del proyecto; None si la MLB no lo lista."""
+    try:
+        return mlb_live.buscar_game_pk(fecha, home_team, away_team)
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=20, show_spinner=False)
+def resumen_partido_vivo(game_pk):
+    return mlb_live.resumir_feed(mlb_live.obtener_feed(game_pk))
+
+
+@st.cache_data(ttl=6 * 3600, show_spinner=False)
+def resumen_partido_final(game_pk):
+    return mlb_live.resumir_feed(mlb_live.obtener_feed(game_pk))
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def cartelera_oficial(fecha):
+    try:
+        return mlb_live.cartelera_del_dia(fecha)
+    except Exception:
+        return []
+
+
+def obtener_resumen_partido(game_pk, terminado=False):
+    """Caché larga para partidos terminados y corta (20 s) para los que pueden estar en curso."""
+    try:
+        if terminado:
+            return resumen_partido_final(game_pk)
+        return resumen_partido_vivo(game_pk)
+    except Exception:
+        return None
+
+
+def parsear_features(partido):
+    """Variables que usó el modelo (campo `detalles` de la predicción)."""
+    detalles = partido.get("detalles")
+    if not detalles:
+        return {}
+    try:
+        datos = json.loads(detalles) if isinstance(detalles, str) else detalles
+        return datos.get("features_usadas", {}) or {}
+    except Exception:
+        return {}
+
+
+def _ordinal(n):
+    return mlb_live.ORDINALES.get(n, f"{n}ª")
+
+
+def html_bases(bases):
+    def rombo(cx, cy, ocupada):
+        color = "#ff6a00" if ocupada else "#3a3a3a"
+        relleno = "#ff6a00" if ocupada else "none"
+        return (
+            f'<rect x="{cx - 9}" y="{cy - 9}" width="18" height="18" transform="rotate(45 {cx} {cy})" '
+            f'fill="{relleno}" stroke="{color}" stroke-width="2"/>'
+        )
+
+    return (
+        '<svg viewBox="0 0 60 60" aria-label="Bases">'
+        + rombo(44, 32, bases.get("primera"))
+        + rombo(30, 18, bases.get("segunda"))
+        + rombo(16, 32, bases.get("tercera"))
+        + "</svg>"
+    )
+
+
+def html_linescore(resumen, hasta_entrada=None, en_vivo=False):
+    """Tabla de carreras por entrada. Con `hasta_entrada` recorta la repetición."""
+    entradas = resumen.get("entradas", [])
+    n_cols = max(resumen.get("entradas_programadas", 9) or 9, len(entradas))
+    actual = resumen["situacion"].get("entrada") if en_vivo else None
+    por_num = {e["num"]: e for e in entradas}
+
+    def fila(lado, code):
+        celdas, total = [], 0
+        for n in range(1, n_cols + 1):
+            e = por_num.get(n)
+            visible = e is not None and (hasta_entrada is None or n <= hasta_entrada)
+            carreras = e.get(lado) if visible else None
+            if carreras is not None:
+                total += carreras
+            clase = ' class="now"' if actual == n else ""
+            celdas.append(f"<td{clase}>{'' if carreras is None else carreras}</td>")
+        if hasta_entrada is None:
+            r = resumen["marcador"].get(lado)
+            h = resumen["marcador"]["hits"].get(lado, 0)
+            e_ = resumen["marcador"]["errores"].get(lado, 0)
+            tot = f'<td class="tot tot-r">{"" if r is None else r}</td><td class="tot">{h}</td><td class="tot">{e_}</td>'
+        else:
+            tot = f'<td class="tot tot-r">{total}</td><td class="tot"></td><td class="tot"></td>'
+        ganador = ' class="ganador"' if resumen.get("ganador") == lado and hasta_entrada is None else ""
+        return f"<tr{ganador}><td>{code}</td>{''.join(celdas)}{tot}</tr>"
+
+    cab = "".join(f"<th>{n}</th>" for n in range(1, n_cols + 1))
+    return (
+        '<table class="linescore"><thead><tr><th></th>'
+        + cab
+        + '<th class="tot">R</th><th class="tot">H</th><th class="tot">E</th></tr></thead><tbody>'
+        + fila("away", resumen["away"]["code"])
+        + fila("home", resumen["home"]["code"])
+        + "</tbody></table>"
+    )
+
+
+def html_situacion(resumen):
+    s = resumen["situacion"]
+    outs = "".join(f'<i class="{"on" if i < (s.get("outs") or 0) else ""}"></i>' for i in range(3))
+    mitad = "Alta" if s.get("mitad") == "alta" else "Baja"
+    entrada = _ordinal(s.get("entrada") or 0)
+    return (
+        '<div class="situacion">'
+        f'<div class="bases">{html_bases(s.get("bases", {}))}</div>'
+        f'<div><div class="inning">{mitad} {entrada}<small>{s.get("estado_entrada", "")}</small></div>'
+        f'<div class="count">Cuenta <b>{s.get("bolas", 0)}-{s.get("strikes", 0)}</b> &nbsp; Outs <span class="outs">{outs}</span></div></div>'
+        f'<div class="duelo">Lanza <b>{s.get("lanzador") or "-"}</b><br>Batea <b>{s.get("bateador") or "-"}</b></div>'
+        "</div>"
+        + (f'<div class="ultima-jugada"><b>Última jugada</b> {s["ultima_jugada"]}</div>' if s.get("ultima_jugada") else "")
+    )
+
+
+def html_jugadas(jugadas, decisiva=None):
+    if not jugadas:
+        return '<p class="stats-card-desc">Sin jugadas registradas.</p>'
+    items = []
+    for j in jugadas:
+        clases = []
+        if j.get("anota"):
+            clases.append("anota")
+        if decisiva is not None and j.get("indice") == decisiva.get("indice"):
+            clases.append("decisiva")
+        flecha = "&#9650;" if j["mitad"] == "alta" else "&#9660;"
+        items.append(
+            f'<li class="{" ".join(clases)}"><span class="cuando">{flecha} {_ordinal(j["entrada"])}</span>'
+            f'<span>{j["descripcion"]}</span><span class="marcador">{j["away"]}-{j["home"]}</span></li>'
+        )
+    return f'<ul class="play-list">{"".join(items)}</ul>'
+
+
+def html_factores(factores, prediccion, rival):
+    items = []
+    for f in factores:
+        if f["favorece"] == prediccion:
+            chip = f'<span class="chip a-favor">favorece {prediccion}</span>'
+        elif f["favorece"] == rival:
+            chip = f'<span class="chip en-contra">favorece {rival}</span>'
+        else:
+            chip = '<span class="chip">neutro</span>'
+        items.append(f'<li><span class="factor">{f["factor"]}</span><span>{f["texto"]}</span>{chip}</li>')
+    return f'<ul class="reason-list">{"".join(items)}</ul>'
+
+
+def html_abridores(resumen):
+    def linea(lado):
+        a = resumen["box"][lado].get("abridor")
+        code = resumen[lado]["code"]
+        if not a:
+            return f'<div class="pitcher-line"><b>{code}</b>Sin datos del abridor</div>'
+        return (
+            f'<div class="pitcher-line"><b>{a["nombre"]} ({code})</b>'
+            f'{a["ip"]} IP, {a["h"]} H, {a["r"]} C ({a["er"]} limpias), {a["bb"]} BB, {a["k"]} K, {a["lanzamientos"]} lanzamientos</div>'
+        )
+
+    return f'<div class="pitchers-box">{linea("away")}{linea("home")}</div>'
+
+
+def html_abridores_previos(probables, resumen):
+    return (
+        '<div class="pitchers-box" style="padding: 0.9rem 1.25rem;">'
+        f'<div class="pitcher-line"><b>{resumen["away"]["code"]}</b>Abre {probables.get("away") or "por confirmar"}</div>'
+        f'<div class="pitcher-line"><b>{resumen["home"]["code"]}</b>Abre {probables.get("home") or "por confirmar"}</div>'
+        "</div>"
+    )
+
+
+def render_por_que(partido, features):
+    """Por qué el modelo eligió a ese equipo, a partir de las variables guardadas."""
+    prediccion = partido.get("prediccion")
+    home, away = partido["home_team"], partido["away_team"]
+    if not prediccion:
+        st.caption("Este partido no tiene predicción del modelo.")
+        return
+    if not features:
+        st.caption("No se guardaron las variables del modelo para este partido, así que no se puede reconstruir el razonamiento.")
+        return
+    rival = away if prediccion == home else home
+    factores = mlb_live.explicar_prediccion(
+        prediccion, home, away, features, partido.get("home_pitcher") or "", partido.get("away_pitcher") or ""
+    )
+    prob = normalizar_probabilidad(partido.get("prob_home" if prediccion == home else "prob_away", 0.5)) * 100
+    confianza = (partido.get("confianza") or "sin dato").lower()
+    st.markdown(
+        f'<div class="analisis"><p>El modelo dio <b>{prob:.1f}%</b> a <b>{prediccion}</b> con confianza {confianza}. '
+        f"{mlb_live.resumen_factores(factores, prediccion, rival)}</p></div>" + html_factores(factores, prediccion, rival),
+        unsafe_allow_html=True,
+    )
+
+
+def render_que_paso(partido, resumen, features):
+    """Análisis del resultado frente a la predicción, con box score y jugadas de anotación."""
+    prediccion = partido.get("prediccion")
+    home, away = partido["home_team"], partido["away_team"]
+    if not prediccion:
+        st.caption("Sin predicción del modelo para contrastar.")
+        st.markdown(html_abridores(resumen), unsafe_allow_html=True)
+        st.markdown(html_jugadas(resumen["jugadas_anotacion"]), unsafe_allow_html=True)
+        return
+    analisis = mlb_live.analizar_resultado(prediccion, home, away, resumen, features)
+    if analisis["acierto"] is None:
+        st.caption(analisis["titulo"])
+        return
+    chip = '<span class="chip ok">acierto</span>' if analisis["acierto"] else '<span class="chip fallo">fallo</span>'
+    claves = "".join(f'<div>{c["etiqueta"]}<b>{c["valor"]}</b></div>' for c in analisis["claves"])
+    parrafos = "".join(f"<p>{p}</p>" for p in analisis["parrafos"])
+    st.markdown(
+        f'<div class="analisis"><div class="analisis-titulo">{analisis["titulo"]} {chip}</div>{parrafos}'
+        f'<div class="claves">{claves}</div></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(html_abridores(resumen), unsafe_allow_html=True)
+    st.markdown('<div class="replay-half">Jugadas de anotación (la decisiva, en naranja)</div>', unsafe_allow_html=True)
+    st.markdown(html_jugadas(resumen["jugadas_anotacion"], analisis.get("momento")), unsafe_allow_html=True)
+
+
+def render_repeticion(resumen, key):
+    """Simulador del partido: recorre entrada a entrada el marcador y las jugadas."""
+    por_entrada = resumen.get("jugadas_por_entrada") or {}
+    if not por_entrada:
+        st.caption("Todavía no hay jugadas para reproducir.")
+        return
+    ultima = max(por_entrada)
+    n = st.slider("Entrada", 1, ultima, ultima, key=f"rep_{key}") if ultima > 1 else 1
+    jugadas_hasta = [j for e, mitades in por_entrada.items() if e <= n for j in mitades["alta"] + mitades["baja"]]
+    away_r = jugadas_hasta[-1]["away"] if jugadas_hasta else 0
+    home_r = jugadas_hasta[-1]["home"] if jugadas_hasta else 0
+    st.markdown(
+        '<div class="replay-score">'
+        f'<span class="eq">{resumen["away"]["code"]}</span><span class="num {"lidera" if away_r > home_r else ""}">{away_r}</span>'
+        '<span class="eq">-</span>'
+        f'<span class="num {"lidera" if home_r > away_r else ""}">{home_r}</span><span class="eq">{resumen["home"]["code"]}</span>'
+        "</div>" + html_linescore(resumen, hasta_entrada=n),
+        unsafe_allow_html=True,
+    )
+    mitades = por_entrada.get(n, {"alta": [], "baja": []})
+    for nombre, lista in (("alta", mitades["alta"]), ("baja", mitades["baja"])):
+        quien = resumen["away"]["code"] if nombre == "alta" else resumen["home"]["code"]
+        st.markdown(f'<div class="replay-half">{nombre.capitalize()} de la {_ordinal(n)}, batea {quien}</div>', unsafe_allow_html=True)
+        if not lista and nombre == "baja" and n == ultima and resumen.get("estado") == "final":
+            st.markdown('<p class="stats-card-desc">No se jugó: el local ya ganaba al cerrar la alta.</p>', unsafe_allow_html=True)
+        else:
+            st.markdown(html_jugadas(lista), unsafe_allow_html=True)
+
+
+def _render_panel_partido(resumen, partido, features, key):
+    estado = resumen["estado"]
+    prediccion = partido.get("prediccion")
+    home, away = partido["home_team"], partido["away_team"]
+    if estado == "en_vivo":
+        badge = '<span class="live-badge">EN VIVO</span>'
+    elif estado == "final":
+        badge = '<span class="final-badge">FINAL</span>'
+    else:
+        badge = '<span class="previo-badge">PROGRAMADO</span>'
+    lugar = " ".join(x for x in (resumen.get("lugar"), f"({resumen['clima']})" if resumen.get("clima") else "") if x)
+    cabecera = (
+        '<div class="live-panel"><div class="live-panel-head">'
+        f"{badge}<span>{resumen.get('hora_et', '')} ET</span><span>{lugar}</span></div>"
+    )
+
+    if estado == "previo":
+        cuerpo = (
+            '<div class="live-pulse">Primer lanzamiento a las '
+            f"<b>{(resumen.get('hora_et') or '')[-5:]}</b> hora del Este.</div>"
+            + html_abridores_previos(resumen.get("probables", {}), resumen)
+        )
+        st.markdown(cabecera + cuerpo + "</div>", unsafe_allow_html=True)
+        if prediccion and features:
+            with st.expander(f"Por qué el modelo elige a {prediccion}"):
+                render_por_que(partido, features)
+        return
+
+    pulso = ""
+    if estado == "en_vivo" and prediccion:
+        pulso = f'<div class="live-pulse">{mlb_live.pulso_en_vivo(prediccion, home, away, resumen)}</div>'
+    cuerpo = pulso + html_linescore(resumen, en_vivo=(estado == "en_vivo"))
+    if estado == "en_vivo":
+        cuerpo += html_situacion(resumen)
+    st.markdown(cabecera + cuerpo + "</div>", unsafe_allow_html=True)
+
+    if estado == "en_vivo":
+        with st.expander("Jugadas de anotación hasta ahora"):
+            st.markdown(html_jugadas(resumen["jugadas_anotacion"]), unsafe_allow_html=True)
+        if prediccion and features:
+            with st.expander(f"Por qué el modelo eligió a {prediccion}"):
+                render_por_que(partido, features)
+        return
+
+    tab_paso, tab_rep, tab_por = st.tabs(["Qué pasó", "Repetición", "Por qué lo predijimos"])
+    with tab_paso:
+        render_que_paso(partido, resumen, features)
+    with tab_rep:
+        render_repeticion(resumen, key)
+    with tab_por:
+        render_por_que(partido, features)
+
+
+def render_seguimiento_partido(partido, features, key, terminado=False):
+    """Panel bajo la tarjeta del partido: en vivo (se refresca solo), programado o final."""
+    game_pk = partido.get("game_pk") or resolver_game_pk(partido.get("fecha"), partido["home_team"], partido["away_team"])
+    if not game_pk:
+        st.caption("No se encontró este partido en la cartelera oficial de la MLB.")
+        return
+    resumen = obtener_resumen_partido(game_pk, terminado=terminado)
+    if not resumen:
+        st.caption("La MLB no respondió a tiempo; el seguimiento del partido no está disponible ahora mismo.")
+        return
+
+    if resumen["estado"] == "en_vivo":
+
+        @st.fragment(run_every="30s")
+        def _panel_en_vivo():
+            actual = obtener_resumen_partido(game_pk) or resumen
+            _render_panel_partido(actual, partido, features, key)
+
+        _panel_en_vivo()
+    else:
+        _render_panel_partido(resumen, partido, features, key)
+
+
+def render_tarjeta_oficial(p):
+    """Tarjeta compacta para un partido de la cartelera oficial sin predicción del modelo."""
+    a_logo = get_team_logo_html(p["away_team"], 32)
+    h_logo = get_team_logo_html(p["home_team"], 32)
+    estado = {"en_vivo": "EN VIVO", "final": "FINAL", "previo": "PROGRAMADO"}.get(p["estado"], p["estado_detalle"])
+    st.markdown(
+        f"""<div class="mlb-scoreboard-card">
+<div class="mlb-card-header"><span>{estado}</span><span>{p.get("serie") or ""} {p.get("hora_et", "")} ET</span></div>
+<div class="mlb-card-body">
+<div class="mlb-team-row"><div class="mlb-team-info">{a_logo}<div class="mlb-team-name">{get_team_display_name(p["away_team"])}</div></div><div class="mlb-team-record">{p.get("away_pitcher") or ""}</div></div>
+<div class="mlb-team-row"><div class="mlb-team-info">{h_logo}<div class="mlb-team-name">{get_team_display_name(p["home_team"])}</div></div><div class="mlb-team-record">{p.get("home_pitcher") or ""}</div></div>
+</div></div>""",
+        unsafe_allow_html=True,
+    )
+
+
 # ============================================================================
 # SIDEBAR
 # ============================================================================
@@ -2114,6 +2470,22 @@ elif pagina == "Partidos de hoy":
                 unsafe_allow_html=True,
             )
 
+            oficiales = cartelera_oficial(fecha_hoy)
+            titulo_oficial = "Cartelera oficial de la MLB para hoy"
+            if not oficiales:
+                manana = (ahora_et + timedelta(days=1)).strftime("%Y-%m-%d")
+                oficiales = cartelera_oficial(manana)
+                titulo_oficial = f"Próximos partidos oficiales ({manana})"
+            if oficiales:
+                st.markdown(f"### {titulo_oficial}")
+                st.caption(
+                    "Según la MLB Stats API. Estos partidos aún no tienen predicción del modelo; "
+                    "el seguimiento en vivo y el resumen sí están disponibles."
+                )
+                for p in oficiales:
+                    render_tarjeta_oficial(p)
+                    render_seguimiento_partido(p, {}, key=f"of_{p['game_pk']}")
+
             if st.button("Buscar Partidos Manualmente", type="primary", use_container_width=True):
                 exito, mensaje = ejecutar_scraper_manual()
                 if exito:
@@ -2315,6 +2687,9 @@ CONFIANZA: <b>{confianza}</b>
 </div>
 </div>"""
                         st.markdown(matchup_html, unsafe_allow_html=True)
+                        render_seguimiento_partido(
+                            partido, features, key=f"hoy_{partido.get('game_id', '')}_{partido['home_team']}"
+                        )
 
                         game_id = partido.get(
                             "game_id",
@@ -2695,11 +3070,9 @@ elif pagina == "Historial y precisión":
                                     unsafe_allow_html=True,
                                 )
                                 # Botón de detalles opcional
-                                with st.expander("Ver Análisis Detallado", expanded=False):
+                                with st.expander("Ver análisis del partido", expanded=False):
                                     prob_h = normalizar_probabilidad(partido.get("prob_home", 0.5))
                                     prob_a = normalizar_probabilidad(partido.get("prob_away", 0.5))
-
-                                    # Confianza
                                     confianza = partido.get("confianza", "N/A")
                                     color_conf = {
                                         "MUY ALTA": "#ff6a00",
@@ -2707,25 +3080,19 @@ elif pagina == "Historial y precisión":
                                         "MODERADA": "#f2f2f2",
                                         "BAJA": "#8a8a8a",
                                     }.get(confianza, "#8a8a8a")
-
                                     st.markdown(
-                                        f"**Confianza:** <span style='color:{color_conf}; font-weight:bold;'>{confianza}</span>",
+                                        f"**Confianza:** <span style='color:{color_conf}; font-weight:bold;'>{confianza}</span>"
+                                        f" &nbsp; {get_team_display_name(_at)} {prob_a * 100:.1f}% &nbsp; "
+                                        f"{get_team_display_name(_ht)} {prob_h * 100:.1f}%",
                                         unsafe_allow_html=True,
                                     )
-
-                                    col_p1, col_p2 = st.columns(2)
-                                    with col_p1:
-                                        st.metric(
-                                            label=f"Prob. {get_team_display_name(partido.get('away_team', 'Visitante'))}",
-                                            value=f"{prob_a * 100:.1f}%"
-                                        )
-                                    with col_p2:
-                                        st.metric(
-                                            label=f"Prob. {get_team_display_name(partido.get('home_team', 'Home'))}",
-                                            value=f"{prob_h * 100:.1f}%"
-                                        )
-                                    if "stats_detalladas" in partido:
-                                        st.json(partido["stats_detalladas"], expanded=False)
+                                    features_partido = parsear_features(partido)
+                                    render_seguimiento_partido(
+                                        partido,
+                                        features_partido,
+                                        key=f"hist_{partido.get('game_id', '')}_{_ht}",
+                                        terminado=partido.get("score_home") is not None,
+                                    )
         else:
             st.info(f" No hay datos disponibles para {fecha_str}")
 

@@ -1009,6 +1009,7 @@ async def comparar_predicciones_resultados(fecha: str):
                     p.prob_away,
                     p.confianza,
                     p.tipo,
+                    p.detalles,
                     CASE
                         WHEN r.ganador IS NULL THEN NULL
                         WHEN (r.ganador = 1 AND p.prediccion = r.home_team) OR
@@ -1073,6 +1074,7 @@ async def comparar_predicciones_resultados(fecha: str):
                     p.prob_away,
                     p.confianza,
                     p.tipo,
+                    p.detalles,
                     NULL as acierto
                 FROM predicciones_historico p
                 LEFT JOIN historico_partidos hp
