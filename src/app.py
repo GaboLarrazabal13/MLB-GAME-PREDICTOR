@@ -27,6 +27,7 @@ except Exception as e:
     def get_team_code(name):
         return name
     st.warning(f"Config fallback due to error: {e}")
+from vistas_sistema import render_salud_modelo, render_simulacion_playoffs
 
 # ============================================================================
 # CONFIGURACIÓN
@@ -1860,6 +1861,7 @@ with st.sidebar:
             "Historial y precisión",
             "Power Rankings",
             "Rendimiento",
+            "Playoffs",
             "Acerca del modelo",
         ],
         index=0,
@@ -3169,6 +3171,8 @@ elif pagina == "Rendimiento":
         '<div class="subtitle">Análisis visual del rendimiento histórico del modelo</div>',
         unsafe_allow_html=True,
     )
+    render_salud_modelo(API_URL, render_custom_alert)
+    st.markdown("---")
 
     try:
         with sqlite3.connect(DB_PATH) as conn:
@@ -3580,6 +3584,9 @@ elif pagina == "Rendimiento":
     # ============================================================================
     # PÁGINA: ACERCA DEL MODELO
     # ============================================================================
+
+elif pagina == "Playoffs":
+    render_simulacion_playoffs(API_URL, render_custom_alert, get_team_logo_html)
 
 elif pagina == "Acerca del modelo":
     st.markdown(f'<div class="about-hero">{LOGO_SVG}</div>', unsafe_allow_html=True)
