@@ -36,7 +36,13 @@ from mlb_config import (
     SCRAPING_FEATURES,
     TRAINING_LOG_PATH,
 )
-from mlb_feature_engineering import calcular_super_features, preparar_matriz_modelo
+from mlb_feature_engineering import (
+    calcular_super_features,
+    cargar_partidos_historicos,
+    features_cronologicas_dataset,
+    preparar_matriz_modelo,
+    unir_partidos,
+)
 from mlb_model_card import escribir_model_card, leer_model_card, version_modelo_actual
 
 DIAS_SOMBRA = 30
@@ -112,54 +118,16 @@ def _guardar_cache(cache, cache_path):
         pickle.dump({"X_list": list(cache.values()), "y_list": [], "indices": []}, f)
 
 
-def _features_temporales(df):
-    """Tendencias por equipo y temporada calculadas cronológicamente, solo con partidos anteriores."""
-    historial = {}
-    filas = []
-
-    def resumen(hist):
-        if not hist:
-            return 0.5, 0, 4.5, 0.0
-        rec = hist[-10:]
-        wr10 = sum(g["ganado"] for g in rec) / len(rec)
-        ravg = sum(g["runs_sc"] for g in rec) / len(rec)
-        rdiff = (sum(g["runs_sc"] for g in rec) - sum(g["runs_al"] for g in rec)) / len(rec)
-        ultimo = hist[-1]["ganado"]
-        racha = 0
-        for g in reversed(hist):
-            if g["ganado"] != ultimo:
-                break
-            racha += 1
-        return wr10, (racha if ultimo else -racha), ravg, rdiff
-
-    for row in df.itertuples(index=False):
-        kh, ka = (row.home_team, row.year), (row.away_team, row.year)
-        h = resumen(historial.get(kh, []))
-        a = resumen(historial.get(ka, []))
-        filas.append(
-            {
-                "home_win_rate_10": h[0], "home_racha": h[1], "home_runs_avg": h[2], "home_runs_diff": h[3],
-                "away_win_rate_10": a[0], "away_racha": a[1], "away_runs_avg": a[2], "away_runs_diff": a[3],
-            }
-        )
-        sh, sa = float(row.score_home or 0), float(row.score_away or 0)
-        historial.setdefault(kh, []).append({"ganado": row.ganador == 1, "runs_sc": sh, "runs_al": sa})
-        historial.setdefault(ka, []).append({"ganado": row.ganador == 0, "runs_sc": sa, "runs_al": sh})
-    return pd.DataFrame(filas)
-
-
 def construir_dataset(conn, cache_path=CACHE_PATH, scraping_para_faltantes=True):
     """
     Devuelve un DataFrame ordenado por fecha con metadatos (game_id, fecha, year, home_team,
     away_team, ganador) y todas las MODEL_FEATURES. Aborta si las temporadas pasadas no tienen
     estadísticas reales (es la situación que arruinó los reentrenamientos de 2026).
     """
-    df = pd.read_sql("SELECT * FROM historico_real WHERE ganador IS NOT NULL ORDER BY fecha ASC", conn)
+    real = pd.read_sql("SELECT * FROM historico_real WHERE ganador IS NOT NULL ORDER BY fecha ASC", conn)
+    df = unir_partidos(real, cargar_partidos_historicos())
     if df.empty:
-        raise ValueError("historico_real está vacío")
-    df = df.drop_duplicates("game_id", keep="last").reset_index(drop=True)
-    df["year"] = df["year"].astype(int)
-    df["ganador"] = df["ganador"].astype(int)
+        raise ValueError("No hay partidos con resultado para entrenar")
     temporada_actual = int(df["year"].max())
 
     hist = cargar_features_historicas(conn).drop_duplicates("game_id").set_index("game_id")
@@ -188,7 +156,7 @@ def construir_dataset(conn, cache_path=CACHE_PATH, scraping_para_faltantes=True)
     if cache_crecio:
         _guardar_cache(cache, cache_path)
 
-    df = pd.concat([df, pd.DataFrame(base), _features_temporales(df)], axis=1)
+    df = pd.concat([df, pd.DataFrame(base), features_cronologicas_dataset(df)], axis=1)
     df = pd.concat([df, pd.DataFrame([calcular_super_features(r) for r in df.to_dict("records")])[
         ["super_neutralizacion_whip_ops", "super_resistencia_era_ops", "super_muro_bullpen"]
     ]], axis=1)

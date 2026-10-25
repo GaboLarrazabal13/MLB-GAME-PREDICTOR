@@ -28,7 +28,8 @@ class TestPrepararMatriz:
         X = preparar_matriz_modelo(df)
         assert list(X.columns) == MODEL_FEATURES
         assert "basura" not in X.columns
-        assert "home_elo" not in X.columns
+        assert len(X.columns) == 38
+        assert not {"home_elo", "home_descanso"} & set(X.columns)
 
     def test_ceros_de_estadisticas_son_faltantes(self):
         fila = dict.fromkeys(MODEL_FEATURES, 1.0)

@@ -24,7 +24,10 @@ MODEL_CARD_PATH = os.path.join(BASE_DIR, "models", "model_card.json")
 # Registro de cada evaluación champion/challenger (una línea JSON por ejecución)
 TRAINING_LOG_PATH = os.path.join(BASE_DIR, "models", "training_log.jsonl")
 DB_PATH = os.path.join(BASE_DIR, "data", "mlb_reentrenamiento.db")
-# Features de la API para temporadas pasadas, versionadas como texto (fuente de verdad del entrenamiento)
+# Temporadas pasadas completas (2022-2025) versionadas como texto: partidos con resultado y sus
+# estadísticas de la API calculadas al día anterior. Son la fuente de verdad del entrenamiento;
+# historico_real solo aporta los partidos que no están aquí (la temporada en curso).
+PARTIDOS_HISTORICOS_PATH = os.path.join(BASE_DIR, "data", "partidos_historicos.csv")
 FEATURES_HISTORICAS_PATH = os.path.join(BASE_DIR, "data", "features_historicas.csv")
 CACHE_PATH = os.path.join(BASE_DIR, "cache", "features_hibridas_v4.0_cache.pkl")
 
@@ -147,7 +150,15 @@ TEMPORAL_FEATURES = [
     "home_elo",
     "away_elo",
     "diff_elo",
+    "home_descanso",
+    "away_descanso",
 ]
+
+# Parámetros del ELO cronológico (compartidos por entrenamiento, inferencia y dashboard)
+ELO_K = 20.0
+ELO_HOME_ADVANTAGE = 24.0
+ELO_CARRYOVER = 2 / 3  # al empezar una temporada, el ELO regresa un tercio hacia 1500
+DESCANSO_MAX_DIAS = 7  # días de descanso se topan en 7 (primer partido de temporada = 7)
 
 SCRAPING_FEATURES = [
     "home_team_OPS",
@@ -185,11 +196,12 @@ SUPER_FEATURES = [
     "super_muro_bullpen",
 ]
 
-# Features que consume el modelo en producción, en orden. ELO queda fuera a propósito:
-# el motor de predicción todavía no lo calcula (devuelve 1500) y entrenar con ELO real
-# produciría un desfase entre entrenamiento e inferencia.
-ELO_FEATURES = ["home_elo", "away_elo", "diff_elo"]
-MODEL_FEATURES = [f for f in TEMPORAL_FEATURES if f not in ELO_FEATURES] + SCRAPING_FEATURES + SUPER_FEATURES
+# Features que consume el modelo, en orden: las 38 del champion de mayo. ELO y descanso se
+# calculan (TrackerCronologico, igual en entrenamiento e inferencia) pero quedan fuera: en la
+# prueba en igualdad de condiciones de 2026 (entrenar hasta el 27-may, evaluar 1,612 partidos
+# posteriores) añadirlos bajó el acierto de 57.7% a 56.4%.
+FEATURES_EXPERIMENTALES = ["home_elo", "away_elo", "diff_elo", "home_descanso", "away_descanso"]
+MODEL_FEATURES = [f for f in TEMPORAL_FEATURES if f not in FEATURES_EXPERIMENTALES] + SCRAPING_FEATURES + SUPER_FEATURES
 
 
 # ============================================================================
