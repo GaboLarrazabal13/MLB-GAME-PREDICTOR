@@ -13,15 +13,17 @@ import pandas as pd
 from catboost import CatBoostClassifier
 
 # Importar módulos centralizados
-from mlb_config import COMBINACION_MERCADO, DB_PATH, MODELO_PATH, get_team_name
-from mlb_cuotas import combinar_probabilidades, prob_mercado_para
+from mlb_config import DB_PATH, ENSEMBLE_MIEMBROS, MODELO_PATH, get_team_name
+from mlb_cuotas import combinar_lista, prob_mercado_para
 from mlb_feature_engineering import (
     calcular_estadisticas_agregadas,
     calcular_super_features,
     detectar_outliers,
+    historia_para_tracker,
     preparar_matriz_modelo,
 )
 from mlb_model_card import leer_model_card, version_modelo_actual
+from mlb_sabermetria import predecir_saber, sabermetria_hasta
 
 # Importar extracción de features del módulo de utilidades
 from mlb_utils import extraer_features_hibridas, normalizar_texto
@@ -53,13 +55,15 @@ def obtener_nivel_confianza(prob_pct):
 COLUMNAS_PREDICCION = """(fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
                           away_pitcher TEXT, prob_home REAL, prob_away REAL,
                           prediccion TEXT, confianza TEXT, tipo TEXT, detalles TEXT,
-                          model_version TEXT, generated_at TEXT, prob_modelo REAL, prob_mercado REAL)"""
+                          model_version TEXT, generated_at TEXT, prob_modelo REAL, prob_mercado REAL,
+                          prob_saber REAL)"""
 
 
 def _asegurar_columnas(conn, tabla):
     conn.execute(f"CREATE TABLE IF NOT EXISTS {tabla} {COLUMNAS_PREDICCION}")
     existentes = {col[1] for col in conn.execute(f"PRAGMA table_info({tabla})")}
-    for columna, tipo in (("detalles", "TEXT"), ("model_version", "TEXT"), ("generated_at", "TEXT"), ("prob_modelo", "REAL"), ("prob_mercado", "REAL")):
+    for columna, tipo in (("detalles", "TEXT"), ("model_version", "TEXT"), ("generated_at", "TEXT"), ("prob_modelo", "REAL"), ("prob_mercado", "REAL"),
+                         ("prob_saber", "REAL")):
         if columna not in existentes:
             conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")
 
@@ -274,17 +278,26 @@ def predecir_juego(
             extra={"feature_columns": int(len(X_df.columns))},
         )
 
-        # 10. Realizar predicción y combinarla con el mercado si hay cuota
+        # 10. Predicción del conjunto: CatBoost + modelo sabermétrico + mercado (los que haya)
         stage_start = time.perf_counter()
         prob_modelo = float(model_cb.predict_proba(X_df)[0][1])
-        prob_mercado = None
-        if COMBINACION_MERCADO["activa"]:
+        prob_saber = prob_mercado = None
+        if "saber" in ENSEMBLE_MIEMBROS:
+            try:
+                saber = sabermetria_hasta(historia_para_tracker(df_historico), row_data["fecha"])
+                feats_saber = saber.features(home_team, away_team, home_pitcher, away_pitcher, row_data["fecha"], year)
+                features_dict.update(feats_saber)
+                prob_saber = predecir_saber(feats_saber)
+            except Exception as e:  # noqa: BLE001 - sin modelo sabermétrico se usan los demás miembros
+                debug_info.setdefault("avisos", []).append(f"saber: {e}")
+        if "mercado" in ENSEMBLE_MIEMBROS:
             try:
                 prob_mercado = prob_mercado_para(row_data["fecha"], home_team, away_team)
-            except Exception:  # noqa: BLE001 - sin cuotas se publica solo el modelo
+            except Exception:  # noqa: BLE001 - sin cuotas se usan los demás miembros
                 prob_mercado = None
-        prob_home = combinar_probabilidades(prob_modelo, prob_mercado, COMBINACION_MERCADO["peso_mercado"]) if prob_mercado is not None else prob_modelo
-        _debug_stage("predict", stage_start, extra={"model_version": model_version, "prob_modelo": prob_modelo, "prob_mercado": prob_mercado})
+        prob_home = combinar_lista([prob_modelo, prob_saber, prob_mercado])
+        _debug_stage("predict", stage_start, extra={"model_version": model_version, "prob_modelo": prob_modelo,
+                                                    "prob_saber": prob_saber, "prob_mercado": prob_mercado})
 
         prob_home_pct = round(float(prob_home) * 100, 2)
         prob_away_pct = round(100 - prob_home_pct, 2)
@@ -488,6 +501,7 @@ def predecir_juego(
             "generated_at": pd.Timestamp.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
             "prob_modelo": round(prob_modelo * 100, 2),
             "prob_mercado": round(prob_mercado * 100, 2) if prob_mercado is not None else None,
+            "prob_saber": round(prob_saber * 100, 2) if prob_saber is not None else None,
         }
 
         resultado_data = {**db_data, "detalles": detalles}

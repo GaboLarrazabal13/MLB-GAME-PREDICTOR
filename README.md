@@ -156,7 +156,18 @@ El reentrenamiento (`src/train_model.py` → `src/mlb_training.py`) compara el m
   * Forma reciente del abridor + cansancio del bullpen: 57.7% → 56.8%. Descartado (el registro de lanzadores se sigue guardando).
   * Mercado de apuestas: nuestro modelo (58.2%) supera la línea de apertura (57.0%) e iguala la de cierre (58.3%).
   * **Combinación modelo + mercado (50/50 en escala logit): log loss 0.6803 → 0.6770 (p≈0.99) con el mismo acierto. Adoptada.**
-* **Probabilidad publicada:** combinación del modelo con la probabilidad implícita del mercado capturada antes de predecir (`COMBINACION_MERCADO` en `mlb_config.py`); sin cuota, solo el modelo. Cada predicción guarda `prob_modelo` y `prob_mercado` por separado, y el reentrenamiento juzga al champion con `prob_modelo`.
+* **Validación cronológica mes a mes 2024-2026** (cada mes se entrena con todo lo anterior; hiperparámetros elegidos solo con datos hasta 2023; 7,210 partidos fuera de muestra):
+
+  | Receta | Acierto | 2024 | 2025 | 2026 | Log loss |
+  |---|---|---|---|---|---|
+  | Mercado, cierre (techo) | 57.6% | 59.1 | 56.4 | 57.4 | 0.6740 |
+  | **CatBoost + sabermétrico + mercado (conjunto en producción)** | **57.0%** | **57.9** | **56.4** | **56.9** | 0.6797 |
+  | Logística sabermétrica (7 variables) | 56.6% | 57.5 | 55.9 | 56.3 | 0.6807 |
+  | Mercado al publicar | 56.4% | 57.3 | 55.6 | 56.3 | 0.6791 |
+  | CatBoost 38 variables (receta del champion) | 55.3% | 55.4 | 54.9 | 55.6 | 0.6852 |
+
+  Una auditoría independiente confirmó que las estadísticas históricas no tienen fugas (coinciden con los datos hasta el día anterior en el 100% de los casos recalculados).
+* **Probabilidad publicada:** media en escala logit de los miembros disponibles del conjunto (`ENSEMBLE_MIEMBROS` en `mlb_config.py`): el CatBoost champion, la logística sabermétrica (`src/mlb_sabermetria.py`: pitagórica, FIP del abridor a 365 días, FIP del bullpen a 30 días, carreras anotadas/recibidas, todo con regresión a la media) y la probabilidad del mercado. Cada predicción guarda `prob_modelo`, `prob_saber` y `prob_mercado`; el reentrenamiento juzga al champion con `prob_modelo`. La logística se reentrena en cada ejecución del job semanal (`models/modelo_saber.pkl` + `modelo_saber.json`).
 * **Pesos por recencia:** temporada en curso `2.5`, temporada anterior `1.3`, resto `1.0`.
 * **Predicciones inmutables:** cada predicción guarda `model_version` y `generated_at`. Si un partido ya tiene resultado, su predicción publicada no se vuelve a escribir: cualquier re-puntuación va a `predicciones_rescore`.
 

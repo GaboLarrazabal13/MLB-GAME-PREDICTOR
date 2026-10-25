@@ -1,0 +1,25 @@
+{
+  "version": "saber-20261025",
+  "trained_at": "2026-10-25T20:47:37+00:00",
+  "trained_through": "2026-10-24",
+  "n_train": 12001,
+  "features": [
+    "diff_pitag",
+    "diff_fip_sp",
+    "diff_fip_bp",
+    "home_rs",
+    "away_rs",
+    "home_ra",
+    "away_ra"
+  ],
+  "coeficientes_estandarizados": {
+    "diff_pitag": 0.475,
+    "diff_fip_sp": 0.1158,
+    "diff_fip_bp": 0.0156,
+    "home_rs": -0.1029,
+    "away_rs": 0.1076,
+    "home_ra": 0.0787,
+    "away_ra": -0.1105
+  },
+  "intercepto": 0.124
+}
