@@ -66,14 +66,14 @@ La plataforma implementa una arquitectura desacoplada y modular en 4 capas de gr
                         │
 ┌───────────────────────▼─────────────────────────────────┐
 │               CAPA DE LÓGICA DE NEGOCIO                 │
-│  mlb_predict_engine · train_model_v4.0                  │
+│  mlb_predict_engine · train_model · mlb_sabermetria     │
 │  mlb_feature_engineering · mlb_daily_scraper            │
 └───────────────────────┬─────────────────────────────────┘
                         │ SQLite Dialect
 ┌───────────────────────▼─────────────────────────────────┐
 │                     CAPA DE DATOS                       │
-│  SQLite (mlb_reentrenamiento.db) · Pickle Cache         │
-│  historico_real (10,300+ partidos) · features_juegos    │
+│  SQLite (mlb_reentrenamiento.db) · CSV versionados      │
+│  historico_real · partidos/features 2022-2025 · logs    │
 │  predicciones_historico · sync_control                  │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -86,9 +86,12 @@ El repositorio mantiene una higiene rigurosa, eliminando scripts redundantes de 
 |---|---|
 | `mlb_config.py` | Configuración centralizada del sistema, rutas, mapeos de equipos y espacios de búsqueda de hiperparámetros. |
 | `mlb_daily_scraper.py` | Consumidor digital autónomo de la **MLB Stats API** para carteleras, abridores y métricas en vivo. |
-| `mlb_feature_engineering.py` | Cálculo matemático de super features compuestas y tratamiento de outliers. |
-| `mlb_predict_engine.py` | Motor de inferencia y predicción diaria con validaciones estrictas y control de calidad. |
-| `train_model_v4.0.py` | Script oficial de entrenamiento acumulativo con pesos por recencia y tracking en MLflow SQLite. |
+| `mlb_feature_engineering.py` | Features cronológicas (tendencias, ELO, descanso), super features y limpieza común a entrenamiento e inferencia. |
+| `mlb_sabermetria.py` | Pitagórica, FIP del abridor y del bullpen, y la regresión logística sabermétrica del conjunto. |
+| `mlb_predict_engine.py` | Motor de inferencia: conjunto CatBoost + sabermétrico + mercado, con predicciones inmutables. |
+| `train_model.py` / `mlb_training.py` | Reentrenamiento semanal: logística sabermétrica siempre; CatBoost por champion/challenger con ventana sombra. |
+| `mlb_salud.py` / `mlb_simulacion.py` | Salud del modelo frente a referencias y simulación Monte Carlo de temporada y playoffs. |
+| `mlb_cuotas.py` / `mlb_pitching_logs.py` / `mlb_batting_logs.py` | Recogida diaria de probabilidad de mercado y registros de lanzadores y bateadores. |
 | `mlb_update_real_results.py` | Feedback loop diario que registra resultados finales y evalúa el accuracy real. |
 | `api.py` | API REST FastAPI con endpoints para predicciones, históricos y métricas de salud del sistema. |
 | `app.py` | Interfaz interactiva de Streamlit, visualización Plotly y análisis estadístico profundo. |
