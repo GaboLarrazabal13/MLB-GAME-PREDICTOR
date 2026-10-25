@@ -1,5 +1,5 @@
 # ============================================================================
-# Configuración de Streamlit para MLB Predictor Pro V3.5
+# Configuración de Streamlit para MLB Predictor (tema único negro/naranja)
 # ============================================================================
 
 [server]
@@ -14,11 +14,14 @@ serverAddress = "localhost"
 serverPort = 8501
 
 [theme]
-primaryColor = "#3b82f6"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f8fafc"
-textColor = "#0f172a"
-font = "sans serif"
+base = "dark"
+primaryColor = "#ff6a00"
+backgroundColor = "#000000"
+secondaryBackgroundColor = "#0f0f0f"
+textColor = "#f2f2f2"
+# Las fuentes se cargan vía @import en src/assets/theme.css
+font = "Manrope, sans-serif"
+headingFont = "Big Shoulders Display, sans-serif"
 
 [client]
 showErrorDetails = true

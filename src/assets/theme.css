@@ -1,0 +1,839 @@
+/* ============================================================================
+   MLB Predictor — tema visual único (negro + naranja neón)
+   Cargado por app.py. Un solo tema: no existe modo claro.
+   ============================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --bg:            #000000;
+    --surface:       #0f0f0f;
+    --surface-2:     #070707;
+    --surface-hover: #1a1a1a;
+    --border:        #262626;
+    --border-strong: #3a3a3a;
+
+    --orange:        #ff6a00;
+    --orange-hi:     #ff8f2b;
+    --orange-dim:    #7a3300;
+    --orange-glow:   rgba(255, 106, 0, 0.35);
+    --orange-soft:   rgba(255, 106, 0, 0.10);
+
+    --amber:         #ffb000;
+    --green:         #3ddc84;
+    --red:           #ff3b3b;
+
+    --text:          #f2f2f2;
+    --text-2:        #a3a3a3;
+    --text-3:        #7a7a7a;
+
+    --font-display:  'Big Shoulders Display', 'Arial Narrow', sans-serif;
+    --font-body:     'Manrope', 'Segoe UI', sans-serif;
+
+    --radius-sm: 6px;
+    --radius:    10px;
+    --radius-lg: 14px;
+}
+
+/* ---------- Base ---------- */
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
+    font-family: var(--font-body);
+    font-feature-settings: "tnum" 1;
+}
+.stApp {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+}
+header, [data-testid="stHeader"], .stApp header {
+    background: transparent !important;
+}
+[data-testid="stAppViewContainer"] > .main .block-container {
+    padding-top: 2.5rem;
+    max-width: 1280px;
+}
+h1, h2, h3, h4, h5, h6,
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+    font-family: var(--font-display);
+    color: var(--text) !important;
+    letter-spacing: 0.01em;
+}
+.stMarkdown h3 { font-size: 1.75rem; font-weight: 700; margin-top: 2rem; }
+.stMarkdown h4 { font-size: 1.35rem; font-weight: 700; }
+.stMarkdown p, .stMarkdown li { color: var(--text-2); }
+.stMarkdown strong { color: var(--text); }
+a, a:visited { color: var(--orange); }
+a:hover { color: var(--orange-hi); }
+hr { border-color: var(--border) !important; opacity: 1; }
+::selection { background: var(--orange); color: #000; }
+
+:focus-visible {
+    outline: 2px solid var(--orange) !important;
+    outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---------- Cabecera de página ---------- */
+.main-title {
+    font-family: var(--font-display);
+    font-size: 3.4rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    margin: 0.5rem 0 0.75rem 0;
+    text-align: left;
+}
+.main-title::after {
+    content: "";
+    display: block;
+    width: 64px;
+    height: 4px;
+    margin-top: 0.85rem;
+    background: var(--orange);
+    box-shadow: 0 0 14px var(--orange-glow);
+}
+.subtitle {
+    color: var(--text-2);
+    font-size: 1.05rem;
+    font-weight: 500;
+    margin-bottom: 2.25rem;
+    max-width: 68ch;
+    text-align: left;
+}
+
+/* ---------- Widgets de Streamlit ---------- */
+.stTabs [data-baseweb="tab-list"] { gap: 0.25rem; border-bottom: 1px solid var(--border); }
+.stTabs [data-baseweb="tab"] {
+    color: var(--text-3) !important;
+    font-weight: 600;
+    padding: 0.6rem 1rem;
+}
+.stTabs [aria-selected="true"] { color: var(--text) !important; }
+.stTabs [data-baseweb="tab-highlight"] { background: var(--orange) !important; height: 3px; }
+.stTabs [data-baseweb="tab-border"] { background: var(--border) !important; }
+
+details summary {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    color: var(--text) !important;
+    font-weight: 700 !important;
+    padding: 0.7rem 1rem !important;
+    cursor: pointer;
+}
+details summary:hover { border-color: var(--border-strong) !important; }
+details[open] summary { border-radius: var(--radius) var(--radius) 0 0 !important; }
+details > div {
+    background: var(--bg) !important;
+    border: 1px solid var(--border) !important;
+    border-top: none !important;
+    border-radius: 0 0 var(--radius) var(--radius) !important;
+    padding: 1rem !important;
+    color: var(--text) !important;
+}
+
+.stButton > button, .stDownloadButton > button {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: var(--radius-sm) !important;
+    font-weight: 700 !important;
+    font-family: var(--font-body) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease !important;
+}
+.stButton > button:hover:not(:disabled), .stDownloadButton > button:hover {
+    border-color: var(--orange) !important;
+    color: var(--orange) !important;
+    box-shadow: 0 0 0 1px var(--orange), 0 0 18px var(--orange-glow) !important;
+}
+.stButton > button[kind="primary"] {
+    background: var(--orange) !important;
+    color: #000 !important;
+    border-color: var(--orange) !important;
+}
+.stButton > button[kind="primary"]:hover { background: var(--orange-hi) !important; color: #000 !important; }
+.stButton > button:disabled { opacity: 0.45; }
+
+div[data-baseweb="input"], div[data-baseweb="base-input"] {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text) !important;
+}
+div[data-baseweb="base-input"] { border: none !important; }
+div[data-baseweb="input"] input, div[data-baseweb="base-input"] input {
+    color: var(--text) !important;
+    background: transparent !important;
+}
+div[data-baseweb="input"]:focus-within { border-color: var(--orange) !important; }
+
+div[data-baseweb="select"] > div {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text) !important;
+}
+div[data-baseweb="select"] div, div[data-baseweb="select"] span, div[data-baseweb="select"] input {
+    background: transparent !important;
+    color: var(--text) !important;
+}
+div[data-baseweb="select"] svg { fill: var(--text-2) !important; }
+div[data-baseweb="popover"], ul[role="listbox"], li[role="option"] {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+}
+ul[role="listbox"] { border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; }
+li[role="option"]:hover, li[role="option"][aria-selected="true"] {
+    background: var(--surface-hover) !important;
+    color: var(--orange) !important;
+}
+div[data-baseweb="calendar"], div[data-baseweb="calendar"] * { background: var(--surface) !important; color: var(--text) !important; }
+div[data-baseweb="calendar"] [aria-selected="true"] { background: var(--orange) !important; color: #000 !important; }
+
+.stDataFrame, [data-testid="stDataFrame"] {
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    background: var(--surface) !important;
+    overflow: hidden;
+}
+
+[data-testid="stMetric"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.9rem 1.1rem;
+}
+[data-testid="stMetricLabel"] { color: var(--text-2) !important; font-weight: 600; }
+[data-testid="stMetricValue"] {
+    color: var(--text) !important;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 2.1rem;
+}
+[data-testid="stMetricDelta"] { color: var(--green) !important; }
+
+.stWidgetLabel p, .stWidgetLabel, label, label p, [data-testid="stWidgetLabel"] { color: var(--text) !important; }
+.stCaption p, .stCaption, [data-testid="stCaptionContainer"] { color: var(--text-3) !important; }
+div[role="radiogroup"] label p { color: var(--text) !important; }
+div[role="radiogroup"] label:has(input:checked) p { color: var(--orange) !important; }
+[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child > div {
+    border-color: var(--border-strong) !important;
+    background: var(--surface-2) !important;
+}
+[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) > div:first-child > div {
+    border-color: var(--orange) !important;
+    background: var(--orange) !important;
+}
+.stCheckbox label span[data-checked="true"] { background: var(--orange) !important; border-color: var(--orange) !important; }
+.stSlider [data-baseweb="slider"] div[role="slider"] { background: var(--orange) !important; border-color: var(--orange) !important; }
+
+[data-testid="stAlert"] {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-left-width: 4px !important;
+    border-radius: var(--radius) !important;
+    color: var(--text) !important;
+}
+[data-testid="stAlert"] p { color: var(--text) !important; }
+div[data-testid="stSpinner"] p { color: var(--text-2) !important; }
+.stProgress > div > div > div { background: var(--orange) !important; }
+
+/* ---------- Sidebar ---------- */
+[data-testid="stSidebar"] {
+    background: var(--surface-2) !important;
+    border-right: 1px solid var(--border) !important;
+}
+[data-testid="stSidebar"] hr { margin: 1rem 0; }
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.25rem 0.75rem 0.25rem;
+}
+.brand svg { width: 46px; height: 46px; flex: none; filter: drop-shadow(0 0 10px var(--orange-glow)); }
+.brand-name {
+    font-family: var(--font-display);
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: 0.02em;
+    color: var(--text);
+}
+.brand-name span { display: block; color: var(--orange); }
+.brand-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.25rem 0 0.5rem 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-3);
+}
+.brand-meta .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--green);
+}
+.brand-meta .live::before {
+    content: "";
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+[data-testid="stSidebar"] .sidebar-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    margin: 0.25rem 0 0.5rem 0.25rem;
+}
+[data-testid="stSidebar"] div[role="radiogroup"] { gap: 0.15rem; }
+[data-testid="stSidebar"] div[role="radiogroup"] label {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-left: 3px solid transparent !important;
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 0.75rem;
+    margin: 0;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child { display: none; }
+[data-testid="stSidebar"] div[role="radiogroup"] label:hover { background: var(--surface-hover) !important; }
+[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+    background: var(--orange-soft) !important;
+    border-left-color: var(--orange) !important;
+}
+[data-testid="stSidebar"] div[role="radiogroup"] label p {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-2) !important;
+}
+[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p { color: var(--text) !important; }
+.sidebar-foot { font-size: 0.72rem; color: var(--text-3); line-height: 1.5; padding: 0 0.25rem; }
+.sidebar-foot b { color: var(--text-2); font-weight: 600; }
+
+/* ---------- Badges ---------- */
+.badge {
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.78rem;
+    margin: 0.2rem;
+    border: 1px solid var(--border-strong);
+    color: var(--text-2);
+    background: var(--surface);
+}
+.badge-pro { background: var(--orange); color: #000; border-color: var(--orange); }
+.badge-live { background: transparent; color: var(--green); border-color: rgba(61, 220, 132, 0.4); }
+
+/* ---------- Tarjetas ---------- */
+.winner-box {
+    background: var(--surface);
+    padding: 2.5rem;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    color: var(--text);
+    margin: 2rem 0;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--orange);
+    box-shadow: 0 -10px 40px -20px var(--orange-glow);
+}
+.winner-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--orange) !important;
+    margin-bottom: 0.5rem;
+}
+.winner-team {
+    font-family: var(--font-display);
+    font-size: 3.6rem;
+    font-weight: 900;
+    margin: 0.5rem 0;
+    color: var(--text);
+}
+
+.stats-card {
+    background: var(--surface);
+    padding: 1.5rem 1.75rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--orange);
+    margin: 1rem 0;
+}
+.stats-card h3, .stats-card h4 { color: var(--text) !important; margin-top: 0; }
+.stats-card h4 { font-family: var(--font-body); font-size: 0.85rem; font-weight: 700; color: var(--text-2) !important; }
+.stats-card p, .stats-card span, .stats-card li { color: var(--text-2); }
+.stats-card strong { color: var(--text); }
+
+.stats-card-mini {
+    background: var(--surface);
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin: 0.5rem 0;
+}
+.stats-card-mini h4 {
+    margin: 0 0 0.25rem 0;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-2) !important;
+}
+.stats-card-val {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 0.2rem;
+}
+.value-blue { color: var(--orange) !important; }
+.value-purple { color: var(--text) !important; }
+.stats-card-desc { color: var(--text-3) !important; margin: 0; font-size: 0.72rem; }
+
+.pitcher-card {
+    background: var(--surface);
+    padding: 1.75rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--orange);
+    margin: 1.5rem 0;
+}
+.pitcher-name {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+}
+
+.super-feature {
+    background: var(--surface);
+    padding: 1.4rem;
+    border-radius: var(--radius);
+    color: var(--text);
+    margin: 1rem 0;
+    min-height: 220px;
+    border: 1px solid var(--border);
+}
+.super-feature h4 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text) !important;
+}
+.super-feature-advantage {
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: var(--orange-soft);
+    color: var(--orange);
+    border: 1px solid rgba(255, 106, 0, 0.3);
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    margin: 0.4rem 0;
+}
+.super-feature p, .super-feature strong { color: var(--text-2) !important; }
+
+.alert-card-info, .alert-card-warning, .alert-card-success {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--orange);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin: 0.75rem 0;
+}
+.alert-card-warning { border-left-color: var(--amber); }
+.alert-card-success { border-left-color: var(--green); }
+.alert-card-info-title, .alert-card-warning-title, .alert-card-success-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text);
+}
+.alert-card-info-title { color: var(--orange); }
+.alert-card-warning-title { color: var(--amber); }
+.alert-card-success-title { color: var(--green); }
+.alert-card-info-message, .alert-card-warning-message, .alert-card-success-message {
+    color: var(--text-2);
+    font-size: 0.875rem;
+}
+
+.game-card {
+    background: var(--surface);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--orange);
+}
+
+/* ---------- Scoreboard ---------- */
+.mlb-scoreboard-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+.mlb-card-header {
+    padding: 8px 15px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-3);
+    display: flex;
+    justify-content: space-between;
+}
+.mlb-card-body { padding: 15px; }
+.mlb-team-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.mlb-team-row:last-child { margin-bottom: 0; }
+.mlb-team-info { display: flex; align-items: center; gap: 12px; }
+.mlb-team-name { font-size: 1rem; font-weight: 700; color: var(--text); }
+.mlb-team-record { font-size: 0.75rem; color: var(--text-3); }
+.mlb-score { font-family: var(--font-display); font-size: 1.7rem; font-weight: 800; color: var(--text); }
+.mlb-card-footer {
+    padding: 10px 15px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.mlb-prediction-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--orange-soft);
+    border: 1px solid rgba(255, 106, 0, 0.3);
+    color: var(--orange);
+}
+
+/* ---------- Niveles de confianza ---------- */
+.confidence-muy-alta { color: var(--orange); font-family: var(--font-display); font-weight: 900; font-size: 2.5rem; }
+.confidence-alta     { color: var(--amber);  font-family: var(--font-display); font-weight: 900; font-size: 2.5rem; }
+.confidence-moderada { color: var(--text);   font-family: var(--font-display); font-weight: 900; font-size: 2.5rem; }
+.confidence-baja     { color: var(--text-3); font-family: var(--font-display); font-weight: 900; font-size: 2.5rem; }
+
+/* ---------- Matchup (partidos de hoy) ---------- */
+.mlb-matchup-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.75rem;
+    overflow: hidden;
+}
+.mlb-matchup-top-header {
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--text-2);
+}
+.mlb-matchup-pred-badge {
+    background: var(--orange-soft);
+    border: 1px solid rgba(255, 106, 0, 0.3);
+    color: var(--orange);
+    padding: 0.2rem 0.7rem;
+    border-radius: 2rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.mlb-matchup-conf-pill {
+    background: rgba(61, 220, 132, 0.08);
+    border: 1px solid rgba(61, 220, 132, 0.25);
+    color: var(--green);
+    padding: 0.2rem 0.7rem;
+    border-radius: 2rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.mlb-matchup-grid {
+    display: grid;
+    grid-template-columns: 2.2fr 1fr 2.2fr;
+    align-items: center;
+    padding: 1.75rem 1.25rem;
+    background: var(--surface);
+}
+.mlb-matchup-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    padding: 0.5rem 0;
+}
+.mlb-matchup-logo-container, .mlb-matchup-status-label, .mlb-matchup-team-name,
+.mlb-matchup-pitcher-name, .mlb-matchup-prob-value, .mlb-matchup-prob-label { position: relative; z-index: 2; }
+.mlb-matchup-logo-container {
+    width: 80px; height: 80px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 0.75rem;
+}
+.bg-logo {
+    position: absolute;
+    width: 180px; height: 180px;
+    top: 50%; right: -25px;
+    transform: translateY(-50%);
+    object-fit: contain;
+    pointer-events: none;
+    filter: saturate(0) brightness(1.6);
+    opacity: 0.06;
+    z-index: 1;
+}
+.mlb-matchup-grid .mlb-matchup-team:nth-child(3) .bg-logo { right: auto; left: -25px; }
+.mlb-matchup-status-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.35rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: var(--radius-sm);
+}
+.status-favorite { color: var(--orange); background: var(--orange-soft); }
+.status-underdog { color: var(--text-3); background: rgba(122, 122, 122, 0.1); }
+.mlb-matchup-team-name {
+    font-family: var(--font-display);
+    color: var(--text);
+    font-size: 1.7rem;
+    font-weight: 800;
+    margin: 0.25rem 0;
+}
+.mlb-matchup-pitcher-name { color: var(--text-2); font-size: 0.8rem; margin-bottom: 0.75rem; font-weight: 600; }
+.mlb-matchup-prob-value {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 0.15rem;
+}
+.prob-fav { color: var(--orange); text-shadow: 0 0 18px var(--orange-glow); }
+.prob-und { color: var(--text-3); }
+.mlb-p-bar {
+    height: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    margin-top: 8px;
+    overflow: hidden;
+    width: 80%;
+    position: relative;
+    z-index: 2;
+}
+.mlb-p-bar-fill { height: 100%; background: linear-gradient(90deg, var(--orange-dim), var(--orange)); border-radius: 3px; }
+.mlb-matchup-prob-label { color: var(--text-3); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; }
+.mlb-matchup-center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.mlb-matchup-vs {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--border-strong);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+}
+.mlb-matchup-edge-box {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.8rem;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+}
+.mlb-matchup-edge-value { font-family: var(--font-display); color: var(--green); font-size: 1.4rem; font-weight: 800; line-height: 1.1; }
+.mlb-matchup-edge-label { color: var(--text-3); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em; margin-top: 0.15rem; }
+.mlb-matchup-stadium { color: var(--text-3); font-size: 0.72rem; margin-top: 1rem; font-weight: 600; }
+
+.mlb-momentum-bar {
+    background: var(--surface-2);
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.8rem;
+}
+.mlb-momentum-column { display: flex; align-items: center; gap: 1rem; }
+.column-away { justify-content: flex-start; border-right: 1px solid var(--border); padding-right: 1rem; }
+.column-home { justify-content: flex-end; padding-left: 1rem; }
+.mlb-momentum-team-badge {
+    font-weight: 800;
+    font-size: 0.75rem;
+    color: var(--text);
+    background: var(--surface);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong);
+}
+.mlb-momentum-stat { display: flex; flex-direction: column; align-items: center; }
+.mlb-momentum-stat-label { color: var(--text-3); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.15rem; }
+.mlb-momentum-stat-value { color: var(--text); font-weight: 700; }
+
+.racha-pill {
+    padding: 0.1rem 0.5rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+}
+.racha-win { background: rgba(61, 220, 132, 0.1); color: var(--green); border: 1px solid rgba(61, 220, 132, 0.25); }
+.racha-loss { background: rgba(255, 59, 59, 0.1); color: var(--red); border: 1px solid rgba(255, 59, 59, 0.25); }
+
+/* ---------- Bloques de rendimiento ---------- */
+.rendimiento-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-left: 3px solid var(--orange) !important;
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 2rem;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+.rendimiento-title { font-family: var(--font-display); font-size: 1.7rem; font-weight: 800; color: var(--text) !important; }
+.rendimiento-subtitle { font-size: 0.78rem; color: var(--text-2) !important; font-weight: 600; margin-top: 2px; }
+.rendimiento-stats { display: flex; gap: 1rem; flex-wrap: wrap; }
+.rendimiento-stat-box {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius);
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 110px;
+}
+.rendimiento-stat-val { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; color: var(--orange) !important; line-height: 1; }
+.rendimiento-stat-lbl { font-size: 0.62rem; font-weight: 700; color: var(--text-3) !important; letter-spacing: 0.05em; margin-top: 5px; text-align: center; }
+
+/* ---------- Tablas HTML ---------- */
+.mlb-results-table, .mlb-elo-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.mlb-results-table th, .mlb-elo-table th {
+    background: var(--surface-2) !important;
+    color: var(--text-3) !important;
+    font-weight: 700;
+    text-align: left;
+    padding: 0.8rem 1.25rem;
+    border-bottom: 1px solid var(--border-strong) !important;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+}
+.mlb-results-table td, .mlb-elo-table td {
+    padding: 0.8rem 1.25rem;
+    border-bottom: 1px solid var(--border) !important;
+    color: var(--text) !important;
+}
+.mlb-results-table tr:last-child td, .mlb-elo-table tr:last-child td { border-bottom: none; }
+.mlb-results-table tr:hover td, .mlb-elo-table tr:hover td { background: var(--surface-hover) !important; }
+.table-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-align: center;
+}
+.table-badge-success { background: rgba(61, 220, 132, 0.12) !important; color: var(--green) !important; border: 1px solid rgba(61, 220, 132, 0.3) !important; }
+.table-badge-error   { background: rgba(255, 59, 59, 0.12) !important; color: var(--red) !important; border: 1px solid rgba(255, 59, 59, 0.3) !important; }
+
+/* ---------- Pie de página ---------- */
+.site-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1.5rem 0 0.5rem 0;
+    color: var(--text-3);
+    font-size: 0.8rem;
+}
+.site-footer b { color: var(--text-2); font-weight: 700; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .main-title { font-size: 2.4rem; }
+    .mlb-matchup-grid { grid-template-columns: 1fr; gap: 1rem; }
+    .mlb-matchup-prob-value { font-size: 2.4rem; }
+    .mlb-momentum-bar { grid-template-columns: 1fr; }
+    .column-away { border-right: none; padding-right: 0; }
+    .rendimiento-container { padding: 1rem; }
+}
+
+/* ---------- Power Rankings (tabla ELO) ---------- */
+.elo-rank { font-family: var(--font-display); font-weight: 700; color: var(--text-3) !important; font-size: 1.1rem; text-align: center; width: 50px; }
+.elo-team-col { display: flex; align-items: center; gap: 10px; }
+.elo-logo { width: 28px; height: 28px; object-fit: contain; }
+.elo-team-name { font-weight: 700; color: var(--text) !important; }
+.elo-badge-tier {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-align: center;
+    white-space: nowrap;
+}
+.elo-tier-elite       { background: rgba(61, 220, 132, 0.12); color: var(--green);  border: 1px solid rgba(61, 220, 132, 0.3); }
+.elo-tier-strong      { background: var(--orange-soft);       color: var(--orange); border: 1px solid rgba(255, 106, 0, 0.3); }
+.elo-tier-competitive { background: rgba(255, 176, 0, 0.12);  color: var(--amber);  border: 1px solid rgba(255, 176, 0, 0.3); }
+.elo-tier-developing  { background: rgba(255, 59, 59, 0.12);  color: var(--red);    border: 1px solid rgba(255, 59, 59, 0.3); }
+.elo-tier-rebuilding  { background: rgba(138, 138, 138, 0.12); color: var(--text-3); border: 1px solid rgba(138, 138, 138, 0.3); }
+.elo-bar-bg {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    height: 8px;
+    width: 100px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+}
+.elo-bar-fill { height: 100%; border-radius: 4px; }
+.elo-legend-container { font-size: 0.8rem; color: var(--text-2); }
+
+/* ---------- Historial: filas acierto / fallo ---------- */
+.mlb-row-success td:first-child { border-left: 3px solid var(--green) !important; }
+.mlb-row-error td:first-child   { border-left: 3px solid var(--red) !important; }
+
+/* ---------- Acerca del modelo ---------- */
+.about-hero { display: flex; justify-content: center; margin: 0.5rem 0 1.5rem 0; }
+.about-hero svg { width: 128px; height: 128px; filter: drop-shadow(0 0 24px var(--orange-glow)); }

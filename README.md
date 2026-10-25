@@ -1,8 +1,8 @@
 ---
 title: MLB Game Predictor Pro
 emoji: ⚾
-colorFrom: blue
-colorTo: red
+colorFrom: gray
+colorTo: yellow
 sdk: docker
 pinned: false
 ---

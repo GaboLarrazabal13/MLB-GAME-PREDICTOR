@@ -31,17 +31,16 @@ except Exception as e:
 # CONFIGURACIÓN
 # ============================================================================
 
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+
 st.set_page_config(
-    page_title="MLB Predictor Pro V4.0",
-    page_icon="⚾",
+    page_title="MLB Predictor",
+    page_icon=os.path.join(ASSETS_DIR, "favicon.png"),
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-if "theme_selector" not in st.session_state:
-    st.session_state.theme_selector = "🌙 Oscuro"
 
-theme = "Oscuro" if "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
 
 # API Configuration
 API_URL = os.getenv("API_URL")
@@ -209,1899 +208,19 @@ EQUIPOS_MLB = {
 }
 
 # ============================================================================
-# ESTILOS CSS PROFESIONALES
+# TEMA VISUAL (src/assets/theme.css + src/assets/logo.svg)
 # ============================================================================
-if theme == "Oscuro":
-    st.markdown(
-        """
-<style>
-    :root {
-        --primary-blue: #00c8ff;
-        --secondary-blue: #0088cc;
-        --success-green: #00e676;
-        --warning-yellow: #f59e0b;
-        --danger-red: #ef4444;
-        --dark-bg: #070e1c;
-        --light-bg: #050c1a;
-    }
 
-    .stApp {
-        background-color: #070e1c !important;
-        color: #d8eef8 !important;
-    }
 
-    header, [data-testid="stHeader"], .stApp header {
-        background-color: transparent !important;
-        background: transparent !important;
-    }
+def leer_asset(nombre):
+    """Lee un archivo estático de la carpeta assets (CSS, SVG)."""
+    with open(os.path.join(ASSETS_DIR, nombre), encoding="utf-8") as f:
+        return f.read()
 
-    .stTabs [data-baseweb="tab"] {
-        color: #8b949e !important;
-    }
-    .stTabs [aria-selected="true"] {
-        color: #fff !important;
-        border-bottom-color: #00c8ff !important;
-    }
 
-    /* Style Streamlit expander boxes (details summary / details>div) */
-    details summary {
-        background-color: #050c1a !important;
-        border: 1px solid #1e3f6a !important;
-        border-radius: 8px !important;
-        color: #00c8ff !important;
-        font-weight: 700 !important;
-        padding: 0.7rem 1rem !important;
-        cursor: pointer;
-    }
-    details[open] summary {
-        border-radius: 8px 8px 0 0 !important;
-        border-bottom: 1px solid #1e3f6a !important;
-    }
-    details>div {
-        background-color: #070e1c !important;
-        border: 1px solid #1e3f6a !important;
-        border-top: none !important;
-        border-radius: 0 0 8px 8px !important;
-        padding: 1rem !important;
-        color: #d8eef8 !important;
-    }
-
-    /* Style Streamlit standard buttons */
-    .stButton>button {
-        background-color: #050c1a !important;
-        color: #00c8ff !important;
-        border: 1px solid #1e3f6a !important;
-        border-radius: 8px !important;
-        font-weight: 700 !important;
-        transition: all 0.2s ease !important;
-    }
-    .stButton>button:hover {
-        background-color: #0a1628 !important;
-        border-color: #00c8ff !important;
-        color: #ffffff !important;
-        box-shadow: 0 0 10px rgba(0, 200, 255, 0.2) !important;
-    }
-
-    /* Style inputs, selectors, and dropdown fields globally in Oscuro mode */
-    div[data-baseweb="input"] {
-        background-color: #050c1a !important;
-        border: 1px solid #1e3f6a !important;
-        border-radius: 8px !important;
-        color: #d8eef8 !important;
-    }
-    div[data-baseweb="input"] input {
-        color: #d8eef8 !important;
-        background-color: transparent !important;
-    }
-
-    /* Comprehensive override for selectboxes and dropdowns in Dark Mode to prevent white background */
-    div[data-baseweb="select"],
-    div[data-baseweb="select"] > div,
-    div[role="button"],
-    .stSelectbox > div {
-        background-color: #050c1a !important;
-        border: 1px solid #1e3f6a !important;
-        border-radius: 8px !important;
-        color: #d8eef8 !important;
-    }
-
-    /* Inner text and inputs in selectbox */
-    div[data-baseweb="select"] div,
-    div[data-baseweb="select"] span,
-    div[data-baseweb="select"] input {
-        background-color: transparent !important;
-        color: #d8eef8 !important;
-    }
-
-    /* Opened dropdown options popup/popover menu */
-    div[data-baseweb="popover"],
-    ul[role="listbox"],
-    li[role="option"] {
-        background-color: #050c1a !important;
-        color: #d8eef8 !important;
-        border: 1px solid #1e3f6a !important;
-    }
-
-    /* Hover and active selections in the dropdown options list */
-    li[role="option"]:hover,
-    li[role="option"][aria-selected="true"] {
-        background-color: #0a1628 !important;
-        color: #00c8ff !important;
-    }
-    /* Style dataframes */
-    .stDataFrame {
-        border: 1px solid #1e3f6a !important;
-        border-radius: 8px !important;
-        background-color: #050c1a !important;
-    }
-
-    /* Streamlit Metric Value/Labels */
-    [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {
-        color: #d8eef8 !important;
-    }
-    [data-testid="stMetricDelta"] {
-        color: #00e676 !important;
-    }
-
-    /* Labels and legends of standard widgets to fix 'no se ven algunas letras' */
-    .stWidgetLabel p, .stWidgetLabel, label, label p, [data-testid="stWidgetLabel"] {
-        color: #d8eef8 !important;
-    }
-    /* Small help texts or descriptions below widgets */
-    .stMarkdown p, .stCaption p, .stCaption, [data-testid="stCaptionContainer"] {
-        color: #90cce8 !important;
-    }
-    /* Radio options */
-    div[role="radiogroup"] label p {
-        color: #d8eef8 !important;
-    }
-
-    /* Premium Table styling for Oscuro mode */
-    .mlb-results-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 1.5rem 0;
-        font-family: 'Inter', sans-serif;
-        font-size: 0.9rem;
-        background: #070e1c !important;
-        border: 1px solid #1e3f6a !important;
-        box-shadow: 0 4px 20px rgba(0, 200, 255, 0.05) !important;
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    .mlb-results-table th {
-        background: #050c1a !important;
-        color: #90cce8 !important;
-        font-weight: 700;
-        text-align: left;
-        padding: 0.85rem 1.25rem;
-        border-bottom: 2px solid #1e3f6a !important;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
-    }
-    .mlb-results-table td {
-        padding: 0.85rem 1.25rem;
-        border-bottom: 1px solid #1e3f6a !important;
-        color: #d8eef8 !important;
-    }
-    .mlb-results-table tr:last-child td {
-        border-bottom: none;
-    }
-    .mlb-results-table tr:hover {
-        background: #0a1628 !important;
-    }
-    .table-badge {
-        display: inline-block;
-        padding: 0.25rem 0.6rem;
-        border-radius: 6px;
-        font-weight: 700;
-        font-size: 0.75rem;
-        text-align: center;
-    }
-    .table-badge-success {
-        background: rgba(0, 230, 118, 0.15) !important;
-        color: #00e676 !important;
-        border: 1px solid rgba(0, 230, 118, 0.3) !important;
-    }
-    .table-badge-error {
-        background: rgba(239, 68, 68, 0.15) !important;
-        color: #ef4444 !important;
-        border: 1px solid rgba(239, 68, 68, 0.3) !important;
-    }
-
-    .main-title {
-        font-size: 3.5rem;
-        font-weight: 900;
-        text-align: center;
-        background: linear-gradient(135deg, #00c8ff 0%, #0088cc 50%, #90cce8 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 1rem 0;
-        text-shadow: 2px 2px 8px rgba(0,200,255,0.2);
-    }
-
-    .subtitle {
-        text-align: center;
-        color: #90cce8;
-        font-size: 1.2rem;
-        margin-bottom: 2rem;
-        font-weight: 500;
-    }
-
-    .badge {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        border-radius: 2rem;
-        font-weight: 700;
-        font-size: 0.875rem;
-        margin: 0.25rem;
-    }
-
-    .badge-pro {
-        background: linear-gradient(135deg, #0055aa 0%, #00c8ff 100%);
-        color: #05090f;
-        box-shadow: 0 4px 15px rgba(0, 200, 255, 0.4);
-    }
-
-    .badge-live {
-        background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
-        color: white;
-        box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-
-    .winner-box {
-        background: linear-gradient(135deg, #070e1c 0%, #0a1628 100%);
-        padding: 2.5rem;
-        border-radius: 1.25rem;
-        text-align: center;
-        color: #d8eef8;
-        margin: 2rem 0;
-        box-shadow: 0 10px 30px rgba(0, 200, 255, 0.15);
-        border: 2px solid #1e3f6a;
-    }
-
-    .winner-title {
-        font-size: 2rem;
-        font-weight: 900;
-        margin-bottom: 1rem;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        color: #00c8ff !important;
-    }
-
-    .winner-team {
-        font-size: 3.5rem;
-        font-weight: 900;
-        margin: 1rem 0;
-        color: #ffffff;
-    }
-
-    .stats-card {
-        background: #070e1c;
-        padding: 1.75rem;
-        border-radius: 1rem;
-        box-shadow: 0 4px 20px rgba(0, 200, 255, 0.05);
-        border-left: 5px solid #00c8ff;
-        border-top: 1px solid #1e3f6a;
-        border-right: 1px solid #1e3f6a;
-        border-bottom: 1px solid #1e3f6a;
-        margin: 1rem 0;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(0, 200, 255, 0.12);
-        border-color: #00c8ff;
-    }
-
-    .stats-card h4 {
-        color: #90cce8 !important;
-    }
-
-    .stats-card p, .stats-card span {
-        color: #d8eef8;
-    }
-
-    .stats-card-mini {
-        background: #070e1c;
-        padding: 0.75rem 1rem;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 15px rgba(0, 200, 255, 0.04);
-        border-left: 4px solid #00c8ff;
-        border-top: 1px solid #1e3f6a;
-        border-right: 1px solid #1e3f6a;
-        border-bottom: 1px solid #1e3f6a;
-        margin: 0.5rem 0;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .stats-card-mini:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 200, 255, 0.08);
-        border-color: #00c8ff;
-    }
-    .stats-card-mini h4 {
-        margin: 0 0 0.15rem 0;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #90cce8 !important;
-    }
-
-    .stats-card-val {
-        font-size: 1.15rem;
-        font-weight: 900;
-        margin-bottom: 0.15rem;
-    }
-    .value-blue {
-        color: #00c8ff !important;
-    }
-    .value-purple {
-        color: #b388ff !important;
-    }
-    .stats-card-desc {
-        color: #8b949e !important;
-        margin: 0;
-        font-size: 0.725rem;
-    }
-
-    .pitcher-card {
-        background: linear-gradient(135deg, #070e1c 0%, #0a1628 100%);
-        padding: 2rem;
-        border-radius: 1rem;
-        border-left: 8px solid #00c8ff;
-        border-top: 1px solid #1e3f6a;
-        border-right: 1px solid #1e3f6a;
-        border-bottom: 1px solid #1e3f6a;
-        margin: 1.5rem 0;
-        box-shadow: 0 6px 25px rgba(0,0,0,0.2);
-    }
-
-    .pitcher-name {
-        font-size: 1.75rem;
-        font-weight: 800;
-        color: #ffffff;
-        margin-bottom: 1rem;
-    }
-
-    .super-feature {
-        background: #070e1c;
-        padding: 1.5rem;
-        border-radius: 1rem;
-        color: #d8eef8;
-        margin: 1rem 0;
-        min-height: 220px;
-        box-shadow: 0 4px 15px rgba(0, 200, 255, 0.04);
-        border-left: 5px solid #00c8ff;
-        border-top: 1px solid #1e3f6a;
-        border-right: 1px solid #1e3f6a;
-        border-bottom: 1px solid #1e3f6a;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .super-feature:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 200, 255, 0.08);
-        border-color: #00c8ff;
-    }
-
-    .super-feature h4 {
-        font-size: 1.15rem;
-        font-weight: 800;
-        margin-bottom: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #00c8ff !important;
-    }
-
-    .super-feature-advantage {
-        font-size: 0.825rem;
-        font-weight: 700;
-        background: rgba(0, 200, 255, 0.1);
-        color: #00c8ff;
-        padding: 0.25rem 0.65rem;
-        border-radius: 6px;
-        display: inline-block;
-        margin: 0.5rem 0;
-    }
-
-    .super-feature p, .super-feature strong {
-        color: #cbd5e1 !important;
-    }
-
-    .alert-card-info {
-        background: #070e1c;
-        border-left: 5px solid #00c8ff;
-        border-top: 1px solid #1e3f6a;
-        border-right: 1px solid #1e3f6a;
-        border-bottom: 1px solid #1e3f6a;
-        border-radius: 12px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        margin: 0.75rem 0;
-        font-family: 'Inter', sans-serif;
-    }
-    .alert-card-info-title {
-        color: #00c8ff;
-        font-weight: 700;
-        font-size: 0.95rem;
-        margin-bottom: 0.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .alert-card-info-message {
-        color: #90cce8;
-        font-size: 0.875rem;
-    }
-
-    .alert-card-warning {
-        background: #070e1c;
-        border-left: 5px solid #f59e0b;
-        border-top: 1px solid #1e3f6a;
-        border-right: 1px solid #1e3f6a;
-        border-bottom: 1px solid #1e3f6a;
-        border-radius: 12px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        margin: 0.75rem 0;
-        font-family: 'Inter', sans-serif;
-    }
-    .alert-card-warning-title {
-        color: #f59e0b;
-        font-weight: 700;
-        font-size: 0.95rem;
-        margin-bottom: 0.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .alert-card-warning-message {
-        color: #fed7aa;
-        font-size: 0.875rem;
-    }
-
-    .alert-card-success {
-        background: #070e1c;
-        border-left: 5px solid #10b981;
-        border-top: 1px solid #1e3f6a;
-        border-right: 1px solid #1e3f6a;
-        border-bottom: 1px solid #1e3f6a;
-        border-radius: 12px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        margin: 0.75rem 0;
-        font-family: 'Inter', sans-serif;
-    }
-    .alert-card-success-title {
-        color: #10b981;
-        font-weight: 700;
-        font-size: 0.95rem;
-        margin-bottom: 0.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .alert-card-success-message {
-        color: #bbf7d0;
-        font-size: 0.875rem;
-    }
-
-    .game-card {
-        background: #070e1c;
-        padding: 1.5rem;
-        border-radius: 1rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 15px rgba(0, 200, 255, 0.05);
-        border: 1px solid #1e3f6a;
-        border-top: 4px solid #00c8ff;
-    }
-    .game-card:hover {
-        transform: scale(1.02);
-        box-shadow: 0 6px 20px rgba(0, 200, 255, 0.12);
-        border-color: #00c8ff;
-    }
-
-    .mlb-scoreboard-card {
-        background: #070e1c;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        padding: 0;
-        margin-bottom: 20px;
-        border: 1px solid #1e3f6a;
-        overflow: hidden;
-        transition: transform 0.2s;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .mlb-scoreboard-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 18px rgba(0,200,255,0.1);
-        border-color: #00c8ff;
-    }
-    .mlb-card-header {
-        padding: 8px 15px;
-        background: #050c1a;
-        border-bottom: 1px solid #1e3f6a;
-        font-size: 0.7rem;
-        font-weight: 700;
-        color: #90cce8;
-        display: flex;
-        justify-content: space-between;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .mlb-card-body {
-        padding: 15px;
-    }
-    .mlb-team-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-    }
-    .mlb-team-row:last-child {
-        margin-bottom: 0;
-    }
-    .mlb-team-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .mlb-team-name {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #ffffff;
-    }
-    .mlb-team-record {
-        font-size: 0.75rem;
-        color: #8b949e;
-        font-weight: 400;
-    }
-    .mlb-score {
-        font-size: 1.4rem;
-        font-weight: 800;
-        color: #ffffff;
-    }
-    .mlb-card-footer {
-        padding: 10px 15px;
-        background: #070e1c;
-        border-top: 1px solid #1e3f6a;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .mlb-prediction-badge {
-        font-size: 0.75rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 4px 10px;
-        border-radius: 4px;
-        background: #050c1a;
-        border: 1px solid #1e3f6a;
-        color: #00c8ff;
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #050c1a !important;
-        border-right: 1px solid #1e3f6a !important;
-    }
-
-    [data-testid="stSidebar"] h2 {
-        color: #ffffff !important;
-        font-family: 'Inter', sans-serif !important;
-        font-size: 1.5rem !important;
-        font-weight: 800 !important;
-        letter-spacing: 0.5px !important;
-    }
-
-    [data-testid="stSidebar"] .sidebar-section-title {
-        font-size: 0.92rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #90cce8;
-        margin: 0.5rem 0 0.75rem 0;
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] {
-        gap: 0.6rem;
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label {
-        background: linear-gradient(180deg, #070e1c 0%, #0a1628 100%) !important;
-        border: 1px solid #1e3f6a !important;
-        border-radius: 14px;
-        padding: 0.55rem 0.75rem;
-        margin: 0.35rem 0;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
-        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label:hover {
-        transform: translateY(-1px);
-        border-color: #00c8ff !important;
-        box-shadow: 0 10px 24px rgba(0, 200, 255, 0.1);
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
-        background: linear-gradient(135deg, #0a1628 0%, #0d1e38 100%) !important;
-        border-color: #00c8ff !important;
-        box-shadow: 0 12px 26px rgba(0, 200, 255, 0.15);
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label p {
-        font-size: 1rem;
-        font-weight: 700;
-        color: #90cce8 !important;
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p {
-        color: #00c8ff !important;
-    }
-
-    .confidence-muy-alta { color: #00e676; font-weight: 900; font-size: 2.5rem; }
-    .confidence-alta { color: #00c8ff; font-weight: 900; font-size: 2.5rem; }
-    .confidence-moderada { color: #f59e0b; font-weight: 900; font-size: 2.5rem; }
-    .confidence-baja { color: #ef4444; font-weight: 900; font-size: 2.5rem; }
-
-    .mlb-matchup-container {
-        background: #070e1c;
-        border: 1px solid #1e3f6a;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        margin-bottom: 2rem;
-        overflow: hidden;
-        font-family: 'Inter', sans-serif;
-    }
-
-    .mlb-matchup-top-header {
-        background: #050c1a;
-        border-bottom: 1px solid #1e3f6a;
-        padding: 0.6rem 1.25rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .mlb-matchup-pred-badge {
-        background: rgba(0, 200, 255, 0.08);
-        border: 1px solid rgba(0, 200, 255, 0.15);
-        color: #00c8ff;
-        padding: 0.25rem 0.75rem;
-        border-radius: 2rem;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-    }
-
-    .mlb-matchup-conf-pill {
-        background: rgba(0, 230, 118, 0.08);
-        border: 1px solid rgba(0, 230, 118, 0.15);
-        color: #00e676;
-        padding: 0.25rem 0.75rem;
-        border-radius: 2rem;
-        font-size: 0.725rem;
-        font-weight: 700;
-    }
-
-    .mlb-matchup-grid {
-        display: grid;
-        grid-template-columns: 2.2fr 1fr 2.2fr;
-        align-items: center;
-        padding: 1.75rem 1.25rem;
-        background: #070e1c;
-    }
-
-    .mlb-matchup-team {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
-        width: 100%;
-        padding: 0.5rem 0;
-    }
-
-    .mlb-matchup-logo-container,
-    .mlb-matchup-status-label,
-    .mlb-matchup-team-name,
-    .mlb-matchup-pitcher-name,
-    .mlb-matchup-prob-value,
-    .mlb-matchup-prob-label {
-        position: relative;
-        z-index: 2;
-    }
-
-    .mlb-matchup-logo-container {
-        width: 80px;
-        height: 80px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 0.75rem;
-        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-    }
-
-    @keyframes logoFloat {
-        0% { transform: translateY(-50%) scale(1); opacity: .07; }
-        50% { transform: translateY(-54%) scale(1.04); opacity: .12; }
-        100% { transform: translateY(-50%) scale(1); opacity: .07; }
-    }
-    @keyframes logoFloatL {
-        0% { transform: translateY(-50%) scale(1); opacity: .07; }
-        50% { transform: translateY(-54%) scale(1.04); opacity: .12; }
-        100% { transform: translateY(-50%) scale(1); opacity: .07; }
-    }
-
-    .bg-logo {
-        position: absolute;
-        width: 180px;
-        height: 180px;
-        top: 50%;
-        right: -25px;
-        object-fit: contain;
-        pointer-events: none;
-        filter: saturate(0) brightness(1.5);
-        animation: logoFloat 8s ease-in-out infinite;
-        z-index: 1;
-    }
-    .mlb-matchup-grid .mlb-matchup-team:nth-child(3) .bg-logo {
-        right: auto;
-        left: -25px;
-        animation: logoFloatL 8s ease-in-out infinite;
-    }
-
-    .mlb-matchup-status-label {
-        font-size: 0.675rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 0.35rem;
-        padding: 0.15rem 0.6rem;
-        border-radius: 0.25rem;
-    }
-
-    .status-favorite {
-        color: #00c8ff;
-        background: rgba(0, 200, 255, 0.1);
-    }
-
-    .status-underdog {
-        color: #8b949e;
-        background: rgba(139, 148, 158, 0.08);
-    }
-
-    .mlb-matchup-team-name {
-        color: #ffffff;
-        font-size: 1.45rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        margin: 0.25rem 0;
-    }
-
-    .mlb-matchup-pitcher-name {
-        color: #90cce8;
-        font-size: 0.8rem;
-        margin-bottom: 0.75rem;
-        font-weight: 600;
-    }
-
-    .mlb-matchup-prob-value {
-        font-size: 2.5rem;
-        font-weight: 900;
-        line-height: 1;
-        margin-bottom: 0.15rem;
-    }
-
-    .prob-fav {
-        color: #00c8ff;
-        opacity: 1.0;
-    }
-
-    .prob-und {
-        color: #8b949e;
-        opacity: 0.45;
-    }
-
-    .mlb-p-bar {
-        height: 6px;
-        background: #050c1a;
-        border-radius: 3px;
-        margin-top: 8px;
-        overflow: hidden;
-        width: 80%;
-        position: relative;
-        z-index: 2;
-    }
-
-    .mlb-p-bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #0055aa, #00c8ff);
-        border-radius: 3px;
-    }
-
-    .mlb-matchup-prob-label {
-        color: #8b949e;
-        font-size: 0.65rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
-
-    .mlb-matchup-center {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-    }
-
-    .mlb-matchup-vs {
-        font-size: 1.15rem;
-        font-weight: 900;
-        color: #1e3f6a;
-        letter-spacing: 0.1em;
-        margin-bottom: 0.5rem;
-    }
-
-    .mlb-matchup-edge-box {
-        background: rgba(0, 230, 118, 0.05);
-        border: 1px solid rgba(0, 230, 118, 0.2);
-        border-radius: 0.5rem;
-        padding: 0.4rem 0.75rem;
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .mlb-matchup-edge-value {
-        color: #00e676;
-        font-size: 1.15rem;
-        font-weight: 800;
-        line-height: 1.1;
-    }
-
-    .mlb-matchup-edge-label {
-        color: #00c8ff;
-        font-size: 0.6rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        margin-top: 0.15rem;
-    }
-
-    .mlb-matchup-stadium {
-        color: #90cce8;
-        font-size: 0.7rem;
-        margin-top: 1rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .mlb-momentum-bar {
-        background: #050c1a;
-        border-top: 1px solid #1e3f6a;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        padding: 0.75rem 1.5rem;
-        font-size: 0.8rem;
-    }
-
-    .mlb-momentum-column {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .column-away {
-        justify-content: flex-start;
-        border-right: 1px solid #1e3f6a;
-        padding-right: 1rem;
-    }
-
-    .column-home {
-        justify-content: flex-end;
-        padding-left: 1rem;
-    }
-
-    .mlb-momentum-team-badge {
-        font-weight: 800;
-        font-size: 0.75rem;
-        color: #00c8ff;
-        background: rgba(0, 200, 255, 0.1);
-        padding: 0.15rem 0.5rem;
-        border-radius: 0.25rem;
-        border: 1px solid rgba(0, 200, 255, 0.2);
-    }
-
-    .mlb-momentum-stat {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .mlb-momentum-stat-label {
-        color: #8b949e;
-        font-size: 0.575rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.15rem;
-    }
-
-    .mlb-momentum-stat-value {
-        color: #ffffff;
-        font-weight: 700;
-    }
-
-    .racha-pill {
-        padding: 0.1rem 0.5rem;
-        border-radius: 2rem;
-        font-size: 0.7rem;
-        font-weight: 800;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.15rem;
-    }
-
-    .racha-win {
-        background: rgba(0, 230, 118, 0.1);
-        color: #00e676;
-        border: 1px solid rgba(0, 230, 118, 0.2);
-    }
-
-    .racha-loss {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    .rendimiento-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #070e1c !important;
-        border: 1px solid #1e3f6a !important;
-        border-left: 6px solid #00c8ff !important;
-        border-radius: 14px;
-        padding: 1.25rem 2rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 4px 25px rgba(0, 200, 255, 0.08) !important;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-    }
-
-    .rendimiento-title {
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: #ffffff !important;
-        letter-spacing: 0.5px;
-    }
-
-    .rendimiento-subtitle {
-        font-size: 0.75rem;
-        color: #90cce8 !important;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-top: 2px;
-    }
-
-    .rendimiento-stats {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .rendimiento-stat-box {
-        background: #050c1a !important;
-        border: 1px solid #1e3f6a !important;
-        border-radius: 10px;
-        padding: 0.75rem 1.25rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-width: 110px;
-        box-shadow: none !important;
-    }
-
-    .rendimiento-stat-val {
-        font-size: 1.5rem;
-        font-weight: 900;
-        color: #00c8ff !important;
-        line-height: 1.1;
-    }
-
-    .rendimiento-stat-lbl {
-        font-size: 0.6rem;
-        font-weight: 700;
-        color: #80bcd8 !important;
-        letter-spacing: 1px;
-        margin-top: 4px;
-        text-transform: uppercase;
-        text-align: center;
-    }
-</style>
-""",
-        unsafe_allow_html=True,
-    )
-else:
-    st.markdown(
-        """
-<style>
-    header, [data-testid="stHeader"], .stApp header {
-        background-color: transparent !important;
-        background: transparent !important;
-    }
-
-    :root {
-        --primary-blue: #1e40af;
-        --secondary-blue: #3b82f6;
-        --success-green: #10b981;
-        --warning-yellow: #f59e0b;
-        --danger-red: #ef4444;
-        --dark-bg: #0f172a;
-        --light-bg: #f8fafc;
-    }
-
-    .main-title {
-        font-size: 3.5rem;
-        font-weight: 900;
-        text-align: center;
-        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 1rem 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .subtitle {
-        text-align: center;
-        color: #64748b;
-        font-size: 1.2rem;
-        margin-bottom: 2rem;
-        font-weight: 500;
-    }
-
-    .badge {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        border-radius: 2rem;
-        font-weight: 700;
-        font-size: 0.875rem;
-        margin: 0.25rem;
-    }
-
-    .badge-pro {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
-    }
-
-    .badge-live {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
-        box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-
-    .winner-box {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        padding: 2.5rem;
-        border-radius: 1.25rem;
-        text-align: center;
-        color: white;
-        margin: 2rem 0;
-        box-shadow: 0 10px 30px rgba(30, 58, 138, 0.3);
-        border: 2px solid rgba(255,255,255,0.1);
-    }
-
-    .winner-title {
-        font-size: 2rem;
-        font-weight: 900;
-        margin-bottom: 1rem;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-
-    .winner-team {
-        font-size: 3.5rem;
-        font-weight: 900;
-        margin: 1rem 0;
-    }
-
-    .stats-card {
-        background: white;
-        padding: 1.75rem;
-        border-radius: 1rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border-left: 5px solid var(--primary-blue);
-        margin: 1rem 0;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-    }
-
-    .stats-card-mini {
-        background: white;
-        padding: 0.75rem 1rem;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.06);
-        border-left: 4px solid var(--primary-blue);
-        margin: 0.5rem 0;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .stats-card-mini:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-    }
-    .stats-card-mini h4 {
-        margin: 0 0 0.15rem 0;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #64748b;
-    }
-
-    .stats-card-val {
-        font-size: 1.15rem;
-        font-weight: 900;
-        margin-bottom: 0.15rem;
-    }
-    .value-blue {
-        color: #1e40af;
-    }
-    .value-purple {
-        color: #7c3aed;
-    }
-    .stats-card-desc {
-        color: #64748b;
-        margin: 0;
-        font-size: 0.725rem;
-    }
-
-    .pitcher-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        padding: 2rem;
-        border-radius: 1rem;
-        border-left: 8px solid var(--secondary-blue);
-        margin: 1.5rem 0;
-        box-shadow: 0 6px 25px rgba(0,0,0,0.1);
-    }
-
-    .pitcher-name {
-        font-size: 1.75rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin-bottom: 1rem;
-    }
-
-    .super-feature {
-        background: #ffffff;
-        padding: 1.5rem;
-        border-radius: 1rem;
-        color: #0f172a;
-        margin: 1rem 0;
-        min-height: 220px;
-        box-shadow: 0 4px 15px rgba(15, 23, 42, 0.05);
-        border-left: 5px solid var(--primary-blue);
-        border-top: 1px solid #e2e8f0;
-        border-right: 1px solid #e2e8f0;
-        border-bottom: 1px solid #e2e8f0;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .super-feature:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(15, 23, 42, 0.08);
-    }
-
-    .super-feature h4 {
-        font-size: 1.15rem;
-        font-weight: 800;
-        margin-bottom: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #0f172a;
-    }
-
-    .super-feature-advantage {
-        font-size: 0.825rem;
-        font-weight: 700;
-        background: rgba(37, 99, 235, 0.08);
-        color: #1d4ed8;
-        padding: 0.25rem 0.65rem;
-        border-radius: 6px;
-        display: inline-block;
-        margin: 0.5rem 0;
-    }
-
-    .alert-card-info {
-        background: #ffffff;
-        border-left: 5px solid #3b82f6;
-        border-top: 1px solid #e2e8f0;
-        border-right: 1px solid #e2e8f0;
-        border-bottom: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 15px rgba(15, 23, 42, 0.05);
-        margin: 0.75rem 0;
-        font-family: 'Inter', sans-serif;
-    }
-    .alert-card-info-title {
-        color: #1e3a8a;
-        font-weight: 700;
-        font-size: 0.95rem;
-        margin-bottom: 0.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .alert-card-info-message {
-        color: #1e40af;
-        font-size: 0.875rem;
-    }
-
-    .alert-card-warning {
-        background: #ffffff;
-        border-left: 5px solid #f59e0b;
-        border-top: 1px solid #e2e8f0;
-        border-right: 1px solid #e2e8f0;
-        border-bottom: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 15px rgba(15, 23, 42, 0.05);
-        margin: 0.75rem 0;
-        font-family: 'Inter', sans-serif;
-    }
-    .alert-card-warning-title {
-        color: #854d0e;
-        font-weight: 700;
-        font-size: 0.95rem;
-        margin-bottom: 0.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .alert-card-warning-message {
-        color: #a16207;
-        font-size: 0.875rem;
-    }
-
-    .alert-card-success {
-        background: #ffffff;
-        border-left: 5px solid #10b981;
-        border-top: 1px solid #e2e8f0;
-        border-right: 1px solid #e2e8f0;
-        border-bottom: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 15px rgba(15, 23, 42, 0.05);
-        margin: 0.75rem 0;
-        font-family: 'Inter', sans-serif;
-    }
-    .alert-card-success-title {
-        color: #065f46;
-        font-weight: 700;
-        font-size: 0.95rem;
-        margin-bottom: 0.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .alert-card-success-message {
-        color: #047857;
-        font-size: 0.875rem;
-    }
-
-    .game-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 1rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        border-top: 4px solid var(--primary-blue);
-    }
-    .game-card:hover {
-        transform: scale(1.02);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-    }
-
-    .mlb-scoreboard-card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        padding: 0;
-        margin-bottom: 20px;
-        border: 1px solid #e0e0e0;
-        overflow: hidden;
-        transition: transform 0.2s;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .mlb-scoreboard-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-    }
-    .mlb-card-header {
-        padding: 8px 15px;
-        background: #f8f9fa;
-        border-bottom: 1px solid #eeeeee;
-        font-size: 0.7rem;
-        font-weight: 700;
-        color: #616161;
-        display: flex;
-        justify-content: space-between;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .mlb-card-body {
-        padding: 15px;
-    }
-    .mlb-team-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-    }
-    .mlb-team-row:last-child {
-        margin-bottom: 0;
-    }
-    .mlb-team-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .mlb-team-name {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #212121;
-    }
-    .mlb-team-record {
-        font-size: 0.75rem;
-        color: #757575;
-        font-weight: 400;
-    }
-    .mlb-score {
-        font-size: 1.4rem;
-        font-weight: 800;
-        color: #212121;
-    }
-    .mlb-card-footer {
-        padding: 10px 15px;
-        background: #ffffff;
-        border-top: 1px solid #f0f0f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .mlb-prediction-badge {
-        font-size: 0.75rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 4px 10px;
-        border-radius: 4px;
-        background: #f1f5f9;
-    }
-
-    [data-testid="stSidebar"] h2 {
-        color: #0f172a !important;
-        font-family: 'Inter', sans-serif !important;
-        font-size: 1.5rem !important;
-        font-weight: 800 !important;
-        letter-spacing: 0.5px !important;
-    }
-
-    [data-testid="stSidebar"] .sidebar-section-title {
-        font-size: 0.92rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #64748b;
-        margin: 0.5rem 0 0.75rem 0;
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] {
-        gap: 0.6rem;
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label {
-        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        border-radius: 14px;
-        padding: 0.55rem 0.75rem;
-        margin: 0.35rem 0;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
-        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label:hover {
-        transform: translateY(-1px);
-        border-color: rgba(59, 130, 246, 0.45);
-        box-shadow: 0 10px 24px rgba(30, 64, 175, 0.12);
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        border-color: rgba(37, 99, 235, 0.7);
-        box-shadow: 0 12px 26px rgba(37, 99, 235, 0.18);
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label p {
-        font-size: 1rem;
-        font-weight: 700;
-        color: #0f172a;
-    }
-
-    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p {
-        color: #1d4ed8;
-    }
-
-    .confidence-muy-alta { color: #10b981; font-weight: 900; font-size: 2.5rem; }
-    .confidence-alta { color: #3b82f6; font-weight: 900; font-size: 2.5rem; }
-    .confidence-moderada { color: #f59e0b; font-weight: 900; font-size: 2.5rem; }
-    .confidence-baja { color: #ef4444; font-weight: 900; font-size: 2.5rem; }
-
-    .mlb-matchup-container {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        margin-bottom: 2rem;
-        overflow: hidden;
-        font-family: 'Inter', sans-serif;
-    }
-
-    .mlb-matchup-top-header {
-        background: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
-        padding: 0.6rem 1.25rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .mlb-matchup-pred-badge {
-        background: rgba(59, 130, 246, 0.08);
-        border: 1px solid rgba(59, 130, 246, 0.15);
-        color: #1e40af;
-        padding: 0.25rem 0.75rem;
-        border-radius: 2rem;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-    }
-
-    .mlb-matchup-conf-pill {
-        background: rgba(16, 185, 129, 0.08);
-        border: 1px solid rgba(16, 185, 129, 0.15);
-        color: #10b981;
-        padding: 0.25rem 0.75rem;
-        border-radius: 2rem;
-        font-size: 0.725rem;
-        font-weight: 700;
-    }
-
-    .mlb-matchup-grid {
-        display: grid;
-        grid-template-columns: 2.2fr 1fr 2.2fr;
-        align-items: center;
-        padding: 1.75rem 1.25rem;
-        background: #ffffff;
-    }
-
-    .mlb-matchup-team {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
-        width: 100%;
-        padding: 0.5rem 0;
-    }
-
-    .mlb-matchup-logo-container,
-    .mlb-matchup-status-label,
-    .mlb-matchup-team-name,
-    .mlb-matchup-pitcher-name,
-    .mlb-matchup-prob-value,
-    .mlb-matchup-prob-label {
-        position: relative;
-        z-index: 2;
-    }
-
-    .mlb-matchup-logo-container {
-        width: 80px;
-        height: 80px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 0.75rem;
-        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.08));
-    }
-
-    @keyframes logoFloat {
-        0% { transform: translateY(-50%) scale(1); opacity: .07; }
-        50% { transform: translateY(-54%) scale(1.04); opacity: .12; }
-        100% { transform: translateY(-50%) scale(1); opacity: .07; }
-    }
-    @keyframes logoFloatL {
-        0% { transform: translateY(-50%) scale(1); opacity: .07; }
-        50% { transform: translateY(-54%) scale(1.04); opacity: .12; }
-        100% { transform: translateY(-50%) scale(1); opacity: .07; }
-    }
-
-    .bg-logo {
-        position: absolute;
-        width: 180px;
-        height: 180px;
-        top: 50%;
-        right: -25px;
-        object-fit: contain;
-        pointer-events: none;
-        filter: saturate(0) brightness(0.65);
-        animation: logoFloat 8s ease-in-out infinite;
-        z-index: 1;
-    }
-    .mlb-matchup-grid .mlb-matchup-team:nth-child(3) .bg-logo {
-        right: auto;
-        left: -25px;
-        animation: logoFloatL 8s ease-in-out infinite;
-    }
-
-    .mlb-matchup-status-label {
-        font-size: 0.675rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 0.35rem;
-        padding: 0.15rem 0.6rem;
-        border-radius: 0.25rem;
-    }
-
-    .status-favorite {
-        color: #10b981;
-        background: rgba(16, 185, 129, 0.1);
-    }
-
-    .status-underdog {
-        color: #64748b;
-        background: rgba(100, 116, 139, 0.08);
-    }
-
-    .mlb-matchup-team-name {
-        color: #0f172a;
-        font-size: 1.45rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        margin: 0.25rem 0;
-    }
-
-    .mlb-matchup-pitcher-name {
-        color: #64748b;
-        font-size: 0.8rem;
-        margin-bottom: 0.75rem;
-        font-weight: 600;
-    }
-
-    .mlb-matchup-prob-value {
-        font-size: 2.5rem;
-        font-weight: 900;
-        line-height: 1;
-        margin-bottom: 0.15rem;
-    }
-
-    .prob-fav {
-        color: #10b981;
-        opacity: 1.0;
-    }
-
-    .prob-und {
-        color: #64748b;
-        opacity: 0.45;
-    }
-
-    .mlb-p-bar {
-        height: 6px;
-        background: #f1f5f9;
-        border-radius: 3px;
-        margin-top: 8px;
-        overflow: hidden;
-        width: 80%;
-        position: relative;
-        z-index: 2;
-    }
-
-    .mlb-p-bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #3b82f6, #10b981);
-        border-radius: 3px;
-    }
-
-    .mlb-matchup-prob-label {
-        color: #94a3b8;
-        font-size: 0.65rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
-
-    .mlb-matchup-center {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-    }
-
-    .mlb-matchup-vs {
-        font-size: 1.15rem;
-        font-weight: 900;
-        color: #cbd5e1;
-        letter-spacing: 0.1em;
-        margin-bottom: 0.5rem;
-    }
-
-    .mlb-matchup-edge-box {
-        background: rgba(16, 185, 129, 0.05);
-        border: 1px solid rgba(16, 185, 129, 0.2);
-        border-radius: 0.5rem;
-        padding: 0.4rem 0.75rem;
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .mlb-matchup-edge-value {
-        color: #10b981;
-        font-size: 1.15rem;
-        font-weight: 800;
-        line-height: 1.1;
-    }
-
-    .mlb-matchup-edge-label {
-        color: #059669;
-        font-size: 0.6rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        margin-top: 0.15rem;
-    }
-
-    .mlb-matchup-stadium {
-        color: #64748b;
-        font-size: 0.7rem;
-        margin-top: 1rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .mlb-momentum-bar {
-        background: #f8fafc;
-        border-top: 1px solid #e2e8f0;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        padding: 0.75rem 1.5rem;
-        font-size: 0.8rem;
-    }
-
-    .mlb-momentum-column {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .column-away {
-        justify-content: flex-start;
-        border-right: 1px solid #e2e8f0;
-        padding-right: 1rem;
-    }
-
-    .column-home {
-        justify-content: flex-end;
-        padding-left: 1rem;
-    }
-
-    .mlb-momentum-team-badge {
-        font-weight: 800;
-        font-size: 0.75rem;
-        color: #1e293b;
-        background: rgba(15, 23, 42, 0.05);
-        padding: 0.15rem 0.5rem;
-        border-radius: 0.25rem;
-    }
-
-    .mlb-momentum-stat {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .mlb-momentum-stat-label {
-        color: #64748b;
-        font-size: 0.575rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.15rem;
-    }
-
-    .mlb-momentum-stat-value {
-        color: #0f172a;
-        font-weight: 700;
-    }
-
-    .racha-pill {
-        padding: 0.1rem 0.5rem;
-        border-radius: 2rem;
-        font-size: 0.7rem;
-        font-weight: 800;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.15rem;
-    }
-
-    .racha-win {
-        background: rgba(16, 185, 129, 0.1);
-        color: #10b981;
-        border: 1px solid rgba(16, 185, 129, 0.2);
-    }
-
-    .racha-loss {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    .rendimiento-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-left: 6px solid var(--secondary-blue);
-        border-radius: 14px;
-        padding: 1.25rem 2rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-        flex-wrap: wrap;
-        gap: 1.5rem;
-    }
-
-    .rendimiento-title {
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: #0f172a;
-        letter-spacing: 0.5px;
-    }
-
-    .rendimiento-subtitle {
-        font-size: 0.75rem;
-        color: #64748b;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-top: 2px;
-    }
-
-    .rendimiento-stats {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .rendimiento-stat-box {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 0.75rem 1.25rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-width: 110px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-    }
-
-    .rendimiento-stat-val {
-        font-size: 1.5rem;
-        font-weight: 900;
-        color: #0f172a;
-        line-height: 1.1;
-    }
-
-    .rendimiento-stat-lbl {
-        font-size: 0.6rem;
-        font-weight: 700;
-        color: #64748b;
-        letter-spacing: 1px;
-        margin-top: 4px;
-        text-transform: uppercase;
-        text-align: center;
-    }
-
-    /* Premium Table styling for Claro mode */
-    .mlb-results-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 1.5rem 0;
-        font-family: 'Inter', sans-serif;
-        font-size: 0.9rem;
-        background: #ffffff;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid #e2e8f0;
-    }
-    .mlb-results-table th {
-        background: #f8fafc;
-        color: #0f172a;
-        font-weight: 700;
-        text-align: left;
-        padding: 0.85rem 1.25rem;
-        border-bottom: 2px solid #e2e8f0;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
-    }
-    .mlb-results-table td {
-        padding: 0.85rem 1.25rem;
-        border-bottom: 1px solid #f1f5f9;
-        color: #334155;
-    }
-    .mlb-results-table tr:last-child td {
-        border-bottom: none;
-    }
-    .mlb-results-table tr:hover {
-        background: #f8fafc;
-    }
-    .table-badge {
-        display: inline-block;
-        padding: 0.25rem 0.6rem;
-        border-radius: 6px;
-        font-weight: 700;
-        font-size: 0.75rem;
-        text-align: center;
-    }
-    .table-badge-success {
-        background: #dcfce7;
-        color: #166534;
-    }
-    .table-badge-error {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-</style>
-""",
-        unsafe_allow_html=True,
-    )
+# Una sola línea: el markdown de Streamlit trataría las líneas indentadas del SVG como código.
+LOGO_SVG = " ".join(line.strip() for line in leer_asset("logo.svg").splitlines())
+st.markdown(f"<style>{leer_asset('theme.css')}</style>", unsafe_allow_html=True)
 
 # ============================================================================
 # FUNCIONES AUXILIARES
@@ -2117,26 +236,22 @@ def render_custom_alert(tipo, titulo, mensaje=""):
         card_class = "alert-card-info"
         title_class = "alert-card-info-title"
         msg_class = "alert-card-info-message"
-        icon = "ℹ️"
     elif tipo == "warning":
         card_class = "alert-card-warning"
         title_class = "alert-card-warning-title"
         msg_class = "alert-card-warning-message"
-        icon = "⚠️"
     elif tipo == "success":
         card_class = "alert-card-success"
         title_class = "alert-card-success-title"
         msg_class = "alert-card-success-message"
-        icon = "✅"
     else:
         card_class = "alert-card-info"
         title_class = "alert-card-info-title"
         msg_class = "alert-card-info-message"
-        icon = "🔔"
 
     html = f"""<div class="{card_class}">
 <div class="{title_class}">
-<span>{icon}</span> <b>{titulo}</b>
+<b>{titulo}</b>
 </div>
 {f'<div class="{msg_class}">{mensaje}</div>' if mensaje else ''}
 </div>"""
@@ -2226,225 +341,13 @@ def get_elo_power_rankings():
 
 def render_power_rankings_table_html(elo_list):
     """Genera HTML para tabla premium de Power Rankings ELO"""
-    theme_act = "Oscuro" if "theme_selector" in st.session_state and "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
 
     div_names = {
         "ALE": "AL Este", "ALC": "AL Central", "ALO": "AL Oeste",
         "NLE": "NL Este", "NLC": "NL Central", "NLO": "NL Oeste"
     }
 
-    if theme_act == "Oscuro":
-        styles = """<style>
-.mlb-elo-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    margin: 1rem 0 !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.85rem !important;
-    background: #070e1c !important;
-    border: 1px solid #1e3f6a !important;
-    box-shadow: 0 4px 20px rgba(0, 200, 255, 0.05) !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-}
-.mlb-elo-table th {
-    background: #050c1a !important;
-    color: #00c8ff !important;
-    font-weight: 700 !important;
-    text-align: left !important;
-    padding: 0.85rem 1.1rem !important;
-    border-bottom: 2px solid #1e3f6a !important;
-    text-transform: uppercase !important;
-    font-size: 0.75rem !important;
-    letter-spacing: 0.5px !important;
-}
-.mlb-elo-table td {
-    padding: 0.85rem 1.1rem !important;
-    border-bottom: 1px solid #1e3f6a !important;
-    color: #d8eef8 !important;
-    vertical-align: middle !important;
-}
-.mlb-elo-table tr:last-child td {
-    border-bottom: none !important;
-}
-.mlb-elo-table tr:hover {
-    background: #0a1628 !important;
-}
-.elo-rank {
-    font-weight: bold !important;
-    color: #90cce8 !important;
-    font-size: 1rem !important;
-    text-align: center !important;
-    width: 50px !important;
-}
-.elo-team-col {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-}
-.elo-logo {
-    width: 28px !important;
-    height: 28px !important;
-    object-fit: contain !important;
-}
-.elo-team-name {
-    font-weight: 700 !important;
-    color: #ffffff !important;
-}
-.elo-badge-tier {
-    display: inline-block !important;
-    padding: 0.2rem 0.5rem !important;
-    border-radius: 6px !important;
-    font-weight: 700 !important;
-    font-size: 0.7rem !important;
-    text-align: center !important;
-}
-.elo-tier-elite {
-    background: rgba(0, 230, 118, 0.15) !important;
-    color: #00e676 !important;
-    border: 1px solid rgba(0, 230, 118, 0.3) !important;
-}
-.elo-tier-strong {
-    background: rgba(0, 200, 255, 0.15) !important;
-    color: #00c8ff !important;
-    border: 1px solid rgba(0, 200, 255, 0.3) !important;
-}
-.elo-tier-competitive {
-    background: rgba(251, 191, 36, 0.15) !important;
-    color: #fbbf24 !important;
-    border: 1px solid rgba(251, 191, 36, 0.3) !important;
-}
-.elo-tier-developing {
-    background: rgba(244, 63, 94, 0.15) !important;
-    color: #f43f5e !important;
-    border: 1px solid rgba(244, 63, 94, 0.3) !important;
-}
-.elo-tier-rebuilding {
-    background: rgba(148, 163, 184, 0.15) !important;
-    color: #94a3b8 !important;
-    border: 1px solid rgba(148, 163, 184, 0.3) !important;
-}
-.elo-bar-bg {
-    background: #050c1a !important;
-    border-radius: 4px !important;
-    height: 8px !important;
-    width: 100px !important;
-    overflow: hidden !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-}
-.elo-bar-fill {
-    height: 100% !important;
-    border-radius: 4px !important;
-}
-</style>"""
-    else:
-        styles = """<style>
-.mlb-elo-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    margin: 1rem 0 !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.85rem !important;
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-}
-.mlb-elo-table th {
-    background: #f8fafc !important;
-    color: #1e3a8a !important;
-    font-weight: 700 !important;
-    text-align: left !important;
-    padding: 0.85rem 1.1rem !important;
-    border-bottom: 2px solid #e2e8f0 !important;
-    text-transform: uppercase !important;
-    font-size: 0.75rem !important;
-    letter-spacing: 0.5px !important;
-}
-.mlb-elo-table td {
-    padding: 0.85rem 1.1rem !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-    color: #334155 !important;
-    vertical-align: middle !important;
-}
-.mlb-elo-table tr:last-child td {
-    border-bottom: none !important;
-}
-.mlb-elo-table tr:hover {
-    background: #f1f5f9 !important;
-}
-.elo-rank {
-    font-weight: bold !important;
-    color: #475569 !important;
-    font-size: 1rem !important;
-    text-align: center !important;
-    width: 50px !important;
-}
-.elo-team-col {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-}
-.elo-logo {
-    width: 28px !important;
-    height: 28px !important;
-    object-fit: contain !important;
-}
-.elo-team-name {
-    font-weight: 700 !important;
-    color: #0f172a !important;
-}
-.elo-badge-tier {
-    display: inline-block !important;
-    padding: 0.2rem 0.5rem !important;
-    border-radius: 6px !important;
-    font-weight: 700 !important;
-    font-size: 0.7rem !important;
-    text-align: center !important;
-}
-.elo-tier-elite {
-    background: rgba(16, 185, 129, 0.15) !important;
-    color: #059669 !important;
-    border: 1px solid rgba(16, 185, 129, 0.3) !important;
-}
-.elo-tier-strong {
-    background: rgba(59, 130, 246, 0.15) !important;
-    color: #2563eb !important;
-    border: 1px solid rgba(59, 130, 246, 0.3) !important;
-}
-.elo-tier-competitive {
-    background: rgba(245, 158, 11, 0.15) !important;
-    color: #d97706 !important;
-    border: 1px solid rgba(245, 158, 11, 0.3) !important;
-}
-.elo-tier-developing {
-    background: rgba(244, 63, 94, 0.15) !important;
-    color: #e11d48 !important;
-    border: 1px solid rgba(244, 63, 94, 0.3) !important;
-}
-.elo-tier-rebuilding {
-    background: rgba(100, 116, 139, 0.15) !important;
-    color: #475569 !important;
-    border: 1px solid rgba(100, 116, 139, 0.3) !important;
-}
-.elo-bar-bg {
-    background: #e2e8f0 !important;
-    border-radius: 4px !important;
-    height: 8px !important;
-    width: 100px !important;
-    overflow: hidden !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-}
-.elo-bar-fill {
-    height: 100% !important;
-    border-radius: 4px !important;
-}
-</style>"""
-
-    table_html = styles + """<table class="mlb-elo-table">
+    table_html = """<table class="mlb-elo-table">
 <thead>
 <tr>
 <th style="text-align: center; width: 60px;">#</th>
@@ -2465,7 +368,7 @@ def render_power_rankings_table_html(elo_list):
 
     for idx, (code, elo, wins, losses) in enumerate(elo_list):
         rank = idx + 1
-        team_info = EQUIPOS_MLB.get(code, {"nombre": code, "logo": "", "color": "#1e40af"})
+        team_info = EQUIPOS_MLB.get(code, {"nombre": code, "logo": "", "color": "#ff6a00"})
         logo_url = team_info.get("logo", "")
         team_name = team_info.get("nombre", code)
 
@@ -2474,40 +377,30 @@ def render_power_rankings_table_html(elo_list):
 
         if elo >= 1580:
             tier_class = "elo-tier-elite"
-            tier_lbl = "🔥 Elite"
+            tier_lbl = "Elite"
         elif elo >= 1520:
             tier_class = "elo-tier-strong"
-            tier_lbl = "💪 Fuerte"
+            tier_lbl = "Fuerte"
         elif elo >= 1480:
             tier_class = "elo-tier-competitive"
-            tier_lbl = "📊 Competitivo"
+            tier_lbl = "Competitivo"
         elif elo >= 1420:
             tier_class = "elo-tier-developing"
-            tier_lbl = "⚠️ En Desarrollo"
+            tier_lbl = "En Desarrollo"
         else:
             tier_class = "elo-tier-rebuilding"
-            tier_lbl = "📉 En Reconstrucción"
+            tier_lbl = "En Reconstrucción"
 
         pct = max(5.0, min(100.0, (elo - min_elo) / elo_range * 100.0))
 
-        if theme_act == "Oscuro":
-            if elo >= 1580:
-                bar_color = "linear-gradient(90deg, #00e676, #bbf7d0)"
-            elif elo >= 1520:
-                bar_color = "linear-gradient(90deg, #0055aa, #00c8ff)"
-            elif elo >= 1480:
-                bar_color = "linear-gradient(90deg, #d97706, #fbbf24)"
-            else:
-                bar_color = "linear-gradient(90deg, #475569, #94a3b8)"
+        if elo >= 1580:
+            bar_color = "linear-gradient(90deg, #3ddc84, #9df5c3)"
+        elif elo >= 1520:
+            bar_color = "linear-gradient(90deg, #7a3300, #ff6a00)"
+        elif elo >= 1480:
+            bar_color = "linear-gradient(90deg, #b37b00, #ffb000)"
         else:
-            if elo >= 1580:
-                bar_color = "#10b981"
-            elif elo >= 1520:
-                bar_color = "#3b82f6"
-            elif elo >= 1480:
-                bar_color = "#f59e0b"
-            else:
-                bar_color = "#94a3b8"
+            bar_color = "linear-gradient(90deg, #4a4a4a, #8a8a8a)"
 
         table_html += f"""<tr>
 <td class="elo-rank">{rank}</td>
@@ -2538,151 +431,10 @@ def render_resultados_table_html(df):
     import re
 
     # Obtener el tema actual desde session state
-    theme_act = "Oscuro" if "theme_selector" in st.session_state and "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
 
     # Definir variables de estilo según el tema
-    if theme_act == "Oscuro":
-        bar_color = "#00c8ff"
-        styles = """<style>
-.mlb-results-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    margin: 1.5rem 0 !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.85rem !important;
-    background: #070e1c !important;
-    border: 1px solid #1e3f6a !important;
-    box-shadow: 0 4px 20px rgba(0, 200, 255, 0.05) !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-}
-.mlb-results-table th {
-    background: #050c1a !important;
-    color: #00c8ff !important;
-    font-weight: 700 !important;
-    text-align: left !important;
-    padding: 0.85rem 1.1rem !important;
-    border-bottom: 2px solid #1e3f6a !important;
-    text-transform: uppercase !important;
-    font-size: 0.75rem !important;
-    letter-spacing: 0.5px !important;
-}
-.mlb-results-table td {
-    padding: 0.85rem 1.1rem !important;
-    border-bottom: 1px solid rgba(30, 63, 106, 0.4) !important;
-    color: #d8eef8 !important;
-    vertical-align: middle !important;
-}
-.mlb-results-table tr:last-child td {
-    border-bottom: none !important;
-}
-.mlb-results-table tr:hover {
-    background: #0a1628 !important;
-}
-.mlb-row-success {
-    background: rgba(0, 230, 118, 0.03) !important;
-}
-.mlb-row-success td:first-child {
-    border-left: 4px solid #00e676 !important;
-}
-.mlb-row-error {
-    background: rgba(239, 68, 68, 0.03) !important;
-}
-.mlb-row-error td:first-child {
-    border-left: 4px solid #ef4444 !important;
-}
-.table-badge {
-    display: inline-block !important;
-    padding: 0.25rem 0.6rem !important;
-    border-radius: 6px !important;
-    font-weight: 700 !important;
-    font-size: 0.72rem !important;
-    text-align: center !important;
-    white-space: nowrap !important;
-}
-.table-badge-success {
-    background: rgba(0, 230, 118, 0.15) !important;
-    color: #00e676 !important;
-    border: 1px solid rgba(0, 230, 118, 0.3) !important;
-}
-.table-badge-error {
-    background: rgba(239, 68, 68, 0.15) !important;
-    color: #ef4444 !important;
-    border: 1px solid rgba(239, 68, 68, 0.3) !important;
-}
-</style>"""
-    else:
-        bar_color = "#3b82f6"
-        styles = """<style>
-.mlb-results-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    margin: 1.5rem 0 !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.85rem !important;
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.02) !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-}
-.mlb-results-table th {
-    background: #f8fafc !important;
-    color: #0f172a !important;
-    font-weight: 700 !important;
-    text-align: left !important;
-    padding: 0.85rem 1.1rem !important;
-    border-bottom: 2px solid #e2e8f0 !important;
-    text-transform: uppercase !important;
-    font-size: 0.75rem !important;
-    letter-spacing: 0.5px !important;
-}
-.mlb-results-table td {
-    padding: 0.85rem 1.1rem !important;
-    border-bottom: 1px solid #f1f5f9 !important;
-    color: #1e293b !important;
-    vertical-align: middle !important;
-}
-.mlb-results-table tr:last-child td {
-    border-bottom: none !important;
-}
-.mlb-results-table tr:hover {
-    background: #f8fafc !important;
-}
-.mlb-row-success {
-    background: rgba(16, 185, 129, 0.03) !important;
-}
-.mlb-row-success td:first-child {
-    border-left: 4px solid #10b981 !important;
-}
-.mlb-row-error {
-    background: rgba(239, 68, 68, 0.03) !important;
-}
-.mlb-row-error td:first-child {
-    border-left: 4px solid #ef4444 !important;
-}
-.table-badge {
-    display: inline-block !important;
-    padding: 0.25rem 0.6rem !important;
-    border-radius: 6px !important;
-    font-weight: 700 !important;
-    font-size: 0.72rem !important;
-    text-align: center !important;
-    white-space: nowrap !important;
-}
-.table-badge-success {
-    background: #dcfce7 !important;
-    color: #166534 !important;
-    border: 1px solid #bbf7d0 !important;
-}
-.table-badge-error {
-    background: #fee2e2 !important;
-    color: #991b1b !important;
-    border: 1px solid #fecaca !important;
-}
-</style>"""
-
-    html = styles + '<div style="overflow-x: auto;"><table class="mlb-results-table">'
+    bar_color = "#ff6a00"
+    html = '<div style="overflow-x: auto;"><table class="mlb-results-table">'
     html += '<thead><tr>'
     for col in df.columns:
         html += f'<th>{col}</th>'
@@ -2702,9 +454,9 @@ def render_resultados_table_html(df):
 
             if col == "Estado":
                 if "mlb-row-success" in row_class:
-                    html += '<td><span class="table-badge table-badge-success">✅ Acertado</span></td>'
+                    html += '<td><span class="table-badge table-badge-success">Acertado</span></td>'
                 else:
-                    html += '<td><span class="table-badge table-badge-error">❌ Error</span></td>'
+                    html += '<td><span class="table-badge table-badge-error">Error</span></td>'
 
             elif col == "Encuentro":
                 # Limpiar emojis
@@ -2716,7 +468,7 @@ def render_resultados_table_html(df):
                     home = teams[1].strip()
                     away_logo = get_team_logo_html(away, 24)
                     home_logo = get_team_logo_html(home, 24)
-                    html += f'<td><div style="display: flex; align-items: center; gap: 8px;">{away_logo} <b>{away}</b> <span style="color: #64748b; font-size: 0.8rem;">@</span> {home_logo} <b>{home}</b></div></td>'
+                    html += f'<td><div style="display: flex; align-items: center; gap: 8px;">{away_logo} <b>{away}</b> <span style="color: #8a8a8a; font-size: 0.8rem;">@</span> {home_logo} <b>{home}</b></div></td>'
                 else:
                     html += f'<td>{val}</td>'
 
@@ -2805,7 +557,7 @@ def ejecutar_scraper_manual():
     env.setdefault("SCRAPER_SAVE_PARTIAL_ON_FINAL", "1")
 
     try:
-        with st.spinner("🔍 Actualizando partidos y predicciones del día..."):
+        with st.spinner("Actualizando partidos y predicciones del día..."):
             scrape_result = subprocess.run(
                 [sys.executable, scraper_path],
                 capture_output=True,
@@ -2818,8 +570,8 @@ def ejecutar_scraper_manual():
             if scrape_result.returncode != 0:
                 error_output = (scrape_result.stderr or scrape_result.stdout or "").strip()
                 if error_output:
-                    return False, f"❌ El scraper falló: {error_output[-300:]}"
-                return False, "⚠️ El scraper no devolvió datos para hoy"
+                    return False, f"El scraper falló: {error_output[-300:]}"
+                return False, "El scraper no devolvió datos para hoy"
 
             predict_result = subprocess.run(
                 [sys.executable, predict_path],
@@ -2830,19 +582,19 @@ def ejecutar_scraper_manual():
                 env=env,
             )
             if predict_result.returncode == 0:
-                return True, "✅ Partidos y predicciones actualizados exitosamente"
+                return True, "Partidos y predicciones actualizados exitosamente"
 
             error_output = (predict_result.stderr or predict_result.stdout or "").strip()
             if error_output:
-                return False, f"❌ Las predicciones fallaron: {error_output[-300:]}"
+                return False, f"Las predicciones fallaron: {error_output[-300:]}"
             return (
                 False,
-                "⚠️ Se actualizaron los partidos, pero falló la generación de predicciones",
+                "Se actualizaron los partidos, pero falló la generación de predicciones",
             )
     except subprocess.TimeoutExpired:
-        return False, "❌ Timeout: El proceso tardó más de 5 minutos"
+        return False, "Timeout: El proceso tardó más de 5 minutos"
     except Exception as e:
-        return False, f"❌ Error: {str(e)}"
+        return False, f"Error: {str(e)}"
 
 
 def render_system_status_panel(api_ok, api_data):
@@ -2856,8 +608,8 @@ def render_system_status_panel(api_ok, api_data):
             f"""
         <div class="stats-card">
             <h4>API Backend</h4>
-            <p style="font-size: 1.05rem; color: {"#10b981" if api_ok else "#ef4444"}; font-weight: 800;">{"Conectada" if api_ok else "No disponible"}</p>
-            <p style="color: #64748b; margin: 0;">Salud general del servicio</p>
+            <p style="font-size: 1.05rem; color: {"#3ddc84" if api_ok else "#ff3b3b"}; font-weight: 800;">{"Conectada" if api_ok else "No disponible"}</p>
+            <p style="color: #8a8a8a; margin: 0;">Salud general del servicio</p>
         </div>
         """,
             unsafe_allow_html=True,
@@ -2869,8 +621,8 @@ def render_system_status_panel(api_ok, api_data):
             f"""
         <div class="stats-card">
             <h4>Modelo</h4>
-            <p style="font-size: 1.05rem; color: {"#10b981" if modelo_ok else "#ef4444"}; font-weight: 800;">{"Cargado" if modelo_ok else "No disponible"}</p>
-            <p style="color: #64748b; margin: 0;">Artefacto predictivo principal</p>
+            <p style="font-size: 1.05rem; color: {"#3ddc84" if modelo_ok else "#ff3b3b"}; font-weight: 800;">{"Cargado" if modelo_ok else "No disponible"}</p>
+            <p style="color: #8a8a8a; margin: 0;">Artefacto predictivo principal</p>
         </div>
         """,
             unsafe_allow_html=True,
@@ -2882,8 +634,8 @@ def render_system_status_panel(api_ok, api_data):
             f"""
         <div class="stats-card">
             <h4>Entorno</h4>
-            <p style="font-size: 1.05rem; color: {"#10b981" if db_ok else "#f59e0b"}; font-weight: 800;">{entorno}</p>
-            <p style="color: #64748b; margin: 0;">Base de datos {"disponible" if db_ok else "requiere revisión"}</p>
+            <p style="font-size: 1.05rem; color: {"#3ddc84" if db_ok else "#ffb000"}; font-weight: 800;">{entorno}</p>
+            <p style="color: #8a8a8a; margin: 0;">Base de datos {"disponible" if db_ok else "requiere revisión"}</p>
         </div>
         """,
             unsafe_allow_html=True,
@@ -2952,8 +704,8 @@ def render_motor_lifetime_panel():
             f"""
         <div class="stats-card">
             <h4>Predicciones Totales</h4>
-            <p style="font-size: 1.35rem; color: #1e40af; font-weight: 900;">{total:,}</p>
-            <p style="color: #64748b; margin: 0;">Generadas por el motor desde el inicio</p>
+            <p style="font-size: 1.35rem; color: #ff6a00; font-weight: 900;">{total:,}</p>
+            <p style="color: #8a8a8a; margin: 0;">Generadas por el motor desde el inicio</p>
         </div>
         """,
             unsafe_allow_html=True,
@@ -2964,8 +716,8 @@ def render_motor_lifetime_panel():
             f"""
         <div class="stats-card">
             <h4>Con Resultado Real</h4>
-            <p style="font-size: 1.35rem; color: #7c3aed; font-weight: 900;">{validados:,}</p>
-            <p style="color: #64748b; margin: 0;">Partidos jugados y con resultado conocido</p>
+            <p style="font-size: 1.35rem; color: #f2f2f2; font-weight: 900;">{validados:,}</p>
+            <p style="color: #8a8a8a; margin: 0;">Partidos jugados y con resultado conocido</p>
         </div>
         """,
             unsafe_allow_html=True,
@@ -2976,8 +728,8 @@ def render_motor_lifetime_panel():
             f"""
         <div class="stats-card">
             <h4>Tasa de Acierto</h4>
-            <p style="font-size: 1.35rem; color: #10b981; font-weight: 900;">{tasa:.1f}%</p>
-            <p style="color: #64748b; margin: 0;">{aciertos:,} aciertos de {validados:,} validados</p>
+            <p style="font-size: 1.35rem; color: #3ddc84; font-weight: 900;">{tasa:.1f}%</p>
+            <p style="color: #8a8a8a; margin: 0;">{aciertos:,} aciertos de {validados:,} validados</p>
         </div>
         """,
             unsafe_allow_html=True,
@@ -2988,8 +740,8 @@ def render_motor_lifetime_panel():
             f"""
         <div class="stats-card">
             <h4>Pendientes de Validar</h4>
-            <p style="font-size: 1.35rem; color: #f59e0b; font-weight: 900;">{pendientes:,}</p>
-            <p style="color: #64748b; margin: 0;">Partidos sin resultado registrado aún</p>
+            <p style="font-size: 1.35rem; color: #ffb000; font-weight: 900;">{pendientes:,}</p>
+            <p style="color: #8a8a8a; margin: 0;">Partidos sin resultado registrado aún</p>
         </div>
         """,
             unsafe_allow_html=True,
@@ -3035,24 +787,14 @@ def crear_grafico_probabilidades(prob_home, prob_away, home_team, away_team):
     prob_home = normalizar_probabilidad(prob_home)
     prob_away = normalizar_probabilidad(prob_away)
 
-    theme_act = "Oscuro" if "theme_selector" in st.session_state and "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
 
-    if theme_act == "Oscuro":
-        colors = [
-            "#00c8ff" if prob_home > prob_away else "#1e3f6a",
-            "#00c8ff" if prob_away > prob_home else "#1e3f6a",
-        ]
-        text_color = "#d8eef8"
-        grid_color = "rgba(30, 63, 106, 0.5)"
-        line_color = "#070e1c"
-    else:
-        colors = [
-            "#3b82f6" if prob_home > prob_away else "#94a3b8",
-            "#ef4444" if prob_away > prob_home else "#94a3b8",
-        ]
-        text_color = "#334155"
-        grid_color = "rgba(0,0,0,0.1)"
-        line_color = "white"
+    colors = [
+        "#ff6a00" if prob_home > prob_away else "#262626",
+        "#ff6a00" if prob_away > prob_home else "#262626",
+    ]
+    text_color = "#f2f2f2"
+    grid_color = "rgba(38, 38, 38, 0.5)"
+    line_color = "#0f0f0f"
 
     fig = go.Figure()
 
@@ -3064,7 +806,7 @@ def crear_grafico_probabilidades(prob_home, prob_away, home_team, away_team):
             marker={"color": colors, "line": {"color": line_color, "width": 3}},
             text=[f"{prob_home * 100:.1f}%", f"{prob_away * 100:.1f}%"],
             textposition="auto",
-            textfont={"size": 18, "color": "white", "family": "Arial Black"},
+            textfont={"size": 18, "color": "white", "family": "Big Shoulders Display"},
             hovertemplate="<b>%{y}</b><br>Probabilidad: %{x:.1f}%<extra></extra>",
         )
     )
@@ -3079,7 +821,7 @@ def crear_grafico_probabilidades(prob_home, prob_away, home_team, away_team):
         showlegend=False,
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font={"size": 14, "family": "Arial", "color": text_color},
+        font={"size": 14, "family": "Manrope", "color": text_color},
         xaxis={"range": [0, 100], "gridcolor": grid_color, "tickfont": {"color": text_color}, "title_font": {"color": text_color}},
         yaxis={"gridcolor": "rgba(0,0,0,0)", "tickfont": {"color": text_color}},
     )
@@ -3092,32 +834,18 @@ def crear_gauge_confianza(confianza):
     # Normalizar confianza
     confianza = normalizar_probabilidad(confianza)
 
-    theme_act = "Oscuro" if "theme_selector" in st.session_state and "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
 
-    if theme_act == "Oscuro":
-        axis_color = "#00c8ff"
-        bar_color = "#00c8ff"
-        bg_gauge = "#050c1a"
-        border_color = "#1e3f6a"
-        text_color = "#d8eef8"
-        steps = [
-            {"range": [0, 55], "color": "rgba(239, 68, 68, 0.15)"},
-            {"range": [55, 60], "color": "rgba(245, 158, 11, 0.15)"},
-            {"range": [60, 70], "color": "rgba(0, 200, 255, 0.15)"},
-            {"range": [70, 100], "color": "rgba(0, 230, 118, 0.25)"},
-        ]
-    else:
-        axis_color = "#1e40af"
-        bar_color = "#3b82f6"
-        bg_gauge = "white"
-        border_color = "#cbd5e1"
-        text_color = "#334155"
-        steps = [
-            {"range": [0, 55], "color": "#fee2e2"},
-            {"range": [55, 60], "color": "#fed7aa"},
-            {"range": [60, 70], "color": "#d9f99d"},
-            {"range": [70, 100], "color": "#bbf7d0"},
-        ]
+    axis_color = "#ff6a00"
+    bar_color = "#ff6a00"
+    bg_gauge = "#070707"
+    border_color = "#262626"
+    text_color = "#f2f2f2"
+    steps = [
+        {"range": [0, 55], "color": "rgba(255, 59, 59, 0.15)"},
+        {"range": [55, 60], "color": "rgba(255, 176, 0, 0.15)"},
+        {"range": [60, 70], "color": "rgba(255, 106, 0, 0.15)"},
+        {"range": [70, 100], "color": "rgba(61, 220, 132, 0.25)"},
+    ]
 
     fig = go.Figure(
         go.Indicator(
@@ -3137,7 +865,7 @@ def crear_gauge_confianza(confianza):
                 "bordercolor": border_color,
                 "steps": steps,
                 "threshold": {
-                    "line": {"color": "#ef4444", "width": 6},
+                    "line": {"color": "#ff3b3b", "width": 6},
                     "thickness": 0.85,
                     "value": 70,
                 },
@@ -3149,7 +877,7 @@ def crear_gauge_confianza(confianza):
         height=350,
         margin={"l": 30, "r": 30, "t": 60, "b": 30},
         paper_bgcolor="rgba(0,0,0,0)",
-        font={"color": text_color, "family": "Arial"},
+        font={"color": text_color, "family": "Manrope"},
     )
 
     return fig
@@ -3192,9 +920,9 @@ def render_tendencias_html(
 
     def _racha_badge(racha):
         if racha > 0:
-            return f'<span style="background:#1a6b3a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">🔥 {racha}G</span>'
+            return f'<span style="background:#1b4d31;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">{racha}G</span>'
         elif racha < 0:
-            return f'<span style="background:#8b1a1a;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">❄️ {abs(racha)}P</span>'
+            return f'<span style="background:#5c1b1b;color:#fff;padding:2px 10px;border-radius:12px;font-weight:700">{abs(racha)}P</span>'
         return '<span style="background:#555;color:#fff;padding:2px 10px;border-radius:12px">—</span>'
 
     # Cálculo de récord W-L basado en win_rate (L10)
@@ -3224,44 +952,24 @@ def render_tendencias_html(
     pct_h = max(5.0, min(100.0, (elo_h - min_elo) / elo_range * 100.0))
     pct_a = max(5.0, min(100.0, (elo_a - min_elo) / elo_range * 100.0))
 
-    theme_act = "Oscuro" if "theme_selector" in st.session_state and "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
 
-    if theme_act == "Oscuro":
-        if elo_h >= 1580:
-            bar_color_h = "linear-gradient(90deg, #00e676, #bbf7d0)"
-        elif elo_h >= 1520:
-            bar_color_h = "linear-gradient(90deg, #0055aa, #00c8ff)"
-        elif elo_h >= 1480:
-            bar_color_h = "linear-gradient(90deg, #d97706, #fbbf24)"
-        else:
-            bar_color_h = "linear-gradient(90deg, #475569, #94a3b8)"
-
-        if elo_a >= 1580:
-            bar_color_a = "linear-gradient(90deg, #00e676, #bbf7d0)"
-        elif elo_a >= 1520:
-            bar_color_a = "linear-gradient(90deg, #0055aa, #00c8ff)"
-        elif elo_a >= 1480:
-            bar_color_a = "linear-gradient(90deg, #d97706, #fbbf24)"
-        else:
-            bar_color_a = "linear-gradient(90deg, #475569, #94a3b8)"
+    if elo_h >= 1580:
+        bar_color_h = "linear-gradient(90deg, #3ddc84, #9df5c3)"
+    elif elo_h >= 1520:
+        bar_color_h = "linear-gradient(90deg, #7a3300, #ff6a00)"
+    elif elo_h >= 1480:
+        bar_color_h = "linear-gradient(90deg, #b37b00, #ffb000)"
     else:
-        if elo_h >= 1580:
-            bar_color_h = "#10b981"
-        elif elo_h >= 1520:
-            bar_color_h = "#3b82f6"
-        elif elo_h >= 1480:
-            bar_color_h = "#f59e0b"
-        else:
-            bar_color_h = "#64748b"
+        bar_color_h = "linear-gradient(90deg, #4a4a4a, #8a8a8a)"
 
-        if elo_a >= 1580:
-            bar_color_a = "#10b981"
-        elif elo_a >= 1520:
-            bar_color_a = "#3b82f6"
-        elif elo_a >= 1480:
-            bar_color_a = "#f59e0b"
-        else:
-            bar_color_a = "#64748b"
+    if elo_a >= 1580:
+        bar_color_a = "linear-gradient(90deg, #3ddc84, #9df5c3)"
+    elif elo_a >= 1520:
+        bar_color_a = "linear-gradient(90deg, #7a3300, #ff6a00)"
+    elif elo_a >= 1480:
+        bar_color_a = "linear-gradient(90deg, #b37b00, #ffb000)"
+    else:
+        bar_color_a = "linear-gradient(90deg, #4a4a4a, #8a8a8a)"
 
     html = f"""
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
@@ -3273,7 +981,7 @@ def render_tendencias_html(
             <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:0.5rem;text-align:center;margin-bottom:1rem">
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">W% SEASON</div>
-                    <div style="font-size:1.1rem;font-weight:700;color:{"#10b981" if win_rate_s_h >= 50 else "#ef4444"}">{win_rate_s_h:.0f}%</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:{"#3ddc84" if win_rate_s_h >= 50 else "#ff3b3b"}">{win_rate_s_h:.0f}%</div>
                 </div>
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">RÉCORD</div>
@@ -3292,11 +1000,11 @@ def render_tendencias_html(
             <div style="display:flex;align-items:center;justify-content:space-between">
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">ELO</div>
-                    <div style="font-size:1.1rem;font-weight:700;color:#00c8ff">{elo_h:.1f}</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#ff6a00">{elo_h:.1f}</div>
                 </div>
                 <div style="text-align:right">
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px;text-align:right;">FUERZA</div>
-                    <div style="background:{"#050c1a" if theme_act == "Oscuro" else "#e2e8f0"} !important; border-radius:4px !important; height:8px !important; width:180px !important; overflow:hidden !important; display:inline-block !important; vertical-align:middle !important; border:1px solid {"rgba(255,255,255,0.15)" if theme_act == "Oscuro" else "rgba(0,0,0,0.1)"} !important;">
+                    <div style="background:{"#070707"} !important; border-radius:4px !important; height:8px !important; width:180px !important; overflow:hidden !important; display:inline-block !important; vertical-align:middle !important; border:1px solid {"rgba(255,255,255,0.15)"} !important;">
                         <div style="display:block !important; min-height:8px !important; height:8px !important; border-radius:4px !important; width:{pct_h:.1f}% !important; background:{bar_color_h} !important; float:left !important;"></div>
                     </div>
                 </div>
@@ -3310,7 +1018,7 @@ def render_tendencias_html(
             <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:0.5rem;text-align:center;margin-bottom:1rem">
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">W% SEASON</div>
-                    <div style="font-size:1.1rem;font-weight:700;color:{"#10b981" if win_rate_s_a >= 50 else "#ef4444"}">{win_rate_s_a:.0f}%</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:{"#3ddc84" if win_rate_s_a >= 50 else "#ff3b3b"}">{win_rate_s_a:.0f}%</div>
                 </div>
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">RÉCORD</div>
@@ -3329,11 +1037,11 @@ def render_tendencias_html(
             <div style="display:flex;align-items:center;justify-content:space-between">
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">ELO</div>
-                    <div style="font-size:1.1rem;font-weight:700;color:#00c8ff">{elo_a:.1f}</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#ff6a00">{elo_a:.1f}</div>
                 </div>
                 <div style="text-align:right">
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px;text-align:right;">FUERZA</div>
-                    <div style="background:{"#050c1a" if theme_act == "Oscuro" else "#e2e8f0"} !important; border-radius:4px !important; height:8px !important; width:180px !important; overflow:hidden !important; display:inline-block !important; vertical-align:middle !important; border:1px solid {"rgba(255,255,255,0.15)" if theme_act == "Oscuro" else "rgba(0,0,0,0.1)"} !important;">
+                    <div style="background:{"#070707"} !important; border-radius:4px !important; height:8px !important; width:180px !important; overflow:hidden !important; display:inline-block !important; vertical-align:middle !important; border:1px solid {"rgba(255,255,255,0.15)"} !important;">
                         <div style="display:block !important; min-height:8px !important; height:8px !important; border-radius:4px !important; width:{pct_a:.1f}% !important; background:{bar_color_a} !important; float:left !important;"></div>
                     </div>
                 </div>
@@ -3355,9 +1063,9 @@ def render_lanzadores_html(home_team, away_team, home_pitcher, away_pitcher, hom
         so9_h = home_pitcher_stats.get("SO9", 0.0)
 
         # Color del ERA
-        color_era_h = "#10b981" if era_h < 3.5 else ("#ef4444" if era_h > 4.5 else "#fbbf24")
+        color_era_h = "#3ddc84" if era_h < 3.5 else ("#ff3b3b" if era_h > 4.5 else "#ffb000")
         # Color del WHIP
-        color_whip_h = "#10b981" if whip_h < 1.20 else ("#ef4444" if whip_h > 1.40 else "#fbbf24")
+        color_whip_h = "#3ddc84" if whip_h < 1.20 else ("#ff3b3b" if whip_h > 1.40 else "#ffb000")
 
         inner_html_h = f"""
             <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.5rem;text-align:center">
@@ -3371,14 +1079,14 @@ def render_lanzadores_html(home_team, away_team, home_pitcher, away_pitcher, hom
                 </div>
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">SO9</div>
-                    <div style="font-size:1.3rem;font-weight:700;color:#10b981">{so9_h:.2f}</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:#3ddc84">{so9_h:.2f}</div>
                 </div>
             </div>
         """
     else:
         inner_html_h = f"""
-            <div style="text-align:center;padding:1rem;color:#94a3b8;font-size:0.8rem;font-style:italic">
-                ⚠️ Sin estadísticas para {home_pitcher}
+            <div style="text-align:center;padding:1rem;color:#8a8a8a;font-size:0.8rem;font-style:italic">
+                Sin estadísticas para {home_pitcher}
             </div>
         """
         nombre_h = home_pitcher
@@ -3390,8 +1098,8 @@ def render_lanzadores_html(home_team, away_team, home_pitcher, away_pitcher, hom
         whip_a = away_pitcher_stats.get("WHIP", 0.0)
         so9_a = away_pitcher_stats.get("SO9", 0.0)
 
-        color_era_a = "#10b981" if era_a < 3.5 else ("#ef4444" if era_a > 4.5 else "#fbbf24")
-        color_whip_a = "#10b981" if whip_a < 1.20 else ("#ef4444" if whip_a > 1.40 else "#fbbf24")
+        color_era_a = "#3ddc84" if era_a < 3.5 else ("#ff3b3b" if era_a > 4.5 else "#ffb000")
+        color_whip_a = "#3ddc84" if whip_a < 1.20 else ("#ff3b3b" if whip_a > 1.40 else "#ffb000")
 
         inner_html_a = f"""
             <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.5rem;text-align:center">
@@ -3405,14 +1113,14 @@ def render_lanzadores_html(home_team, away_team, home_pitcher, away_pitcher, hom
                 </div>
                 <div>
                     <div style="font-size:0.65rem;opacity:0.7;margin-bottom:4px">SO9</div>
-                    <div style="font-size:1.3rem;font-weight:700;color:#10b981">{so9_a:.2f}</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:#3ddc84">{so9_a:.2f}</div>
                 </div>
             </div>
         """
     else:
         inner_html_a = f"""
-            <div style="text-align:center;padding:1rem;color:#94a3b8;font-size:0.8rem;font-style:italic">
-                ⚠️ Sin estadísticas para {away_pitcher}
+            <div style="text-align:center;padding:1rem;color:#8a8a8a;font-size:0.8rem;font-style:italic">
+                Sin estadísticas para {away_pitcher}
             </div>
         """
         nombre_a = away_pitcher
@@ -3501,14 +1209,14 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
 
     if hubo_fallback_home or hubo_fallback_away:
         st.divider()
-        st.markdown("### 📊 Información sobre los datos utilizados")
+        st.markdown("### Información sobre los datos utilizados")
 
         # Mostrar info del lanzador local si tiene fallback
         if hubo_fallback_home:
             ip_home = resultado_detallado.get("ip_home", 0)
             detalle_home = razon_home if razon_home else f"No había muestra suficiente/estable en {year_solicitado}"
             st.info(
-                f"📌 **{home_team} - {home_pitcher}**: Se usaron estadísticas de la temporada "
+                f"**{home_team} - {home_pitcher}**: Se usaron estadísticas de la temporada "
                 f"**{year_home}** para mejorar la estabilidad del análisis. "
                 f"Motivo: {detalle_home}."
                 f" IP consideradas: **{ip_home}**."
@@ -3519,14 +1227,14 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
             ip_away = resultado_detallado.get("ip_away", 0)
             detalle_away = razon_away if razon_away else f"No había muestra suficiente/estable en {year_solicitado}"
             st.info(
-                f"📌 **{away_team} - {away_pitcher}**: Se usaron estadísticas de la temporada "
+                f"**{away_team} - {away_pitcher}**: Se usaron estadísticas de la temporada "
                 f"**{year_away}** para mejorar la estabilidad del análisis. "
                 f"Motivo: {detalle_away}."
                 f" IP consideradas: **{ip_away}**."
             )
 
         st.markdown(
-            "💡 *Este ajuste es normal al inicio de temporada: cuando la muestra de innings "
+            "*Este ajuste es normal al inicio de temporada: cuando la muestra de innings "
             "todavía es baja, el sistema usa una temporada previa para mantener predicciones más robustas. "
             "A medida que se acumulen más innings en la temporada actual, el fallback desaparecerá automáticamente.*"
         )
@@ -3551,7 +1259,7 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
     features = resultado_detallado.get("features_usadas", {})
 
     if not features or not any("super_" in k for k in features):
-        st.info("ℹ️ Las Super Features no están disponibles en esta respuesta de la API")
+        st.info("Las Super Features no están disponibles en esta respuesta de la API")
     else:
         col1, col2, col3 = st.columns(3)
 
@@ -3566,11 +1274,11 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
             <div class="super-feature">
                 <h4>Neutralización WHIP vs OPS</h4>
                 <div class="super-feature-advantage">Ventaja: {ventaja_n}</div>
-                <p style="font-size: 0.925rem; line-height: 1.5; color: #334155; margin-top: 0.75rem;">
+                <p style="font-size: 0.925rem; line-height: 1.5; color: #c9c9c9; margin-top: 0.75rem;">
                     <strong>{pitcher_n}</strong> tiene un WHIP que neutraliza efectivamente
                     el OPS del lineup de <strong>{rival_n}</strong>, limitando su producción ofensiva.
                 </p>
-                <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #64748b; font-weight: 600;">
+                <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #8a8a8a; font-weight: 600;">
                     Impacto: <strong>{abs(neut):.4f}</strong>
                 </div>
             </div>
@@ -3588,11 +1296,11 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
             <div class="super-feature">
                 <h4>Resistencia ERA vs Poder</h4>
                 <div class="super-feature-advantage">Ventaja: {ventaja_r}</div>
-                <p style="font-size: 0.925rem; line-height: 1.5; color: #334155; margin-top: 0.75rem;">
+                <p style="font-size: 0.925rem; line-height: 1.5; color: #c9c9c9; margin-top: 0.75rem;">
                     <strong>{pitcher_r}</strong> demuestra mayor resistencia ante bateadores
                     de poder, manteniendo su ERA bajo presión ofensiva.
                 </p>
-                <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #64748b; font-weight: 600;">
+                <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #8a8a8a; font-weight: 600;">
                     Impacto: <strong>{abs(res):.4f}</strong>
                 </div>
             </div>
@@ -3609,11 +1317,11 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
             <div class="super-feature">
                 <h4>Muro del Bullpen</h4>
                 <div class="super-feature-advantage">Ventaja: {ventaja_m}</div>
-                <p style="font-size: 0.925rem; line-height: 1.5; color: #334155; margin-top: 0.75rem;">
+                <p style="font-size: 0.925rem; line-height: 1.5; color: #c9c9c9; margin-top: 0.75rem;">
                     El bullpen de <strong>{ventaja_m}</strong> es más efectivo
                     contra los mejores bateadores rivales en innings críticos.
                 </p>
-                <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #64748b; font-weight: 600;">
+                <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #8a8a8a; font-weight: 600;">
                     Impacto: <strong>{abs(muro):.4f}</strong>
                 </div>
             </div>
@@ -3665,7 +1373,7 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
 
     if data_ready:
         st.markdown("---")
-        st.markdown("### 📈 Tendencias y Momentum")
+        st.markdown("### Tendencias y Momentum")
         st.markdown(
             render_tendencias_html(
                 home_team,
@@ -3734,7 +1442,7 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
                                 with k4:
                                     st.metric("RBI", int(batter.get("RBI", 0)))
             else:
-                st.info(f"ℹ️ No hay datos de bateadores disponibles para {home_team}")
+                st.info(f"No hay datos de bateadores disponibles para {home_team}")
 
         with bcol2:
             away_batters = stats_det.get("away_batters", [])
@@ -3758,7 +1466,7 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
                                 with k4:
                                     st.metric("RBI", int(batter.get("RBI", 0)))
             else:
-                st.info(f"ℹ️ No hay datos de bateadores disponibles para {away_team}")
+                st.info(f"No hay datos de bateadores disponibles para {away_team}")
 
 
 # ============================================================================
@@ -3766,14 +1474,18 @@ def renderizar_analisis_detallado_partido(resultado_detallado, home_team, away_t
 # ============================================================================
 
 with st.sidebar:
-    st.image("https://www.mlbstatic.com/team-logos/league-on-dark/1.svg", width=140)
-
+    estado_api = (
+        '<span class="live">API conectada</span>' if api_ok else "<span>API sin conexión</span>"
+    )
     st.markdown(
-        """
-    <div style="text-align: center; margin: 1rem 0;">
-        <h2 style="margin: 0; color: #ffffff !important; font-size: 1.5rem; font-weight: 800; letter-spacing: 0.5px;">MLB Predictor</h2>
-        <span class="badge badge-pro">PRO V4.0</span>
-        <span class="badge badge-live">LIVE</span>
+        f"""
+    <div class="brand">
+        {LOGO_SVG}
+        <div class="brand-name">MLB<span>Predictor</span></div>
+    </div>
+    <div class="brand-meta">
+        <span>Modelo V4.0</span>
+        {estado_api}
     </div>
     """,
         unsafe_allow_html=True,
@@ -3782,34 +1494,34 @@ with st.sidebar:
     st.markdown("---")
 
     st.markdown(
-        '<div class="sidebar-section-title">Explorar</div>',
+        '<div class="sidebar-section-title">Secciones</div>',
         unsafe_allow_html=True,
     )
     pagina = st.radio(
         "Selecciona una sección:",
         [
-            "📅 Partidos de Hoy",
-            "📊 Comparación & Historial",
-            "🔮 Power Rankings",
-            "📈 Rendimiento del Modelo",
-            "🧠 Acerca del Modelo",
+            "Partidos de hoy",
+            "Historial y precisión",
+            "Power Rankings",
+            "Rendimiento",
+            "Acerca del modelo",
         ],
         index=0,
         label_visibility="collapsed",
     )
 
     st.markdown("---")
-
     st.markdown(
-        '<div class="sidebar-section-title">Tema Visual</div>',
+        """
+    <div class="sidebar-foot">
+        <b>Datos</b>: API oficial de la MLB<br>
+        <b>Actualización</b>: automática, cada día<br>
+        <b>Uso</b>: análisis estadístico, no asesoría de apuestas
+    </div>
+    """,
         unsafe_allow_html=True,
     )
-    st.selectbox(
-        "Selecciona un tema:",
-        ["🌙 Oscuro", "☀️ Claro"],
-        key="theme_selector",
-        label_visibility="collapsed",
-    )
+
 
 # ============================================================================
 # PÁGINA: PREDICCIÓN MANUAL - COMPLETAMENTE CORREGIDA
@@ -4005,7 +1717,7 @@ if pagina == "⚾ Predicción Manual":
                         features = resultado.get("features_usadas", {})
 
                         if not features or not any("super_" in k for k in features):
-                            st.info("ℹ️ Las Super Features no están disponibles en esta respuesta de la API")
+                            st.info("Las Super Features no están disponibles en esta respuesta de la API")
                         else:
                             col1, col2, col3 = st.columns(3)
 
@@ -4021,11 +1733,11 @@ if pagina == "⚾ Predicción Manual":
                                 <div class="super-feature">
                                     <h4>Neutralización WHIP vs OPS</h4>
                                     <div class="super-feature-advantage">Ventaja: {ventaja_n}</div>
-                                    <p style="font-size: 0.925rem; line-height: 1.5; color: #334155; margin-top: 0.75rem;">
+                                    <p style="font-size: 0.925rem; line-height: 1.5; color: #c9c9c9; margin-top: 0.75rem;">
                                         <strong>{pitcher_n}</strong> tiene un WHIP que neutraliza efectivamente
                                         el OPS del lineup de <strong>{rival_n}</strong>, limitando su producción ofensiva.
                                     </p>
-                                    <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #64748b; font-weight: 600;">
+                                    <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #8a8a8a; font-weight: 600;">
                                         Impacto: <strong>{abs(neut):.4f}</strong>
                                     </div>
                                 </div>
@@ -4044,11 +1756,11 @@ if pagina == "⚾ Predicción Manual":
                                 <div class="super-feature">
                                     <h4>Resistencia ERA vs Poder</h4>
                                     <div class="super-feature-advantage">Ventaja: {ventaja_r}</div>
-                                    <p style="font-size: 0.925rem; line-height: 1.5; color: #334155; margin-top: 0.75rem;">
+                                    <p style="font-size: 0.925rem; line-height: 1.5; color: #c9c9c9; margin-top: 0.75rem;">
                                         <strong>{pitcher_r}</strong> demuestra mayor resistencia ante bateadores
                                         de poder, manteniendo su ERA bajo presión ofensiva.
                                     </p>
-                                    <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #64748b; font-weight: 600;">
+                                    <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #8a8a8a; font-weight: 600;">
                                         Impacto: <strong>{abs(res):.4f}</strong>
                                     </div>
                                 </div>
@@ -4066,11 +1778,11 @@ if pagina == "⚾ Predicción Manual":
                                 <div class="super-feature">
                                     <h4>Muro del Bullpen</h4>
                                     <div class="super-feature-advantage">Ventaja: {ventaja_m}</div>
-                                    <p style="font-size: 0.925rem; line-height: 1.5; color: #334155; margin-top: 0.75rem;">
+                                    <p style="font-size: 0.925rem; line-height: 1.5; color: #c9c9c9; margin-top: 0.75rem;">
                                         El bullpen de <strong>{ventaja_m}</strong> es más efectivo
                                         contra los mejores bateadores rivales en innings críticos.
                                     </p>
-                                    <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #64748b; font-weight: 600;">
+                                    <div style="margin-top: 0.75rem; font-size: 0.775rem; color: #8a8a8a; font-weight: 600;">
                                         Impacto: <strong>{abs(muro):.4f}</strong>
                                     </div>
                                 </div>
@@ -4122,7 +1834,7 @@ if pagina == "⚾ Predicción Manual":
 
                             if data_ready:
                                 st.markdown("---")
-                                st.markdown("### 📈 Tendencias y Momentum")
+                                st.markdown("### Tendencias y Momentum")
                                 st.markdown(
                                     render_tendencias_html(
                                         home_team,
@@ -4214,7 +1926,7 @@ if pagina == "⚾ Predicción Manual":
                                                             int(batter.get("RBI", 0)),
                                                         )
                                 else:
-                                    st.info(f"ℹ️ No hay datos de bateadores disponibles para {home_team}")
+                                    st.info(f"No hay datos de bateadores disponibles para {home_team}")
 
                             with col2:
                                 away_batters = stats_det.get("away_batters", [])
@@ -4258,33 +1970,33 @@ if pagina == "⚾ Predicción Manual":
                                                             int(batter.get("RBI", 0)),
                                                         )
                                 else:
-                                    st.info(f"ℹ️ No hay datos de bateadores disponibles para {away_team}")
+                                    st.info(f"No hay datos de bateadores disponibles para {away_team}")
 
                         # Descargar reporte
                         st.markdown("---")
                         result_json = json.dumps(resultado, indent=2)
                         st.download_button(
-                            label="📥 Descargar Reporte Técnico (JSON)",
+                            label="Descargar Reporte Técnico (JSON)",
                             data=result_json,
                             file_name=f"prediccion_{home_team}_vs_{away_team}_{year}.json",
                             mime="application/json",
                         )
                     else:
                         error = response.json()
-                        st.error(f"❌ Error: {error.get('detail', 'Error desconocido')}")
-                        st.info("💡 Verifica que los nombres de los lanzadores o el año de busqueda sean correctos.")
+                        st.error(f"Error: {error.get('detail', 'Error desconocido')}")
+                        st.info("Verifica que los nombres de los lanzadores o el año de busqueda sean correctos.")
 
                 except requests.exceptions.Timeout:
-                    st.error("⏱️ Timeout: La predicción tardó más de 2 minutos")
+                    st.error("Timeout: La predicción tardó más de 2 minutos")
                 except Exception as e:
-                    st.error("❌ Error al procesar la predicción")
+                    st.error("Error al procesar la predicción")
                     st.exception(e)
 
 # ============================================================================
 # PÁGINA: PARTIDOS DE HOY
 # ============================================================================
 
-elif pagina == "📅 Partidos de Hoy":
+elif pagina == "Partidos de hoy":
     st.markdown(
         '<div class="main-title">Partidos y Predicciones del Día</div>',
         unsafe_allow_html=True,
@@ -4367,7 +2079,7 @@ elif pagina == "📅 Partidos de Hoy":
 
         with col_c3:
             num_juegos = len(partidos)
-            color_num = "#10b981" if num_juegos > 0 else "#ef4444"
+            color_num = "#3ddc84" if num_juegos > 0 else "#ff3b3b"
             bottom_desc = "Partidos programados hoy" if (fecha_mostrada == fecha_hoy and num_juegos > 0) else ("Partidos de la jornada anterior" if num_juegos > 0 else "No hay cartelera programada")
             st.markdown(
                 f"""<div class="stats-card-mini">
@@ -4392,8 +2104,7 @@ elif pagina == "📅 Partidos de Hoy":
         if not partidos:
             st.markdown(
                 """
-            <div style="text-align: center; padding: 4rem 2rem; color: #64748b;">
-                <div style="font-size: 5rem; margin-bottom: 1rem;"></div>
+            <div style="text-align: center; padding: 4rem 2rem; color: #8a8a8a;">
                 <h2>No hay partidos programados para hoy</h2>
                 <p style="font-size: 1.1rem; margin: 1rem 0;">
                     Los partidos aún no han sido scrapeados o no hay juegos programados
@@ -4439,10 +2150,10 @@ elif pagina == "📅 Partidos de Hoy":
                     away_l10 = f"{away_l10_wins}-{away_l10_losses}"
                     away_racha_val = features.get("away_racha", 0)
                     if away_racha_val > 0:
-                        away_racha = f"🔥 {away_racha_val}G"
+                        away_racha = f"{away_racha_val}G"
                         away_racha_class = "racha-win"
                     elif away_racha_val < 0:
-                        away_racha = f"❄️ {abs(away_racha_val)}P"
+                        away_racha = f"{abs(away_racha_val)}P"
                         away_racha_class = "racha-loss"
                     else:
                         away_racha = "—"
@@ -4457,10 +2168,10 @@ elif pagina == "📅 Partidos de Hoy":
                     home_l10 = f"{home_l10_wins}-{home_l10_losses}"
                     home_racha_val = features.get("home_racha", 0)
                     if home_racha_val > 0:
-                        home_racha = f"🔥 {home_racha_val}G"
+                        home_racha = f"{home_racha_val}G"
                         home_racha_class = "racha-win"
                     elif home_racha_val < 0:
-                        home_racha = f"❄️ {abs(home_racha_val)}P"
+                        home_racha = f"{abs(home_racha_val)}P"
                         home_racha_class = "racha-loss"
                     else:
                         home_racha = "—"
@@ -4510,8 +2221,8 @@ elif pagina == "📅 Partidos de Hoy":
                         confianza = partido.get("confianza", "N/A")
 
                         # Racha styles
-                        away_racha_style = f'class="racha-pill {away_racha_class}"' if away_racha_class else 'style="color:#64748b"'
-                        home_racha_style = f'class="racha-pill {home_racha_class}"' if home_racha_class else 'style="color:#64748b"'
+                        away_racha_style = f'class="racha-pill {away_racha_class}"' if away_racha_class else 'style="color:#8a8a8a"'
+                        home_racha_style = f'class="racha-pill {home_racha_class}"' if home_racha_class else 'style="color:#8a8a8a"'
 
                         away_logo_url = EQUIPOS_MLB.get(partido["away_team"], {}).get("logo", "")
                         home_logo_url = EQUIPOS_MLB.get(partido["home_team"], {}).get("logo", "")
@@ -4660,13 +2371,13 @@ CONFIANZA: <b>{confianza}</b>
 
                     st.markdown("---")
     except Exception as e:
-        st.error(f"❌ Error obteniendo datos: {str(e)}")
+        st.error(f"Error obteniendo datos: {str(e)}")
 
 # ============================================================================
 # PÁGINA: COMPARACIÓN & HISTORIAL
 # ============================================================================
 
-elif pagina == "📊 Comparación & Historial":
+elif pagina == "Historial y precisión":
     st.markdown(
         '<div class="main-title"> Comparación de Predicciones vs Resultados</div>',
         unsafe_allow_html=True,
@@ -4677,7 +2388,7 @@ elif pagina == "📊 Comparación & Historial":
     )
 
     if not api_ok:
-        st.error("❌ La API no está disponible")
+        st.error("La API no está disponible")
         st.stop()
 
     estado_fechas = {}
@@ -4702,7 +2413,7 @@ elif pagina == "📊 Comparación & Historial":
     if "fecha_analizar" not in st.session_state:
         st.session_state.fecha_analizar = default_compare_date
 
-    st.markdown("### 📅 Selecciona una Fecha")
+    st.markdown("### Selecciona una Fecha")
 
     if predictions_latest:
         st.caption(
@@ -4720,12 +2431,12 @@ elif pagina == "📊 Comparación & Historial":
         )
 
     with col2:
-        if st.button("📅 Analizar Fecha", type="primary", use_container_width=True):
+        if st.button("Analizar Fecha", type="primary", use_container_width=True):
             st.session_state.fecha_analizar = fecha_seleccionada
             st.session_state.pop("stats_30d", None)
 
     with col3:
-        if st.button("📈 Ver Estadísticas", use_container_width=True):
+        if st.button("Ver Estadísticas", use_container_width=True):
             try:
                 response = requests.get(f"{API_URL}/stats/accuracy?dias=30")
                 if response.status_code == 200:
@@ -4750,7 +2461,6 @@ elif pagina == "📊 Comparación & Historial":
             f"""<div class="rendimiento-container">
 <div class="rendimiento-header">
 <div style="display: flex; align-items: center; gap: 12px;">
-<div style="font-size: 2.2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">📈</div>
 <div>
 <div class="rendimiento-title">Estadísticas — {_periodo}</div>
 <div class="rendimiento-subtitle">Rendimiento histórico acumulado del modelo</div>
@@ -4763,11 +2473,11 @@ elif pagina == "📊 Comparación & Historial":
 <span class="rendimiento-stat-lbl">Total Partidos</span>
 </div>
 <div class="rendimiento-stat-box">
-<span class="rendimiento-stat-val" style="color: #10b981;">{_aciertos}</span>
+<span class="rendimiento-stat-val" style="color: #3ddc84;">{_aciertos}</span>
 <span class="rendimiento-stat-lbl">Aciertos</span>
 </div>
 <div class="rendimiento-stat-box">
-<span class="rendimiento-stat-val" style="color: #3b82f6;">{_acc:.1f}%</span>
+<span class="rendimiento-stat-val" style="color: #ff6a00;">{_acc:.1f}%</span>
 <span class="rendimiento-stat-lbl">Accuracy General</span>
 </div>
 </div>
@@ -4779,21 +2489,13 @@ elif pagina == "📊 Comparación & Historial":
         if _por_conf:
             # Crear las cajas para cada nivel de confianza ordenadas
             boxes_html = ""
-            _iconos = {
-                "MUY ALTA": "🔴",
-                "ALTA": "🟡",
-                "MODERADA": "🟢",
-                "BAJA": "🟣",
-                "BAJA (Partido muy parejo)": "🟣",
-                "BAJA (PARTIDO MUY PAREJO)": "🟣",
-            }
             _colores = {
-                "MUY ALTA": "#ef4444",
-                "ALTA": "#eab308",
-                "MODERADA": "#10b981",
-                "BAJA": "#b388ff",
-                "BAJA (Partido muy parejo)": "#b388ff",
-                "BAJA (PARTIDO MUY PAREJO)": "#b388ff",
+                "MUY ALTA": "#ff6a00",
+                "ALTA": "#ffb000",
+                "MODERADA": "#f2f2f2",
+                "BAJA": "#8a8a8a",
+                "BAJA (Partido muy parejo)": "#8a8a8a",
+                "BAJA (PARTIDO MUY PAREJO)": "#8a8a8a",
             }
 
             # Ordenar claves de manera robusta: MUY ALTA, ALTA, MODERADA, BAJA
@@ -4816,11 +2518,7 @@ elif pagina == "📊 Comparación & Historial":
 
             for _nivel in ordered_keys:
                 _datos = _por_conf[_nivel]
-                _icono = _iconos.get(_nivel, "⚪")
-                _color = _colores.get(_nivel, "#64748b")
-                if _icono == "⚪" and "BAJA" in _nivel.upper():
-                    _icono = "🟣"
-                    _color = "#b388ff"
+                _color = _colores.get(_nivel, "#8a8a8a")
                 _acc_nivel = _datos.get('accuracy', 0)
                 _aciertos_nivel = _datos.get('aciertos', 0)
                 _total_nivel = _datos.get('total', 0)
@@ -4828,15 +2526,14 @@ elif pagina == "📊 Comparación & Historial":
                 boxes_html += f"""
 <div class="rendimiento-stat-box" style="min-width: 140px;">
 <span class="rendimiento-stat-val" style="color: {_color};">{_acc_nivel:.1f}%</span>
-<span class="rendimiento-stat-lbl" style="font-weight: 800; font-size: 0.65rem;">{_icono} {_nivel}</span>
-<span class="rendimiento-stat-lbl" style="text-transform: none; font-size: 0.55rem; color: #64748b; margin-top: 2px;">{_aciertos_nivel}/{_total_nivel} aciertos</span>
+<span class="rendimiento-stat-lbl" style="font-weight: 800; font-size: 0.65rem;">{_nivel}</span>
+<span class="rendimiento-stat-lbl" style="text-transform: none; font-size: 0.55rem; color: #8a8a8a; margin-top: 2px;">{_aciertos_nivel}/{_total_nivel} aciertos</span>
 </div>"""
 
             st.markdown(
-                f"""<div class="rendimiento-container" style="border-left: 6px solid #eab308 !important;">
+                f"""<div class="rendimiento-container" style="border-left: 6px solid #ffb000 !important;">
 <div class="rendimiento-header">
 <div style="display: flex; align-items: center; gap: 12px;">
-<div style="font-size: 2.2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">🎯</div>
 <div>
 <div class="rendimiento-title">Nivel de Confianza</div>
 <div class="rendimiento-subtitle">Desglose de precisión por seguridad</div>
@@ -4868,27 +2565,18 @@ elif pagina == "📊 Comparación & Historial":
             solo_predicciones = stats.get("solo_predicciones", False)
 
             if solo_predicciones:
-                if theme == "Oscuro":
-                    bg_color = "#050c1a"
-                    border_style = "border: 1px solid #1e3f6a; border-left: 4px solid #00c8ff;"
-                    text_color = "#d8eef8"
-                    title_color = "#00c8ff"
-                    hr_color = "#1e3f6a"
-                    link_color = "#00c8ff"
-                else:
-                    bg_color = "#eff6ff"
-                    border_style = "border-left: 4px solid #3b82f6;"
-                    text_color = "#1e40af"
-                    title_color = "#1e3a8a"
-                    hr_color = "#bfdbfe"
-                    link_color = "#1d4ed8"
+                bg_color = "#070707"
+                border_style = "border: 1px solid #262626; border-left: 4px solid #ff6a00;"
+                text_color = "#f2f2f2"
+                title_color = "#ff6a00"
+                hr_color = "#262626"
+                link_color = "#ff6a00"
 
                 st.markdown(
                     f"""
-                    <div style="background-color: {bg_color}; {border_style} padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: 'Inter', sans-serif;">
+                    <div style="background-color: {bg_color}; {border_style} padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                         <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
-                            <span style="font-size: 1.5rem; margin-right: 0.75rem;">📅</span>
-                            <span style="color: {title_color}; font-weight: 700; font-size: 1.15rem; font-family: 'Outfit', sans-serif;">
+                            <span style="color: {title_color}; font-weight: 700; font-size: 1.15rem;">
                                 Resultados Reales Aún No Disponibles
                             </span>
                         </div>
@@ -4897,8 +2585,8 @@ elif pagina == "📊 Comparación & Historial":
                         </p>
                         <hr style="border: 0; border-top: 1px solid {hr_color}; margin: 1rem 0;">
                         <p style="color: {link_color}; font-size: 0.925rem; line-height: 1.5; margin: 0; font-weight: 500;">
-                            💡 <b>¿Quieres ver la cartelera y predicciones de hoy?</b><br>
-                            Dirígete a la sección <b>📅 Partidos de Hoy</b> en el menú lateral izquierdo para ver lineups oficiales y análisis detallados en tiempo real.
+                            <b>¿Quieres ver la cartelera y predicciones de hoy?</b><br>
+                            Dirígete a la sección <b>Partidos de Hoy</b> en el menú lateral izquierdo para ver lineups oficiales y análisis detallados en tiempo real.
                         </p>
                     </div>
                     """,
@@ -4910,7 +2598,6 @@ elif pagina == "📊 Comparación & Historial":
                     f"""<div class="rendimiento-container">
 <div class="rendimiento-header">
 <div style="display: flex; align-items: center; gap: 12px;">
-<div style="font-size: 2.2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">⚾</div>
 <div>
 <div class="rendimiento-title">Rendimiento del Día</div>
 <div class="rendimiento-subtitle">Métricas de precisión y aciertos del modelo</div>
@@ -4923,15 +2610,15 @@ elif pagina == "📊 Comparación & Historial":
 <span class="rendimiento-stat-lbl">Total Partidos</span>
 </div>
 <div class="rendimiento-stat-box">
-<span class="rendimiento-stat-val" style="color: #10b981;">{stats["aciertos"]}</span>
+<span class="rendimiento-stat-val" style="color: #3ddc84;">{stats["aciertos"]}</span>
 <span class="rendimiento-stat-lbl">Aciertos</span>
 </div>
 <div class="rendimiento-stat-box">
-<span class="rendimiento-stat-val" style="color: #3b82f6;">{stats["accuracy"]:.1f}%</span>
+<span class="rendimiento-stat-val" style="color: #ff6a00;">{stats["accuracy"]:.1f}%</span>
 <span class="rendimiento-stat-lbl">Accuracy</span>
 </div>
 <div class="rendimiento-stat-box">
-<span class="rendimiento-stat-val" style="color: #ef4444;">{errores}</span>
+<span class="rendimiento-stat-val" style="color: #ff3b3b;">{errores}</span>
 <span class="rendimiento-stat-lbl">Errores</span>
 </div>
 </div>
@@ -4963,15 +2650,13 @@ elif pagina == "📊 Comparación & Historial":
                                 es_fallback = "FALLBACK" in str(tipo_pred).upper()
 
                                 if es_fallback:
-                                    _badge_icon = "⚠️"
                                     _badge_text = "PRECAUCIÓN: SIN DATOS COMPLETOS"
-                                    _badge_color = "#fef3c7"  # Amarillo/Ámbar suave
-                                    _text_color = "#b45309"   # Marrón/Naranja oscuro
+                                    _badge_color = "rgba(255, 176, 0, 0.15)"  # Amarillo/Ámbar suave
+                                    _text_color = "#ffb000"   # Marrón/Naranja oscuro
                                 else:
-                                    _badge_icon = "✅" if acierto else "❌"
                                     _badge_text = "ACIERTO" if acierto else "ERROR"
-                                    _badge_color = "#dcfce7" if acierto else "#fee2e2"
-                                    _text_color = "#166534" if acierto else "#991b1b"
+                                    _badge_color = "rgba(61, 220, 132, 0.15)" if acierto else "rgba(255, 59, 59, 0.15)"
+                                    _text_color = "#3ddc84" if acierto else "#ff3b3b"
 
                                 # Renderizado de Tarjeta
                                 st.markdown(
@@ -4999,9 +2684,9 @@ elif pagina == "📊 Comparación & Historial":
     </div>
     <div class="mlb-card-footer">
         <div class="mlb-prediction-badge" style="background:{_badge_color}; color:{_text_color};">
-            {_badge_icon} <b>{_badge_text}</b>
+            <b>{_badge_text}</b>
         </div>
-        <div style="font-size: 0.75rem; color: #64748b;">
+        <div style="font-size: 0.75rem; color: #8a8a8a;">
             Predicción: <b>{get_team_display_name(partido.get("prediccion", ""))}</b>
         </div>
     </div>
@@ -5010,18 +2695,18 @@ elif pagina == "📊 Comparación & Historial":
                                     unsafe_allow_html=True,
                                 )
                                 # Botón de detalles opcional
-                                with st.expander("🔍 Ver Análisis Detallado", expanded=False):
+                                with st.expander("Ver Análisis Detallado", expanded=False):
                                     prob_h = normalizar_probabilidad(partido.get("prob_home", 0.5))
                                     prob_a = normalizar_probabilidad(partido.get("prob_away", 0.5))
 
                                     # Confianza
                                     confianza = partido.get("confianza", "N/A")
                                     color_conf = {
-                                        "MUY ALTA": "#ef4444",
-                                        "ALTA": "#f59e0b",
-                                        "MODERADA": "#22c55e",
-                                        "BAJA": "#64748b",
-                                    }.get(confianza, "#64748b")
+                                        "MUY ALTA": "#ff6a00",
+                                        "ALTA": "#ffb000",
+                                        "MODERADA": "#f2f2f2",
+                                        "BAJA": "#8a8a8a",
+                                    }.get(confianza, "#8a8a8a")
 
                                     st.markdown(
                                         f"**Confianza:** <span style='color:{color_conf}; font-weight:bold;'>{confianza}</span>",
@@ -5048,7 +2733,7 @@ elif pagina == "📊 Comparación & Historial":
 # PÁGINA: POWER RANKINGS
 # ============================================================================
 
-elif pagina == "🔮 Power Rankings":
+elif pagina == "Power Rankings":
     st.markdown(
         '<div class="main-title">Power Rankings (Sistema ELO)</div>',
         unsafe_allow_html=True,
@@ -5059,23 +2744,22 @@ elif pagina == "🔮 Power Rankings":
     )
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🏆 Clasificación de Fuerza de Equipos (ELO)")
+    st.markdown("### Clasificación de Fuerza de Equipos (ELO)")
 
-    legend_html = """<div class="elo-legend-container" style="background: rgba(0, 200, 255, 0.04); border: 1px solid rgba(0, 200, 255, 0.15); border-radius: 12px; padding: 16px; margin-bottom: 20px; font-family: 'Inter', sans-serif;">
+    legend_html = """<div class="elo-legend-container" style="background: rgba(255, 106, 0, 0.04); border: 1px solid rgba(255, 106, 0, 0.15); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-<span style="font-size: 1.3rem;">📚</span>
-<h4 style="margin: 0; color: #00c8ff; font-weight: 700; font-size: 1.05rem;">Leyenda y Funcionamiento del Sistema ELO</h4>
+<h4 style="margin: 0; color: #ff6a00; font-weight: 700; font-size: 1.05rem;">Leyenda y Funcionamiento del Sistema ELO</h4>
 </div>
-<p style="margin: 0 0 12px 0; font-size: 0.85rem; color: #d8eef8; line-height: 1.45;">
+<p style="margin: 0 0 12px 0; font-size: 0.85rem; color: #f2f2f2; line-height: 1.45;">
 El <strong>Sistema ELO</strong> es un método matemático de clasificación que calcula la fuerza competitiva relativa de cada equipo de forma dinámica.
 Todos los equipos inician con una base neutral de <strong>1500 puntos</strong>. Tras cada partido, el equipo ganador sustrae puntos al perdedor según la expectativa previa de victoria (vencer a un rival más fuerte otorga más puntos). Se incluye una ventaja de localía de <strong>+24 puntos</strong> para el equipo de casa en la evaluación de cada encuentro.
 </p>
 <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.75rem; font-weight: 700;">
-<span style="background: rgba(0, 230, 118, 0.12); color: #00e676; border: 1px solid rgba(0, 230, 118, 0.25); padding: 4px 8px; border-radius: 6px;">🔥 Elite (&ge; 1580)</span>
-<span style="background: rgba(0, 200, 255, 0.12); color: #00c8ff; border: 1px solid rgba(0, 200, 255, 0.25); padding: 4px 8px; border-radius: 6px;">💪 Fuerte (1520 - 1579)</span>
-<span style="background: rgba(251, 191, 36, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.25); padding: 4px 8px; border-radius: 6px;">📊 Competitivo (1480 - 1519)</span>
-<span style="background: rgba(244, 63, 94, 0.12); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.25); padding: 4px 8px; border-radius: 6px;">⚠️ En Desarrollo (1420 - 1479)</span>
-<span style="background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); padding: 4px 8px; border-radius: 6px;">📉 En Reconstrucción (&lt; 1420)</span>
+<span style="background: rgba(61, 220, 132, 0.12); color: #3ddc84; border: 1px solid rgba(61, 220, 132, 0.25); padding: 4px 8px; border-radius: 6px;">Elite (&ge; 1580)</span>
+<span style="background: rgba(255, 106, 0, 0.12); color: #ff6a00; border: 1px solid rgba(255, 106, 0, 0.25); padding: 4px 8px; border-radius: 6px;">Fuerte (1520 - 1579)</span>
+<span style="background: rgba(255, 176, 0, 0.12); color: #ffb000; border: 1px solid rgba(255, 176, 0, 0.25); padding: 4px 8px; border-radius: 6px;">Competitivo (1480 - 1519)</span>
+<span style="background: rgba(255, 59, 59, 0.12); color: #ff3b3b; border: 1px solid rgba(255, 59, 59, 0.25); padding: 4px 8px; border-radius: 6px;">En Desarrollo (1420 - 1479)</span>
+<span style="background: rgba(138, 138, 138, 0.12); color: #8a8a8a; border: 1px solid rgba(138, 138, 138, 0.25); padding: 4px 8px; border-radius: 6px;">En Reconstrucción (&lt; 1420)</span>
 </div>
 </div>"""
     st.markdown("".join([line.strip() for line in legend_html.splitlines()]), unsafe_allow_html=True)
@@ -5085,10 +2769,10 @@ Todos los equipos inician con una base neutral de <strong>1500 puntos</strong>. 
         elo_table_html = render_power_rankings_table_html(elo_list)
         st.markdown(elo_table_html, unsafe_allow_html=True)
     else:
-        st.warning("⚠️ No se pudieron cargar los Power Rankings ELO.")
+        st.warning("No se pudieron cargar los Power Rankings ELO.")
 
     st.markdown("<br>", unsafe_allow_html=True)
-    with st.expander("📚 ¿Cómo interpretar la clasificación ELO y sus niveles?"):
+    with st.expander("¿Cómo interpretar la clasificación ELO y sus niveles?"):
         st.markdown("""
         El **Sistema ELO** es un método matemático para calcular la fuerza competitiva relativa de los equipos:
 
@@ -5097,19 +2781,19 @@ Todos los equipos inician con una base neutral de <strong>1500 puntos</strong>. 
         * **Calidad de Oposición:** Si un equipo de bajo nivel vence a uno de nivel alto (sorpresa), la transferencia de puntos es mucho mayor.
         * **Ventaja de Localía (+24 pts):** Al evaluar un partido, al equipo de casa se le suman artificialmente 24 puntos de ELO para representar la ventaja estadística de jugar en su estadio.
 
-        #### 🎖️ Niveles de Clasificación (Tiers):
-        * 🔥 **Elite (≥ 1580):** Contendientes indiscutibles al campeonato. Rendimiento dominante y rachas de victorias constantes.
-        * 💪 **Fuerte (1520 - 1579):** Equipos muy sólidos con altas probabilidades de clasificar a postemporada.
-        * 📊 **Competitivo (1480 - 1519):** Equipos de nivel medio, capaces de pelear por puestos de comodín (*Wild Card*).
-        * ⚠️ **En Desarrollo (1420 - 1479):** Equipos en transición con problemas de consistencia o rachas negativas.
-        * 📉 **En Reconstrucción (< 1420):** Equipos en la parte baja de la tabla, enfocados en desarrollar talento joven.
+        #### Niveles de Clasificación (Tiers):
+        * **Elite (≥ 1580):** Contendientes indiscutibles al campeonato. Rendimiento dominante y rachas de victorias constantes.
+        * **Fuerte (1520 - 1579):** Equipos muy sólidos con altas probabilidades de clasificar a postemporada.
+        * **Competitivo (1480 - 1519):** Equipos de nivel medio, capaces de pelear por puestos de comodín (*Wild Card*).
+        * **En Desarrollo (1420 - 1479):** Equipos en transición con problemas de consistencia o rachas negativas.
+        * **En Reconstrucción (< 1420):** Equipos en la parte baja de la tabla, enfocados en desarrollar talento joven.
         """)
 
 # ============================================================================
 # PÁGINA: RENDIMIENTO DEL MODELO
 # ============================================================================
 
-elif pagina == "📈 Rendimiento del Modelo":
+elif pagina == "Rendimiento":
     st.markdown(
         '<div class="main-title">Rendimiento del Modelo</div>',
         unsafe_allow_html=True,
@@ -5170,7 +2854,7 @@ elif pagina == "📈 Rendimiento del Modelo":
                 df_dash["Fecha_Original"] = pd.to_datetime(df_dash["Fecha"])
                 df_dash["Fecha"] = df_dash["Fecha_Original"].dt.date
 
-                st.markdown("### 📅 Filtro de Fechas")
+                st.markdown("### Filtro de Fechas")
                 min_date = df_dash["Fecha"].min()
                 max_date = df_dash["Fecha"].max()
 
@@ -5194,7 +2878,7 @@ elif pagina == "📈 Rendimiento del Modelo":
                         st.session_state.resultados_page = 1
 
                     st.markdown("---")
-                    st.markdown("### 🏟️ Resultados por Partido")
+                    st.markdown("### Resultados por Partido")
 
                     # Crear DataFrame formateado para mostrar al usuario
                     df_display = df_filtered.copy()
@@ -5240,20 +2924,19 @@ elif pagina == "📈 Rendimiento del Modelo":
                     col_pag1, col_pag2, col_pag3 = st.columns([1, 2, 1])
 
                     # Obtener colores e información del tema para la paginación
-                    theme_act = "Oscuro" if "theme_selector" in st.session_state and "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
-                    text_color_pag = "#90cce8" if theme_act == "Oscuro" else "#64748b"
+                    text_color_pag = "#a3a3a3"
 
                     with col_pag1:
                         if st.session_state.resultados_page > 1:
-                            if st.button("⬅️ Anterior", key="btn_prev_page", use_container_width=True):
+                            if st.button("Anterior", key="btn_prev_page", use_container_width=True):
                                 st.session_state.resultados_page -= 1
                                 st.rerun()
                         else:
-                            st.button("⬅️ Anterior", key="btn_prev_page_disabled", disabled=True, use_container_width=True)
+                            st.button("Anterior", key="btn_prev_page_disabled", disabled=True, use_container_width=True)
 
                     with col_pag2:
                         st.markdown(
-                            f"<div style='text-align: center; font-weight: bold; padding: 6px; color: {text_color_pag}; font-family: sans-serif; font-size: 0.85rem;'>"
+                            f"<div style='text-align: center; font-weight: bold; padding: 6px; color: {text_color_pag}; font-size: 0.85rem;'>"
                             f"Página {st.session_state.resultados_page} de {total_pages} (Mostrando {start_idx+1}-{end_idx} de {total_items} resultados)"
                             f"</div>",
                             unsafe_allow_html=True
@@ -5261,14 +2944,14 @@ elif pagina == "📈 Rendimiento del Modelo":
 
                     with col_pag3:
                         if st.session_state.resultados_page < total_pages:
-                            if st.button("Siguiente ➡️", key="btn_next_page", use_container_width=True):
+                            if st.button("Siguiente", key="btn_next_page", use_container_width=True):
                                 st.session_state.resultados_page += 1
                                 st.rerun()
                         else:
-                            st.button("Siguiente ➡️", key="btn_next_page_disabled", disabled=True, use_container_width=True)
+                            st.button("Siguiente", key="btn_next_page_disabled", disabled=True, use_container_width=True)
 
                     st.markdown("---")
-                    st.markdown("### 📈 Histórico de Tasa de Aciertos")
+                    st.markdown("### Histórico de Tasa de Aciertos")
 
                     col_agrup, _ = st.columns([1, 2])
                     with col_agrup:
@@ -5327,10 +3010,10 @@ elif pagina == "📈 Rendimiento del Modelo":
                             y=df_grouped["Tasa de Aciertos (%)"],
                             mode="lines+markers",
                             name="Tasa de Aciertos",
-                            line=dict(color="#3b82f6", width=4, shape="spline"),
-                            marker=dict(size=12, color="#1e40af", line=dict(color="white", width=2)),
+                            line=dict(color="#ff6a00", width=4, shape="spline"),
+                            marker=dict(size=12, color="#ff6a00", line=dict(color="white", width=2)),
                             fill="tozeroy",
-                            fillcolor="rgba(59, 130, 246, 0.1)",
+                            fillcolor="rgba(255, 106, 0, 0.1)",
                             hovertemplate="<b>%{x}</b><br>Tasa de Aciertos: %{y:.1f}%<br>Partidos: %{customdata[0]}<extra></extra>",
                             customdata=df_grouped[["Total"]],
                         )
@@ -5370,7 +3053,7 @@ elif pagina == "📈 Rendimiento del Modelo":
                     col_m1, col_m2 = st.columns(2)
 
                     with col_m1:
-                        st.markdown("### 🎯 Aciertos por Nivel de Confianza")
+                        st.markdown("### Aciertos por Nivel de Confianza")
 
                         df_conf = df_filtered.copy()
                         df_conf["Conf_Pct"] = df_conf["Confianza"]
@@ -5411,12 +3094,12 @@ elif pagina == "📈 Rendimiento del Modelo":
                         df_conf_grouped = df_conf_grouped.sort_values("Order")
 
                         colors_map = {
-                            "Baja (< 55%)": "#94a3b8",
-                            "Media (55% - 65%)": "#fbbf24",
-                            "Alta (65% - 75%)": "#3b82f6",
-                            "Muy Alta (≥ 75%)": "#10b981"
+                            "Baja (< 55%)": "#4a4a4a",
+                            "Media (55% - 65%)": "#8a8a8a",
+                            "Alta (65% - 75%)": "#ffb000",
+                            "Muy Alta (≥ 75%)": "#ff6a00"
                         }
-                        bar_colors = [colors_map.get(n, "#94a3b8") for n in df_conf_grouped["Nivel"]]
+                        bar_colors = [colors_map.get(n, "#8a8a8a") for n in df_conf_grouped["Nivel"]]
 
                         fig_conf = go.Figure()
                         fig_conf.add_trace(
@@ -5431,9 +3114,8 @@ elif pagina == "📈 Rendimiento del Modelo":
                             )
                         )
 
-                        theme_act = "Oscuro" if "theme_selector" in st.session_state and "🌙 Oscuro" in st.session_state.theme_selector else "Claro"
-                        grid_color = "rgba(255, 255, 255, 0.07)" if theme_act == "Oscuro" else "rgba(0, 0, 0, 0.07)"
-                        text_color = "#90cce8" if theme_act == "Oscuro" else "#1e293b"
+                        grid_color = "rgba(255, 255, 255, 0.07)"
+                        text_color = "#a3a3a3"
 
                         fig_conf.update_layout(
                             yaxis_title="Tasa de Aciertos (%)",
@@ -5455,7 +3137,7 @@ elif pagina == "📈 Rendimiento del Modelo":
                         st.plotly_chart(fig_conf, use_container_width=True)
 
                     with col_m2:
-                        st.markdown("### 🏟️ Precisión por Equipo")
+                        st.markdown("### Precisión por Equipo")
 
                         # Analizar la tasa de acierto cada vez que juega un equipo
                         df_home = df_filtered[["Home", "Acierto_Num"]].rename(columns={"Home": "Equipo"})
@@ -5485,7 +3167,7 @@ elif pagina == "📈 Rendimiento del Modelo":
                             df_show = df_team_acc.sort_values("Tasa (%)", ascending=True)
 
                         colors = [
-                            "#ef4444" if x < 50 else ("#10b981" if x >= 60 else "#3b82f6") for x in df_show["Tasa (%)"]
+                            "#ff3b3b" if x < 50 else ("#3ddc84" if x >= 60 else "#ffb000") for x in df_show["Tasa (%)"]
                         ]
 
                         fig_team = go.Figure()
@@ -5521,28 +3203,22 @@ elif pagina == "📈 Rendimiento del Modelo":
                         )
                         st.plotly_chart(fig_team, use_container_width=True)
                 else:
-                    st.info("ℹ️ Por favor, selecciona un rango de fechas válido (fecha inicio y fecha fin).")
+                    st.info("Por favor, selecciona un rango de fechas válido (fecha inicio y fecha fin).")
 
             else:
-                st.info("ℹ️ No hay datos históricos disponibles en la base de datos para mostrar los dashboards.")
+                st.info("No hay datos históricos disponibles en la base de datos para mostrar los dashboards.")
     except Exception as e:
-        st.error(f"❌ Error al cargar los datos para los dashboards: {str(e)}")
+        st.error(f"Error al cargar los datos para los dashboards: {str(e)}")
 
     # ============================================================================
     # PÁGINA: ACERCA DEL MODELO
     # ============================================================================
 
-elif pagina == "🧠 Acerca del Modelo":
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image(
-            "https://www.mlbstatic.com/team-logos/league-on-dark/1.svg",
-            use_container_width=True,
-        )
-
-    st.markdown('<div class="main-title">MLB Predictor Pro V4.0</div>', unsafe_allow_html=True)
+elif pagina == "Acerca del modelo":
+    st.markdown(f'<div class="about-hero">{LOGO_SVG}</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">MLB Predictor</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="subtitle">Sistema Híbrido de Predicción con Machine Learning (Optuna & MLB API)</div>',
+        '<div class="subtitle">Predicción de partidos de la MLB con machine learning, entrenado con datos oficiales de la liga y reentrenado cada día.</div>',
         unsafe_allow_html=True,
     )
 
@@ -5555,7 +3231,7 @@ elif pagina == "🧠 Acerca del Modelo":
     st.markdown(
         """
     <div class="stats-card">
-        <h3> ¿Qué es MLB Predictor Pro?</h3>
+        <h3>¿Qué es MLB Predictor?</h3>
         <p style="font-size: 1.1rem; line-height: 1.8;">
             Sistema avanzado de predicción de partidos MLB que utiliza <strong>XGBoost</strong>
             y <strong>web scraping en tiempo real</strong> para analizar más de 26 características
@@ -5608,7 +3284,7 @@ elif pagina == "🧠 Acerca del Modelo":
     with col1:
         st.markdown(
             """
-        <div class="stats-card" style="border-left-color: #667eea;">
+        <div class="stats-card" style="border-left-color: #ff6a00;">
             <h4> Neutralización</h4>
             <p style="font-size: 1rem; line-height: 1.6;">
                 Mide cómo el <strong>WHIP del lanzador</strong> neutraliza el
@@ -5622,7 +3298,7 @@ elif pagina == "🧠 Acerca del Modelo":
     with col2:
         st.markdown(
             """
-        <div class="stats-card" style="border-left-color: #f093fb;">
+        <div class="stats-card" style="border-left-color: #ffb000;">
             <h4> Resistencia</h4>
             <p style="font-size: 1rem; line-height: 1.6;">
                 Evalúa la capacidad del lanzador de mantener su <strong>ERA bajo presión</strong>
@@ -5636,7 +3312,7 @@ elif pagina == "🧠 Acerca del Modelo":
     with col3:
         st.markdown(
             """
-        <div class="stats-card" style="border-left-color: #a8edea;">
+        <div class="stats-card" style="border-left-color: #3ddc84;">
             <h4> Muro Bullpen</h4>
             <p style="font-size: 1rem; line-height: 1.6;">
                 Analiza la efectividad del <strong>bullpen</strong> contra los
@@ -5665,7 +3341,7 @@ elif pagina == "🧠 Acerca del Modelo":
 
     badges_html = " ".join(
         [
-            f'<span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin: 0.25rem;">{tech}</span>'
+            f'<span class="badge">{tech}</span>'
             for tech in tech_badges
         ]
     )
@@ -5686,7 +3362,7 @@ elif pagina == "🧠 Acerca del Modelo":
 
     st.markdown("---")
     st.info("""
-    ⚠️ Este sistema es una herramienta estadística para análisis y entretenimiento.
+    Este sistema es una herramienta estadística para análisis y entretenimiento.
     El béisbol es inherentemente impredecible. No utilices estas predicciones para apuestas deportivas.
     """)
 
@@ -5697,16 +3373,10 @@ elif pagina == "🧠 Acerca del Modelo":
 st.markdown("---")
 st.markdown(
     """
-<div style="text-align: center; color: #64748b; padding: 2rem 0;">
-    <p style="margin: 0; font-size: 1rem;">
-        <strong>MLB Predictor Pro V4.0</strong> | 2026
-    </p>
-    <p style="margin: 0.5rem 0; font-size: 0.9rem;">
-        Datos: API Oficial de la MLB (statsapi.mlb.com) | Powered by XGBoost, Optuna & FastAPI
-    </p>
-    <p style="margin: 0.5rem 0; font-size: 0.85rem;">
-        🔄 Actualización automática vía GitHub Actions
-    </p>
+<div class="site-footer">
+    <div><b>MLB Predictor</b> 2026. Modelo V4.0.</div>
+    <div>Datos de la API oficial de la MLB. Actualización automática diaria.</div>
+    <div>Herramienta estadística y de entretenimiento. No es asesoría de apuestas.</div>
 </div>
 """,
     unsafe_allow_html=True,

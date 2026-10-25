@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MLB Predictor">
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="32.0" cy="32.0" r="27.0" fill="none" stroke="#ff6a00" stroke-width="2.6" filter="url(#glow)"/>
+  <path d="M 13.5 10.5 C 26.0 21.0, 26.0 43.0, 13.5 53.5" fill="none" stroke="#ff6a00" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="19.55" y1="13.53" x2="15.65" y2="16.33" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="22.74" y1="19.24" x2="18.32" y2="21.10" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="24.64" y1="25.49" x2="19.93" y2="26.41" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="25.27" y1="32.00" x2="20.48" y2="32.00" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="24.64" y1="38.51" x2="19.93" y2="37.59" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="22.74" y1="44.76" x2="18.32" y2="42.90" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="19.55" y1="50.47" x2="15.65" y2="47.67" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 50.5 10.5 C 38.0 21.0, 38.0 43.0, 50.5 53.5" fill="none" stroke="#ff6a00" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="48.35" y1="16.33" x2="44.45" y2="13.53" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="45.68" y1="21.10" x2="41.26" y2="19.24" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="44.07" y1="26.41" x2="39.36" y2="25.49" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="43.52" y1="32.00" x2="38.73" y2="32.00" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="44.07" y1="37.59" x2="39.36" y2="38.51" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="45.68" y1="42.90" x2="41.26" y2="44.76" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="48.35" y1="47.67" x2="44.45" y2="50.47" stroke="#ff6a00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 22 41 L 29 35 L 34 37.5 L 42 24" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="42" cy="24" r="2.6" fill="#ff6a00" stroke="#000" stroke-width="1" filter="url(#glow)"/>
+</svg>
