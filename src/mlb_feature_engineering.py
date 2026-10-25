@@ -4,10 +4,182 @@ Centraliza el cálculo de features para garantizar consistencia
 entre entrenamiento y predicción
 """
 
+import os
+
 import numpy as np
 import pandas as pd
 
-from mlb_config import MODEL_FEATURES, SCRAPING_FEATURES, SUPER_FEATURES
+from mlb_config import (
+    DESCANSO_MAX_DIAS,
+    ELO_CARRYOVER,
+    ELO_HOME_ADVANTAGE,
+    ELO_K,
+    MODEL_FEATURES,
+    PARTIDOS_HISTORICOS_PATH,
+    SCRAPING_FEATURES,
+    SUPER_FEATURES,
+    get_team_code,
+)
+
+COLUMNAS_PARTIDO = ["game_id", "fecha", "year", "home_team", "away_team", "home_pitcher", "away_pitcher", "score_home", "score_away", "ganador"]
+
+
+def cargar_partidos_historicos(path=PARTIDOS_HISTORICOS_PATH):
+    if not os.path.exists(path):
+        return pd.DataFrame(columns=COLUMNAS_PARTIDO)
+    return pd.read_csv(path, dtype={"fecha": str, "game_id": str})[COLUMNAS_PARTIDO]
+
+
+def _clave_partido(df):
+    """fecha + códigos de equipo: identifica un partido aunque el game_id tenga otro formato."""
+    code = lambda t: get_team_code(t) or str(t).strip().upper()  # noqa: E731
+    return df["fecha"].str[:10] + "_" + df["home_team"].map(code) + "_" + df["away_team"].map(code)
+
+
+def unir_partidos(historico_real, partidos_historicos):
+    """Temporadas pasadas del CSV + partidos de historico_real que no estén ya en él, sin duplicados."""
+    real = historico_real.dropna(subset=["ganador"]).copy()
+    hist = partidos_historicos.copy()
+    if len(hist):
+        real = real[~_clave_partido(real).isin(set(_clave_partido(hist)))]
+    df = pd.concat([hist, real[COLUMNAS_PARTIDO]], ignore_index=True)
+    df = df.drop_duplicates("game_id", keep="last").sort_values(["fecha", "game_id"], kind="stable").reset_index(drop=True)
+    df["year"] = df["year"].astype(int)
+    df["ganador"] = df["ganador"].astype(int)
+    return df
+
+
+FEATURES_CRONOLOGICAS = [
+    "home_win_rate_10", "home_racha", "home_runs_avg", "home_runs_diff",
+    "away_win_rate_10", "away_racha", "away_runs_avg", "away_runs_diff",
+    "home_elo", "away_elo", "diff_elo", "home_descanso", "away_descanso",
+]
+
+
+class TrackerCronologico:
+    """
+    Recorre los partidos en orden y, para cada uno, da las features que solo dependen de lo
+    ocurrido ANTES: tendencias de la temporada, ELO y días de descanso.
+
+    Es la única implementación: el entrenamiento recorre todo el histórico con `registrar`
+    y la inferencia recorre los partidos anteriores al que se predice. Así no hay desfase
+    entre lo que ve el modelo al entrenar y al predecir.
+
+    - ELO: K=20, +24 de localía; al cambiar de temporada regresa un tercio hacia 1500, de
+      modo que la fuerza del año anterior sirve de prior en abril.
+    - Descanso: días desde el último partido del equipo en la temporada, topado en 7.
+    """
+
+    def __init__(self):
+        self.elo = {}
+        self.temporada = {}
+        self.ultima_fecha = {}
+        self.historial = {}
+
+    @staticmethod
+    def _code(team):
+        return get_team_code(team) or str(team).strip().upper()
+
+    def _elo_previo(self, code, year):
+        elo = self.elo.get(code, 1500.0)
+        if self.temporada.get(code) not in (None, year):
+            elo = 1500.0 + (elo - 1500.0) * ELO_CARRYOVER
+        return elo
+
+    def _descanso(self, code, year, fecha):
+        if self.temporada.get(code) != year or code not in self.ultima_fecha:
+            return DESCANSO_MAX_DIAS
+        return int(min((fecha - self.ultima_fecha[code]).days, DESCANSO_MAX_DIAS))
+
+    @staticmethod
+    def _tendencias(hist):
+        if not hist:
+            return 0.5, 0, 4.5, 0.0
+        rec = hist[-10:]
+        wr10 = sum(g["ganado"] for g in rec) / len(rec)
+        ravg = sum(g["runs_sc"] for g in rec) / len(rec)
+        rdiff = (sum(g["runs_sc"] for g in rec) - sum(g["runs_al"] for g in rec)) / len(rec)
+        ultimo = hist[-1]["ganado"]
+        racha = 0
+        for g in reversed(hist):
+            if g["ganado"] != ultimo:
+                break
+            racha += 1
+        return wr10, (racha if ultimo else -racha), ravg, rdiff
+
+    def features_previas(self, home_team, away_team, fecha, year):
+        year = int(year)
+        fecha = pd.Timestamp(fecha)
+        h, a = self._code(home_team), self._code(away_team)
+        th, ta = self._tendencias(self.historial.get((h, year), [])), self._tendencias(self.historial.get((a, year), []))
+        eh, ea = self._elo_previo(h, year), self._elo_previo(a, year)
+        return {
+            "home_win_rate_10": th[0], "home_racha": th[1], "home_runs_avg": th[2], "home_runs_diff": th[3],
+            "away_win_rate_10": ta[0], "away_racha": ta[1], "away_runs_avg": ta[2], "away_runs_diff": ta[3],
+            "home_elo": eh, "away_elo": ea, "diff_elo": eh - ea,
+            "home_descanso": self._descanso(h, year, fecha), "away_descanso": self._descanso(a, year, fecha),
+        }
+
+    def registrar(self, home_team, away_team, fecha, year, ganador, score_home=0, score_away=0):
+        year = int(year)
+        fecha = pd.Timestamp(fecha)
+        h, a = self._code(home_team), self._code(away_team)
+        eh, ea = self._elo_previo(h, year), self._elo_previo(a, year)
+        esperado_home = 1.0 / (10.0 ** (-(eh + ELO_HOME_ADVANTAGE - ea) / 400.0) + 1.0)
+        s_home = 1.0 if int(ganador) == 1 else 0.0
+        self.elo[h] = eh + ELO_K * (s_home - esperado_home)
+        self.elo[a] = ea + ELO_K * ((1.0 - s_home) - (1.0 - esperado_home))
+        self.temporada[h] = self.temporada[a] = year
+        self.ultima_fecha[h] = self.ultima_fecha[a] = fecha
+        sh, sa = float(score_home or 0), float(score_away or 0)
+        self.historial.setdefault((h, year), []).append({"ganado": s_home == 1.0, "runs_sc": sh, "runs_al": sa})
+        self.historial.setdefault((a, year), []).append({"ganado": s_home == 0.0, "runs_sc": sa, "runs_al": sh})
+
+    def registrar_dataframe(self, df, hasta_fecha=None):
+        """Registra los partidos con resultado de `df` (opcionalmente solo los anteriores a `hasta_fecha`)."""
+        if df is None or len(df) == 0:
+            return self
+        d = df.dropna(subset=["ganador"]).copy()
+        d["fecha"] = pd.to_datetime(d["fecha"], errors="coerce")
+        d = d.dropna(subset=["fecha"])
+        if hasta_fecha is not None:
+            d = d[d["fecha"] < pd.Timestamp(hasta_fecha)]
+        d = d.sort_values("fecha", kind="stable")
+        for r in d.itertuples(index=False):
+            year = getattr(r, "year", None) or r.fecha.year
+            self.registrar(r.home_team, r.away_team, r.fecha, year, r.ganador,
+                           getattr(r, "score_home", 0), getattr(r, "score_away", 0))
+        return self
+
+
+_HISTORIA_CACHE = {}
+
+
+def historia_para_tracker(df_historico_real):
+    """
+    Historia que alimenta al TrackerCronologico en inferencia: temporadas pasadas del CSV +
+    historico_real, unidas igual que en el entrenamiento (así el ELO coincide).
+    El CSV se lee una vez por proceso.
+    """
+    if "hist" not in _HISTORIA_CACHE:
+        _HISTORIA_CACHE["hist"] = cargar_partidos_historicos()
+    real = df_historico_real if df_historico_real is not None else pd.DataFrame(columns=COLUMNAS_PARTIDO)
+    for col in COLUMNAS_PARTIDO:
+        if col not in real.columns:
+            real = real.assign(**{col: None})
+    real = real.assign(year=pd.to_numeric(real["year"], errors="coerce").fillna(pd.to_datetime(real["fecha"], errors="coerce").dt.year))
+    real = real.dropna(subset=["year", "ganador"])
+    return unir_partidos(real, _HISTORIA_CACHE["hist"])
+
+
+def features_cronologicas_dataset(df):
+    """Features cronológicas de cada fila de `df` (ordenado por fecha), sin mirar el futuro."""
+    tracker = TrackerCronologico()
+    filas = []
+    for r in df.itertuples(index=False):
+        filas.append(tracker.features_previas(r.home_team, r.away_team, r.fecha, r.year))
+        tracker.registrar(r.home_team, r.away_team, r.fecha, r.year, r.ganador, r.score_home, r.score_away)
+    return pd.DataFrame(filas, columns=FEATURES_CRONOLOGICAS)
 
 
 def preparar_matriz_modelo(df, features=None, nan_missing=True):

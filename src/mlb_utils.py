@@ -543,53 +543,22 @@ def extraer_features_hibridas(row, df_historico=None, hacer_scraping=False, sess
                     hacer_scraping = False
                     break
 
-    # 1.1 Ingestar ELO ratings dinámicamente desde SQLite (Siempre disponible)
-    from mlb_config import get_team_code
-    h_code = get_team_code(row["home_team"])
-    a_code = get_team_code(row["away_team"])
+    # 1. FEATURES CRONOLÓGICAS (tendencias, ELO con arrastre entre temporadas y descanso):
+    #    el mismo TrackerCronologico que usa el entrenamiento, alimentado solo con partidos anteriores.
+    from mlb_feature_engineering import TrackerCronologico, historia_para_tracker
 
-    h_elo = 1500.0
-    a_elo = 1500.0
+    fecha_dt = pd.to_datetime(row["fecha"])
+    year_row = safe_int(row.get("year")) or fecha_dt.year
+    tracker = TrackerCronologico().registrar_dataframe(historia_para_tracker(df_historico), hasta_fecha=fecha_dt)
+    features.update(tracker.features_previas(row["home_team"], row["away_team"], fecha_dt, year_row))
 
-    if os.path.exists(DB_PATH):
-        try:
-            with sqlite3.connect(DB_PATH) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='team_elo'")
-                if cursor.fetchone():
-                    cursor.execute("SELECT team_code, elo FROM team_elo")
-                    elo_rows = cursor.fetchall()
-                    elo_map = {r[0]: r[1] for r in elo_rows}
-                    if h_code in elo_map:
-                        h_elo = elo_map[h_code]
-                    if a_code in elo_map:
-                        a_elo = elo_map[a_code]
-        except Exception:
-            pass
-
-    features["home_elo"] = h_elo
-    features["away_elo"] = a_elo
-    features["diff_elo"] = h_elo - a_elo
-
-    # 1. TENDENCIAS TEMPORALES
-    if df_historico is not None:
-        fecha_dt = pd.to_datetime(row["fecha"])
-
+    # 1.1 Récord de temporada (solo informativo para el dashboard)
+    if df_historico is not None and len(df_historico):
         trend_h = calcular_tendencias_equipo(df_historico, row["home_team"], fecha_dt, ventana=10)
         trend_a = calcular_tendencias_equipo(df_historico, row["away_team"], fecha_dt, ventana=10)
-
-        features["home_win_rate_10"] = trend_h.get("victorias_recientes", 0.5)
         features["home_win_rate_season"] = trend_h.get("win_rate_season", 0.5)
-        features["home_racha"] = trend_h.get("racha_actual", 0)
-        features["home_runs_avg"] = trend_h.get("carreras_anotadas_avg", 4.5)
-        features["home_runs_diff"] = trend_h.get("diferencial_carreras", 0)
         features["home_season_record"] = f"{trend_h.get('wins_season', 0)}-{trend_h.get('losses_season', 0)}"
-
-        features["away_win_rate_10"] = trend_a.get("victorias_recientes", 0.5)
         features["away_win_rate_season"] = trend_a.get("win_rate_season", 0.5)
-        features["away_racha"] = trend_a.get("racha_actual", 0)
-        features["away_runs_avg"] = trend_a.get("carreras_anotadas_avg", 4.5)
-        features["away_runs_diff"] = trend_a.get("diferencial_carreras", 0)
         features["away_season_record"] = f"{trend_a.get('wins_season', 0)}-{trend_a.get('losses_season', 0)}"
 
     # 2. PETICIONES A LA API DE MLB EN LUGAR DE SCRAPING DE BASEBALL-REFERENCE
