@@ -166,6 +166,8 @@ El reentrenamiento (`src/train_model.py` → `src/mlb_training.py`) compara el m
   | Mercado al publicar | 56.4% | 57.3 | 55.6 | 56.3 | 0.6791 |
   | CatBoost 38 variables (receta del champion) | 55.3% | 55.4 | 54.9 | 55.6 | 0.6852 |
 
+  También se probaron, sin mejora significativa, la calidad de la alineación titular (wOBA de los 9 titulares y su diferencia con la alineación habitual: +0.2 pts, p=0.76; además muchas alineaciones no están publicadas a la hora de predecir), ELO, descanso, forma reciente del abridor, cansancio del bullpen, pesos por recencia distintos, regresión sobre el margen y logística con las 38 variables. El registro de bateadores titulares queda en `data/batting_logs.csv.gz` (`src/mlb_batting_logs.py`) para experimentos futuros.
+
   Una auditoría independiente confirmó que las estadísticas históricas no tienen fugas (coinciden con los datos hasta el día anterior en el 100% de los casos recalculados).
 * **Probabilidad publicada:** media en escala logit de los miembros disponibles del conjunto (`ENSEMBLE_MIEMBROS` en `mlb_config.py`): el CatBoost champion, la logística sabermétrica (`src/mlb_sabermetria.py`: pitagórica, FIP del abridor a 365 días, FIP del bullpen a 30 días, carreras anotadas/recibidas, todo con regresión a la media) y la probabilidad del mercado. Cada predicción guarda `prob_modelo`, `prob_saber` y `prob_mercado`; el reentrenamiento juzga al champion con `prob_modelo`. La logística se reentrena en cada ejecución del job semanal (`models/modelo_saber.pkl` + `modelo_saber.json`).
 * **Pesos por recencia:** temporada en curso `2.5`, temporada anterior `1.3`, resto `1.0`.
