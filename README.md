@@ -149,7 +149,8 @@ El reentrenamiento (`src/train_model.py` → `src/mlb_training.py`) compara el m
 * **Challenger:** CatBoost optimizado con Optuna (20 trials, validación expansiva por fecha) usando únicamente partidos anteriores a la ventana; se evalúa en la ventana.
 * **Promoción:** solo si el challenger mejora el *log loss* y no pierde más de 1 punto de accuracy. Entonces se reentrena con todos los datos y se escribe `models/model_card.json` (versión, fecha de corte, features, parámetros y métricas). Cada evaluación queda en `models/training_log.jsonl`.
 * **Cadencia:** lunes a las 09:00 UTC si pasaron ≥ 7 días desde el último entrenamiento y hay ≥ 50 partidos nuevos; `python train_model.py --forzar` lo ignora y `--solo-evaluar` solo mide.
-* **Datos:** ~4,900 partidos (2023-2026). Las estadísticas de la API de las temporadas pasadas viven en `data/features_historicas.csv` (texto versionado); el entrenamiento aborta si faltan. Los ceros en estadísticas (dato no disponible) se tratan como valores faltantes, igual en entrenamiento y en inferencia.
+* **Datos:** ~12,000 partidos (2022-2026). Las temporadas pasadas completas viven en `data/partidos_historicos.csv` y sus estadísticas de la API (al día anterior de cada partido) en `data/features_historicas.csv`, como texto versionado; el entrenamiento aborta si faltan. Los ceros en estadísticas (dato no disponible) se tratan como valores faltantes, igual en entrenamiento y en inferencia.
+* **Regla para variables nuevas:** solo entran al modelo si ganan la prueba en igualdad de condiciones (entrenar con lo jugado hasta una fecha y evaluar en los partidos posteriores frente a lo que publicó el champion). Así se descartaron el ELO y los días de descanso en 2026 (bajaron el acierto de 57.7% a 56.4%); se siguen calculando para el dashboard.
 * **Pesos por recencia:** temporada en curso `2.5`, temporada anterior `1.3`, resto `1.0`.
 * **Predicciones inmutables:** cada predicción guarda `model_version` y `generated_at`. Si un partido ya tiene resultado, su predicción publicada no se vuelve a escribir: cualquier re-puntuación va a `predicciones_rescore`.
 
@@ -196,7 +197,19 @@ POST /predict/detailed    → Análisis predictivo estadístico profundo (Caché
 GET  /compare/{fecha}     → Validación cruzada de predicciones vs. resultados reales
 GET  /results             → Historial acumulado con accuracy
 GET  /stats/accuracy      → Métricas e indicadores globales de desempeño
+GET  /stats/salud         → Salud del modelo: acierto reciente vs. "mejor récord" y "local" (ok / vigilar / alerta)
+GET  /simulacion/playoffs → Probabilidad de cada equipo de clasificar, ganar división, liga y Serie Mundial
 ```
+
+### Datos que se recogen a diario
+
+| Archivo | Qué contiene | Cuándo |
+|---|---|---|
+| `data/pitching_logs.csv.gz` | Una fila por lanzador y partido (boxscores de la API): base de la forma del abridor y el cansancio del bullpen | Tras los resultados (07:00 UTC) |
+| `data/cuotas_mercado.csv` | Probabilidad implícita del mercado sin margen (BetMGM y FanDuel vía la API de la MLB); solo datos derivados, sin cuotas en bruto | 12:00, 16:00 y 22:30 UTC |
+| `data/simulacion_playoffs.json` | Última simulación de temporada y playoffs (10,000 iteraciones, fuerza ELO) | Tras los resultados |
+
+Los crons solo corren de marzo a noviembre; fuera de temporada los jobs se lanzan a mano.
 
 ### Dashboard Interactivo Streamlit (V4.5 UI Redesign)
 
