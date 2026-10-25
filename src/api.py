@@ -4,6 +4,7 @@ Endpoints para predicciones manuales, automáticas y análisis de rendimiento
 """
 
 import asyncio
+import json
 import os
 import sqlite3
 import sys
@@ -22,6 +23,8 @@ from pydantic import BaseModel, Field
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mlb_config import DB_PATH, TEAM_CODE_TO_NAME, get_team_code, get_team_name
 from mlb_predict_engine import predecir_juego
+from mlb_salud import calcular_salud
+from mlb_simulacion import SIMULACION_PATH
 
 # ============================================================================
 # CONFIGURACIÓN DE LA API
@@ -1225,6 +1228,27 @@ async def obtener_estadisticas_accuracy(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error calculando accuracy: {str(e)}") from e
+
+
+@app.get("/stats/salud")
+async def obtener_salud_modelo(
+    dias: int = Query(30, ge=7, le=180, description="Ventana en días para el estado"),
+):
+    """Acierto reciente del modelo frente a las referencias simples, con estado ok / vigilar / alerta."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            return calcular_salud(conn, ventana_dias=dias)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculando la salud del modelo: {str(e)}") from e
+
+
+@app.get("/simulacion/playoffs")
+async def obtener_simulacion_playoffs():
+    """Última simulación de temporada y playoffs: probabilidad de clasificar, división, liga y título."""
+    if not os.path.exists(SIMULACION_PATH):
+        raise HTTPException(status_code=404, detail="Todavía no hay simulación; se genera tras actualizar los resultados.")
+    with open(SIMULACION_PATH, encoding="utf-8") as f:
+        return json.load(f)
 
 
 @app.get("/stats/team/{team_code}")
