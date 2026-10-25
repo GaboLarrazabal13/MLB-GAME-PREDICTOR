@@ -7,14 +7,14 @@ sdk: docker
 pinned: false
 ---
 
-# ⚾ MLB Game Predictor V4.5
+# ⚾ MLB Game Predictor V5
 
-> Sistema de Machine Learning de grado de producción para la predicción de partidos de la Major League Baseball (MLB). Cuenta con un pipeline de datos 100% automatizado mediante la API Oficial de la MLB, API REST con FastAPI, dashboard interactivo con Streamlit, torneo local de modelos SOTA optimizados por Optuna, y un ciclo de vida MLOps robusto instrumentado localmente con MLflow (SQLite) promocionando a CatBoost como Champion definitivo.
+> Predicción de partidos de la MLB con un conjunto de tres miembros (CatBoost, regresión logística sabermétrica y probabilidad de mercado), validado mes a mes en 2024-2026 (57.0% de acierto frente a 55.3% del modelo anterior). Pipeline automatizado con la API oficial de la MLB y GitHub Actions, API REST con FastAPI, dashboard en Streamlit, reentrenamiento semanal champion/challenger con medición honesta, panel de salud y simulación diaria de playoffs.
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.127+-green.svg)](https://fastapi.tiangolo.com/)
 [![CatBoost](https://img.shields.io/badge/CatBoost-1.2.7+-blue.svg)](https://catboost.ai/)
-[![XGBoost](https://img.shields.io/badge/XGBoost-3.1.2-orange.svg)](https://xgboost.readthedocs.io/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8+-orange.svg)](https://scikit-learn.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.52.2-red.svg)](https://streamlit.io/)
 [![Docker](https://img.shields.io/badge/Docker-multi--stage-blue.svg)](https://www.docker.com/)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-black.svg)](https://github.com/features/actions)
@@ -42,7 +42,7 @@ pinned: false
 
 ## Acerca del Proyecto
 
-**MLB Game Predictor V4.0** es una plataforma autónoma e inteligente de análisis predictivo deportivo. Ingiere datos cronológicos diariamente de la **API oficial de estadísticas de la MLB**, calcula métricas de tendencias y super features complejas, y utiliza un modelo **XGBoost con optimización bayesiana en vivo (Optuna)** para predecir el ganador de cada encuentro con un nivel de confianza estadístico cuantificado.
+**MLB Game Predictor V5** es una plataforma autónoma de análisis predictivo. Ingiere a diario los datos de la **API oficial de estadísticas de la MLB** y publica para cada partido la media de tres miembros: un **CatBoost** con 38 variables (tendencias, estadísticas de equipo, abridores, bullpen y super features), una **regresión logística sabermétrica** con 7 variables (expectativa pitagórica, FIP del abridor y del bullpen, carreras por partido, todas con regresión a la media) y la **probabilidad implícita de las casas de apuestas** capturada antes del partido. Cada idea nueva se prueba con validación cronológica mes a mes antes de entrar al modelo; las que no mejoran (ELO, forma reciente del abridor, cansancio del bullpen, alineaciones...) quedan documentadas y descartadas.
 
 El sistema está diseñado bajo el principio de **Cero Fuga de Datos (Data Leakage Blindness)** y **Garantía de Calidad API-First**: las predicciones y entrenamientos se basan estrictamente en datos conocidos hasta el día anterior al partido, reflejando el rendimiento real y honesto del modelo en producción.
 
