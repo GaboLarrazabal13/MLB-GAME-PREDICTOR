@@ -15,7 +15,7 @@ import warnings
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mlb_config import DB_PATH
-from mlb_training import debe_entrenar, ejecutar_reentrenamiento, leer_model_card
+from mlb_training import debe_entrenar, ejecutar_reentrenamiento, entrenar_saber_produccion, leer_model_card
 
 warnings.filterwarnings("ignore")
 
@@ -27,6 +27,12 @@ def main():
     parser.add_argument("--forzar", action="store_true", help="Entrena aunque no toque por cadencia")
     parser.add_argument("--solo-evaluar", action="store_true", help="No guarda modelo ni model card")
     args = parser.parse_args()
+
+    if not args.solo_evaluar:
+        # El modelo sabermétrico se reentrena siempre: es la receta validada mes a mes (walk-forward)
+        _, card = entrenar_saber_produccion()
+        print(f"🧮 Modelo sabermétrico {card['version']}: {card['n_train']} partidos hasta {card['trained_through']}")
+        print(f"   coeficientes: {card['coeficientes_estandarizados']}")
 
     if not args.forzar and not args.solo_evaluar:
         with sqlite3.connect(DB_PATH) as conn:

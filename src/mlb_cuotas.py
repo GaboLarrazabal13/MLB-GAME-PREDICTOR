@@ -95,6 +95,17 @@ def combinar_probabilidades(p_modelo, p_mercado, peso_mercado=0.5):
     return 1.0 / (1.0 + math.exp(-z))
 
 
+def combinar_lista(probabilidades):
+    """Media en escala logit de las probabilidades no nulas (None si no hay ninguna)."""
+    import math
+
+    validas = [min(max(float(p), 1e-6), 1 - 1e-6) for p in probabilidades if p is not None]
+    if not validas:
+        return None
+    z = sum(math.log(p / (1 - p)) for p in validas) / len(validas)
+    return 1.0 / (1.0 + math.exp(-z))
+
+
 def prob_mercado_para(fecha, home_team, away_team, path=CUOTAS_PATH, ahora_utc=None):
     """
     Probabilidad del local según la captura más reciente anterior al inicio del partido (y a

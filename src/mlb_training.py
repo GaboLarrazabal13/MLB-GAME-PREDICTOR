@@ -407,3 +407,19 @@ def ejecutar_reentrenamiento(n_trials=20, dias_sombra=DIAS_SOMBRA, solo_evaluar=
 
     registrar_training_log(registro)
     return registro
+
+
+# ============================================================================
+# MODELO SABERMÉTRICO (miembro del conjunto, se reentrena cada semana)
+# ============================================================================
+def entrenar_saber_produccion(db_path=DB_PATH):
+    """Reentrena la logística sabermétrica con todos los partidos con resultado. Devuelve (modelo, ficha)."""
+    from mlb_config import PITCHING_LOGS_PATH
+    from mlb_sabermetria import entrenar_modelo_saber, features_sabermetricas_dataset
+
+    with sqlite3.connect(db_path) as conn:
+        real = pd.read_sql("SELECT * FROM historico_real WHERE ganador IS NOT NULL", conn)
+    df = unir_partidos(real, cargar_partidos_historicos())
+    logs = pd.read_csv(PITCHING_LOGS_PATH, dtype={"fecha": str})
+    dataset = pd.concat([df.reset_index(drop=True), features_sabermetricas_dataset(df, logs)], axis=1)
+    return entrenar_modelo_saber(dataset)

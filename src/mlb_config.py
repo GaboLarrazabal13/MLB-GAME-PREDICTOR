@@ -215,12 +215,15 @@ SUPER_FEATURES = [
 # posteriores) añadirlos bajó el acierto de 57.7% a 56.4%.
 FEATURES_EXPERIMENTALES = ["home_elo", "away_elo", "diff_elo", "home_descanso", "away_descanso"]
 
-# Probabilidad publicada = combinación del modelo con la probabilidad implícita del mercado
-# (media en escala logit). En la prueba de 2026 (1,611 partidos posteriores al 27-may) bajó el
-# log loss de 0.6803 a 0.6770 (p≈0.99) sin cambiar el acierto (58.2% → 58.1%). Sin cuota
-# disponible se publica solo el modelo. La forma reciente del abridor y el cansancio del bullpen
-# no mejoraron (57.7% → 56.8%) y no se usan.
-COMBINACION_MERCADO = {"activa": True, "peso_mercado": 0.5}
+# Probabilidad publicada = media en escala logit de los miembros disponibles del conjunto:
+#   catboost  el champion (38 variables)
+#   saber     regresión logística con 7 variables sabermétricas (mlb_sabermetria), reentrenada cada semana
+#   mercado   probabilidad implícita de las casas capturada antes de predecir
+# Validación cronológica mes a mes 2024-2026 (7,210 partidos, receta del CatBoost como sustituto del
+# champion): catboost 55.3% → catboost+saber+mercado 57.0%, mejor en cada año. Sin cuota o sin
+# modelo sabermétrico, se promedian los miembros que haya.
+# Descartados por las pruebas: ELO y descanso, forma reciente del abridor y cansancio del bullpen.
+ENSEMBLE_MIEMBROS = ("catboost", "saber", "mercado")
 MODEL_FEATURES = [f for f in TEMPORAL_FEATURES if f not in FEATURES_EXPERIMENTALES] + SCRAPING_FEATURES + SUPER_FEATURES
 
 
