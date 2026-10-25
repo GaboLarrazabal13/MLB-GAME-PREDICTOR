@@ -59,5 +59,5 @@ def test_tabla_antigua_gana_columnas_nuevas(conn):
     )
     guardar_prediccion(conn, _pred("2026-06-03", "CHC", "STL", 55.0))
     cols = {c[1] for c in conn.execute("PRAGMA table_info(predicciones_historico)")}
-    assert {"detalles", "model_version", "generated_at"} <= cols
+    assert {"detalles", "model_version", "generated_at", "prob_modelo", "prob_mercado"} <= cols
     assert conn.execute("SELECT model_version FROM predicciones_historico").fetchall() == [("v1",)]

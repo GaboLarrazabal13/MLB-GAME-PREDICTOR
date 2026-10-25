@@ -209,6 +209,7 @@ def predicciones_publicadas(conn, inicio, fin, version=None):
     """Predicciones que el champion publicó en la ventana (última por partido)."""
     cols = {r[1] for r in conn.execute("PRAGMA table_info(predicciones_historico)")}
     sel = "fecha, home_team, away_team, prob_home" + (", model_version" if "model_version" in cols else "")
+    sel += ", prob_modelo" if "prob_modelo" in cols else ""
     df = pd.read_sql(
         f"SELECT {sel} FROM predicciones_historico WHERE fecha BETWEEN ? AND ?", conn, params=[inicio, fin]
     )
@@ -217,7 +218,9 @@ def predicciones_publicadas(conn, inicio, fin, version=None):
     if version and "model_version" in df.columns:
         df = df[df["model_version"].isna() | (df["model_version"] == version)]
     df = df.drop_duplicates(["fecha", "home_team", "away_team"], keep="last")
-    df["p_home_champion"] = df["prob_home"].astype(float) / 100.0
+    # La probabilidad publicada puede ir combinada con el mercado; el champion se juzga como modelo puro
+    publicada = df["prob_modelo"].fillna(df["prob_home"]) if "prob_modelo" in df.columns else df["prob_home"]
+    df["p_home_champion"] = publicada.astype(float) / 100.0
     return df[["fecha", "home_team", "away_team", "p_home_champion"]]
 
 

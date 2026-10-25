@@ -151,6 +151,12 @@ El reentrenamiento (`src/train_model.py` → `src/mlb_training.py`) compara el m
 * **Cadencia:** lunes a las 09:00 UTC si pasaron ≥ 7 días desde el último entrenamiento y hay ≥ 50 partidos nuevos; `python train_model.py --forzar` lo ignora y `--solo-evaluar` solo mide.
 * **Datos:** ~12,000 partidos (2022-2026). Las temporadas pasadas completas viven en `data/partidos_historicos.csv` y sus estadísticas de la API (al día anterior de cada partido) en `data/features_historicas.csv`, como texto versionado; el entrenamiento aborta si faltan. Los ceros en estadísticas (dato no disponible) se tratan como valores faltantes, igual en entrenamiento y en inferencia.
 * **Regla para variables nuevas:** solo entran al modelo si ganan la prueba en igualdad de condiciones (entrenar con lo jugado hasta una fecha y evaluar en los partidos posteriores frente a lo que publicó el champion). Así se descartaron el ELO y los días de descanso en 2026 (bajaron el acierto de 57.7% a 56.4%); se siguen calculando para el dashboard.
+* **Pruebas de 2026** (1,611 partidos posteriores al 27-may, mismos datos de entrenamiento):
+  * ELO + días de descanso: 57.7% → 56.4%. Descartado como variable (se calcula para el dashboard).
+  * Forma reciente del abridor + cansancio del bullpen: 57.7% → 56.8%. Descartado (el registro de lanzadores se sigue guardando).
+  * Mercado de apuestas: nuestro modelo (58.2%) supera la línea de apertura (57.0%) e iguala la de cierre (58.3%).
+  * **Combinación modelo + mercado (50/50 en escala logit): log loss 0.6803 → 0.6770 (p≈0.99) con el mismo acierto. Adoptada.**
+* **Probabilidad publicada:** combinación del modelo con la probabilidad implícita del mercado capturada antes de predecir (`COMBINACION_MERCADO` en `mlb_config.py`); sin cuota, solo el modelo. Cada predicción guarda `prob_modelo` y `prob_mercado` por separado, y el reentrenamiento juzga al champion con `prob_modelo`.
 * **Pesos por recencia:** temporada en curso `2.5`, temporada anterior `1.3`, resto `1.0`.
 * **Predicciones inmutables:** cada predicción guarda `model_version` y `generated_at`. Si un partido ya tiene resultado, su predicción publicada no se vuelve a escribir: cualquier re-puntuación va a `predicciones_rescore`.
 
