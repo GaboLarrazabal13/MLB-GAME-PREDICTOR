@@ -23,10 +23,15 @@ jobs:
 
       - name: Configure Git LFS Tracking
         run: |
+          # Hugging Face rechaza cualquier binario fuera de LFS: incluir todos los formatos binarios del repo
           git lfs track "*.db"
           git lfs track "*.bin"
           git lfs track "*.pkl"
           git lfs track "*.png"
+          git lfs track "*.gz"
+          git lfs track "*.parquet"
+          git lfs track "*.jpg"
+          git lfs track "*.ico"
 
       - name: Create Clean Deploy Commit
         run: |
