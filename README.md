@@ -230,6 +230,8 @@ GET  /simulacion/playoffs → Probabilidad de cada equipo de clasificar, ganar d
 
 Los crons solo corren de marzo a noviembre; fuera de temporada los jobs se lanzan a mano.
 
+**La base de datos de producción (`data/mlb_reentrenamiento.db`) no está en git:** vive en el dataset de Hugging Face `GaboLarrazabal/mlb-game-predictor-data`. Cada job del workflow la descarga al empezar y la sube al terminar (`src/mlb_datos_remotos.py`); el Space, la API y el dashboard la descargan al arrancar si no la tienen. Para trabajar en local: `cd src && python mlb_datos_remotos.py descargar`.
+
 ### Dashboard Interactivo Streamlit (V4.5 UI Redesign)
 
 *   **Identidad Visual Premium:** Logos e insignias oficiales en tiempo real vía CDN para los 30 equipos de la MLB.

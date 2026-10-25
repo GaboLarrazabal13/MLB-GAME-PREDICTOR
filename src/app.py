@@ -29,6 +29,13 @@ except Exception as e:
     st.warning(f"Config fallback due to error: {e}")
 from vistas_sistema import render_salud_modelo, render_simulacion_playoffs
 
+try:  # la base de datos vive en un dataset de Hugging Face (Streamlit Cloud no la trae en el repo)
+    from mlb_datos_remotos import asegurar_db
+
+    asegurar_db()
+except Exception as _e:  # noqa: BLE001
+    print(f"Base de datos remota no disponible: {_e}")
+
 # ============================================================================
 # CONFIGURACIÓN
 # ============================================================================

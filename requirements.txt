@@ -12,6 +12,7 @@ mlflow>=2.14.0
 
 # API Connection
 requests>=2.32.5
+huggingface_hub>=0.24
 
 # API & Web App
 fastapi>=0.127.0

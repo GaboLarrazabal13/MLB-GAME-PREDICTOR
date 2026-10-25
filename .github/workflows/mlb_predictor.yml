@@ -75,6 +75,13 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: Descargar base de datos (dataset de Hugging Face)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd src
+          python mlb_datos_remotos.py descargar --forzar
+
       - name: Validar rango de fechas
         id: validate_range
         run: |
@@ -197,7 +204,10 @@ jobs:
           echo '${{ steps.run_backfill.outputs.failed_dates }}'
 
       - name: Commit y push de resultados por rango
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          (cd src && python mlb_datos_remotos.py subir "🗓️ Backfill por rango: ${{ steps.validate_range.outputs.start_date }} a ${{ steps.validate_range.outputs.end_date }}")
           bash scripts/push_seguro.sh "🗓️ Backfill por rango: ${{ steps.validate_range.outputs.start_date }} a ${{ steps.validate_range.outputs.end_date }}" data/
 
       - name: Marcar fallo si hubo fechas fallidas
@@ -229,6 +239,13 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install -r requirements.txt
+
+      - name: Descargar base de datos (dataset de Hugging Face)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd src
+          python mlb_datos_remotos.py descargar --forzar
 
       - name: Actualizar resultados reales
         env:
@@ -345,7 +362,10 @@ jobs:
           PY
 
       - name: Commit y push de cambios automáticos
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          (cd src && python mlb_datos_remotos.py subir "🤖 Actualización automática completa: $(date +'%Y-%m-%d %H:%M')")
           bash scripts/push_seguro.sh "🤖 Actualización automática completa: $(date +'%Y-%m-%d %H:%M')" data/ models/ cache/
 
   # ============================================================================
@@ -374,6 +394,14 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install -r requirements.txt
+
+      - name: Descargar base de datos (dataset de Hugging Face)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd src
+          python mlb_datos_remotos.py descargar --forzar
+
       
       - name: Ejecutar scraping diario
         id: scrape
@@ -486,7 +514,10 @@ jobs:
 
       - name: Commit y push de datos actualizados
         if: steps.scrape.outcome == 'success'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          (cd src && python mlb_datos_remotos.py subir "📊 Actualización automática: Scraping $(date +'%Y-%m-%d %H:%M')")
           bash scripts/push_seguro.sh "📊 Actualización automática: Scraping $(date +'%Y-%m-%d %H:%M')" data/
         continue-on-error: true
 
@@ -515,6 +546,13 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install -r requirements.txt
+
+      - name: Descargar base de datos (dataset de Hugging Face)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd src
+          python mlb_datos_remotos.py descargar --forzar
 
       - name: Verificar resultados reales del día anterior
         id: check_results
@@ -566,7 +604,10 @@ jobs:
 
       - name: Commit y push de correcciones post-scrape
         if: steps.post_validate.outcome == 'success'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          (cd src && python mlb_datos_remotos.py subir "🩺 Validación post-scrape: correcciones automáticas $(date +'%Y-%m-%d %H:%M')")
           bash scripts/push_seguro.sh "🩺 Validación post-scrape: correcciones automáticas $(date +'%Y-%m-%d %H:%M')" data/
 
       - name: Marcar fallo del job si persisten anomalias
@@ -636,6 +677,14 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install -r requirements.txt
+
+      - name: Descargar base de datos (dataset de Hugging Face)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd src
+          python mlb_datos_remotos.py descargar --forzar
+
       
       - name: Actualizar resultados reales
         env:
@@ -662,7 +711,10 @@ jobs:
         continue-on-error: true
 
       - name: Commit y push de resultados
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          (cd src && python mlb_datos_remotos.py subir "✅ Resultados reales actualizados: $(date +'%Y-%m-%d')")
           bash scripts/push_seguro.sh "✅ Resultados reales actualizados: $(date +'%Y-%m-%d')" data/
         continue-on-error: true
   
@@ -691,6 +743,14 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install -r requirements.txt
+
+      - name: Descargar base de datos (dataset de Hugging Face)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd src
+          python mlb_datos_remotos.py descargar --forzar
+
       
       - name: Reentrenamiento champion/challenger
         # Manual (job=train): se fuerza; programado: train_model.py respeta la cadencia (7 días y 50 partidos nuevos)
@@ -731,6 +791,14 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install -r requirements.txt
+
+      - name: Descargar base de datos (dataset de Hugging Face)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd src
+          python mlb_datos_remotos.py descargar --forzar
+
       
       # Antes de predecir: la probabilidad publicada combina el modelo con la cuota del mercado
       - name: Capturar cuotas del mercado
@@ -745,6 +813,9 @@ jobs:
           RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
       
       - name: Commit predicciones
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          (cd src && python mlb_datos_remotos.py subir "🎯 Predicciones generadas: $(date +'%Y-%m-%d %H:%M')")
           bash scripts/push_seguro.sh "🎯 Predicciones generadas: $(date +'%Y-%m-%d %H:%M')" data/
         continue-on-error: true

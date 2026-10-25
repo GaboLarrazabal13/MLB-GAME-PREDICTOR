@@ -158,3 +158,8 @@ data/mlb_reentrenamiento_backup*.db
 models/modelo_mlb_experimental.json
 models/modelo_mlb_v3.5_backup.json
 
+
+# ============================================================================
+# BASE DE DATOS DE PRODUCCIÓN: vive en el dataset de Hugging Face (src/mlb_datos_remotos.py)
+# ============================================================================
+data/mlb_reentrenamiento.db

@@ -22,9 +22,13 @@ from pydantic import BaseModel, Field
 # Importar módulos del proyecto
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mlb_config import DB_PATH, TEAM_CODE_TO_NAME, get_team_code, get_team_name
+from mlb_datos_remotos import asegurar_db
 from mlb_predict_engine import predecir_juego
 from mlb_salud import calcular_salud
 from mlb_simulacion import SIMULACION_PATH
+
+# La base de datos vive en un dataset de Hugging Face: descargarla si este entorno no la tiene
+asegurar_db()
 
 # ============================================================================
 # CONFIGURACIÓN DE LA API

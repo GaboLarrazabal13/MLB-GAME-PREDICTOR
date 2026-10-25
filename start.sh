@@ -7,6 +7,10 @@
 # Asegurar que existe el directorio de logs
 mkdir -p /app/logs
 
+# La base de datos vive en un dataset de Hugging Face (no viaja en la imagen)
+echo "⚾ [0/3] Descargando base de datos..."
+python src/mlb_datos_remotos.py descargar || echo "⚠️ No se pudo descargar la base de datos"
+
 # Iniciar la API en segundo plano
 echo "⚾ [1/3] Iniciando la API de FastAPI en localhost:8000..."
 python -m uvicorn src.api:app --host 127.0.0.1 --port 8000 2>&1 | tee /app/logs/api.log &
