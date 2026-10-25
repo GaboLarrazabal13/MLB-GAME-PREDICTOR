@@ -196,9 +196,12 @@ SUPER_FEATURES = [
     "super_muro_bullpen",
 ]
 
-# Features que consume el modelo en producción, en orden. ELO y descanso se calculan con el
-# mismo TrackerCronologico en entrenamiento e inferencia (mlb_feature_engineering).
-MODEL_FEATURES = TEMPORAL_FEATURES + SCRAPING_FEATURES + SUPER_FEATURES
+# Features que consume el modelo, en orden: las 38 del champion de mayo. ELO y descanso se
+# calculan (TrackerCronologico, igual en entrenamiento e inferencia) pero quedan fuera: en la
+# prueba en igualdad de condiciones de 2026 (entrenar hasta el 27-may, evaluar 1,612 partidos
+# posteriores) añadirlos bajó el acierto de 57.7% a 56.4%.
+FEATURES_EXPERIMENTALES = ["home_elo", "away_elo", "diff_elo", "home_descanso", "away_descanso"]
+MODEL_FEATURES = [f for f in TEMPORAL_FEATURES if f not in FEATURES_EXPERIMENTALES] + SCRAPING_FEATURES + SUPER_FEATURES
 
 
 # ============================================================================

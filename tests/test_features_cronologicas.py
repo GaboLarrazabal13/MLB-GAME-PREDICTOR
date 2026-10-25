@@ -71,5 +71,11 @@ class TestTracker:
         assert inf == feats.loc[2].to_dict()
         assert inf["home_descanso"] == 2 and inf["away_descanso"] == DESCANSO_MAX_DIAS
 
-    def test_model_features_incluye_elo_y_descanso(self):
-        assert {"home_elo", "away_elo", "diff_elo", "home_descanso", "away_descanso"} <= set(MODEL_FEATURES)
+    def test_model_features_coincide_con_el_champion(self):
+        # ELO y descanso se calculan pero no entran al modelo (empeoraron el acierto en la prueba de 2026)
+        import joblib
+
+        from mlb_config import BASE_DIR
+
+        champion = joblib.load(f"{BASE_DIR}/models/features_catboost.pkl")
+        assert MODEL_FEATURES == champion
