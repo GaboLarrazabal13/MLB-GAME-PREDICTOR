@@ -4,7 +4,42 @@ Centraliza el cálculo de features para garantizar consistencia
 entre entrenamiento y predicción
 """
 
+import numpy as np
 import pandas as pd
+
+from mlb_config import MODEL_FEATURES, SCRAPING_FEATURES, SUPER_FEATURES
+
+
+def preparar_matriz_modelo(df, features=None, nan_missing=True):
+    """
+    Deja un DataFrame listo para el modelo: columnas en el orden esperado, valores numéricos
+    y, si `nan_missing`, estadísticas ausentes marcadas como NaN.
+
+    Un ERA, OPS o WHIP exactamente 0 nunca es un dato real: es un valor que el scraper no
+    consiguió. Marcarlo como NaN deja que CatBoost lo trate como faltante en lugar de
+    aprender que "0" es un lanzador perfecto. Las super features derivadas de un dato
+    ausente también se marcan como NaN. Debe usarse igual en entrenamiento e inferencia;
+    `nan_missing=False` reproduce el comportamiento de los modelos entrenados con ceros.
+    """
+    features = list(features) if features is not None else list(MODEL_FEATURES)
+    X = df.reindex(columns=features)
+    X = X.apply(pd.to_numeric, errors="coerce").fillna(0.0).astype(float)
+    if not nan_missing:
+        return X
+
+    stats = [c for c in SCRAPING_FEATURES if c in X.columns]
+    X[stats] = X[stats].replace(0.0, np.nan)
+
+    inputs_super = {
+        "super_neutralizacion_whip_ops": ["home_starter_WHIP", "away_starter_WHIP", "home_team_OPS", "away_team_OPS"],
+        "super_resistencia_era_ops": ["home_starter_ERA", "away_starter_ERA", "home_team_OPS", "away_team_OPS"],
+        "super_muro_bullpen": ["home_bullpen_WHIP", "away_bullpen_WHIP", "home_best_OPS", "away_best_OPS"],
+    }
+    for sf in SUPER_FEATURES:
+        deps = [c for c in inputs_super.get(sf, []) if c in X.columns]
+        if sf in X.columns and deps:
+            X.loc[X[deps].isna().any(axis=1), sf] = np.nan
+    return X
 
 
 def calcular_super_features(features_dict):

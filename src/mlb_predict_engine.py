@@ -12,20 +12,15 @@ import warnings
 import pandas as pd
 from catboost import CatBoostClassifier
 
-try:
-    import joblib
-    from lightgbm import LGBMClassifier
-    _LGBM_AVAILABLE = True
-except (ImportError, OSError):
-    _LGBM_AVAILABLE = False
-
 # Importar módulos centralizados
-from mlb_config import DB_PATH, MODELO_LGBM_PATH, MODELO_PATH, get_team_name
+from mlb_config import DB_PATH, MODELO_PATH, get_team_name
 from mlb_feature_engineering import (
     calcular_estadisticas_agregadas,
     calcular_super_features,
     detectar_outliers,
+    preparar_matriz_modelo,
 )
+from mlb_model_card import leer_model_card, version_modelo_actual
 
 # Importar extracción de features del módulo de utilidades
 from mlb_utils import extraer_features_hibridas, normalizar_texto
@@ -52,6 +47,51 @@ def obtener_nivel_confianza(prob_pct):
     if confianza > 0.515:
         return "MODERADA"
     return "BAJA (Partido muy parejo)"
+
+
+COLUMNAS_PREDICCION = """(fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
+                          away_pitcher TEXT, prob_home REAL, prob_away REAL,
+                          prediccion TEXT, confianza TEXT, tipo TEXT, detalles TEXT,
+                          model_version TEXT, generated_at TEXT)"""
+
+
+def _asegurar_columnas(conn, tabla):
+    conn.execute(f"CREATE TABLE IF NOT EXISTS {tabla} {COLUMNAS_PREDICCION}")
+    existentes = {col[1] for col in conn.execute(f"PRAGMA table_info({tabla})")}
+    for columna in ("detalles", "model_version", "generated_at"):
+        if columna not in existentes:
+            conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} TEXT")
+
+
+def partido_ya_jugado(conn, fecha, home_team, away_team):
+    try:
+        fila = conn.execute(
+            "SELECT 1 FROM historico_real WHERE fecha = ? AND home_team = ? AND away_team = ? AND ganador IS NOT NULL LIMIT 1",
+            (fecha, home_team, away_team),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        return False
+    return fila is not None
+
+
+def guardar_prediccion(conn, db_data):
+    """
+    Guarda una predicción. Si el partido ya tiene resultado, la predicción publicada queda
+    congelada y la nueva va a `predicciones_rescore`: así una re-puntuación nunca vuelve a
+    borrar el historial real del modelo. Devuelve la tabla donde se escribió.
+    """
+    tabla = "predicciones_rescore" if partido_ya_jugado(conn, db_data["fecha"], db_data["home_team"], db_data["away_team"]) else "predicciones_historico"
+    _asegurar_columnas(conn, "predicciones_historico")
+    if tabla != "predicciones_historico":
+        _asegurar_columnas(conn, tabla)
+    # Reemplazo por juego: una predicción por partido (y por versión en la tabla de re-score).
+    filtro, params = "fecha = ? AND home_team = ? AND away_team = ?", [db_data["fecha"], db_data["home_team"], db_data["away_team"]]
+    if tabla == "predicciones_rescore":
+        filtro += " AND model_version = ?"
+        params.append(db_data["model_version"])
+    conn.execute(f"DELETE FROM {tabla} WHERE {filtro}", params)
+    pd.DataFrame([db_data]).to_sql(tabla, conn, if_exists="append", index=False)
+    return tabla
 
 
 # ============================================================================
@@ -118,13 +158,16 @@ def predecir_juego(
         return None
     _debug_stage("model_exists", stage_start)
 
-    # 2. Cargar modelos del ensemble (CatBoost obligatorio + LightGBM opcional)
+    # 2. Cargar modelo CatBoost y su ficha
     try:
         stage_start = time.perf_counter()
         model_cb = CatBoostClassifier()
         model_cb.load_model(MODELO_PATH)
         expected_features = model_cb.feature_names_
-        _debug_stage("model_load_catboost", stage_start)
+        model_card = leer_model_card()
+        model_version = version_modelo_actual(model_card)
+        nan_missing = bool((model_card or {}).get("nan_missing", False))
+        _debug_stage("model_load_catboost", stage_start, extra={"version": model_version})
     except Exception as e:
         print(f"❌ Error cargando modelo CatBoost: {e}")
         _debug_stage("model_load_catboost", stage_start, ok=False, extra={"error": str(e)})
@@ -133,15 +176,6 @@ def predecir_juego(
         if debug:
             return {"error": debug_info["error"], "_debug": debug_info}
         return None
-
-    model_lgbm = None
-    if _LGBM_AVAILABLE and os.path.exists(MODELO_LGBM_PATH):
-        try:
-            stage_start = time.perf_counter()
-            model_lgbm = joblib.load(MODELO_LGBM_PATH)
-            _debug_stage("model_load_lgbm", stage_start)
-        except Exception as e:
-            _debug_stage("model_load_lgbm", stage_start, ok=False, extra={"error": str(e)})
 
     # 3. Normalizar nombres de lanzadores y validación de calidad
     stage_start = time.perf_counter()
@@ -231,28 +265,18 @@ def predecir_juego(
 
         # 9. Preparar DataFrame para predicción
         stage_start = time.perf_counter()
-        X_df = pd.DataFrame([features_dict])
-        X_df = X_df.reindex(columns=expected_features, fill_value=0)
+        # Misma limpieza que en entrenamiento (ceros de estadísticas → faltantes si el modelo se entrenó así)
+        X_df = preparar_matriz_modelo(pd.DataFrame([features_dict]), expected_features, nan_missing=nan_missing)
         _debug_stage(
             "prepare_matrix",
             stage_start,
             extra={"feature_columns": int(len(X_df.columns))},
         )
 
-        # 10. Realizar predicción con ensemble
+        # 10. Realizar predicción
         stage_start = time.perf_counter()
-        prob_home_cb = model_cb.predict_proba(X_df)[0][1]
-        if model_lgbm is not None:
-            try:
-                lgbm_features = model_lgbm.feature_name_
-                X_lgbm = X_df.reindex(columns=lgbm_features, fill_value=0)
-                prob_home_lgbm = model_lgbm.predict_proba(X_lgbm)[0][1]
-                prob_home = (prob_home_cb + prob_home_lgbm) / 2
-            except Exception:
-                prob_home = prob_home_cb
-        else:
-            prob_home = prob_home_cb
-        _debug_stage("predict", stage_start, extra={"ensemble": model_lgbm is not None})
+        prob_home = model_cb.predict_proba(X_df)[0][1]
+        _debug_stage("predict", stage_start, extra={"model_version": model_version})
 
         prob_home_pct = round(float(prob_home) * 100, 2)
         prob_away_pct = round(100 - prob_home_pct, 2)
@@ -452,6 +476,8 @@ def predecir_juego(
             "confianza": conf_label,
             "tipo": tipo_final,
             "detalles": detalles_json,
+            "model_version": model_version,
+            "generated_at": pd.Timestamp.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
         resultado_data = {**db_data, "detalles": detalles}
@@ -467,27 +493,10 @@ def predecir_juego(
 
             stage_start = time.perf_counter()
             with sqlite3.connect(DB_PATH) as conn:
-                conn.execute("""CREATE TABLE IF NOT EXISTS predicciones_historico
-                               (fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
-                                away_pitcher TEXT, prob_home REAL, prob_away REAL,
-                                prediccion TEXT, confianza TEXT, tipo TEXT, detalles TEXT)""")
-
-                # Check if detalles column exists, if not, add it
-                cursor = conn.execute("PRAGMA table_info(predicciones_historico)")
-                columns = [col[1] for col in cursor.fetchall()]
-                if "detalles" not in columns:
-                    conn.execute("ALTER TABLE predicciones_historico ADD COLUMN detalles TEXT")
-
-                # Reemplazo por juego para evitar duplicados y mantener la corrida no destructiva.
-                conn.execute(
-                    """
-                    DELETE FROM predicciones_historico
-                    WHERE fecha = ? AND home_team = ? AND away_team = ?
-                    """,
-                    (row_data["fecha"], home_team, away_team),
-                )
-                pd.DataFrame([db_data]).to_sql("predicciones_historico", conn, if_exists="append", index=False)
-            _debug_stage("db_write", stage_start)
+                tabla = guardar_prediccion(conn, db_data)
+            if tabla == "predicciones_rescore":
+                print(f"🧊 {away_team} @ {home_team} ({row_data['fecha']}) ya se jugó: la predicción publicada queda congelada; esta va a predicciones_rescore.")
+            _debug_stage("db_write", stage_start, extra={"tabla": tabla})
 
         if debug:
             _debug_stage("total", total_start)

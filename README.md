@@ -140,11 +140,18 @@ Por decisión técnica de arquitectura y simplicidad operativa, se promovió a p
 * **Calibración Fina (LogLoss: 0.6842):** Al modelar las probabilidades reales de forma suave y precisa, calibra a la perfección el nuevo sistema de umbrales en Streamlit (*Muy Alta*, *Alta*, *Moderada*), reduciendo drásticamente el ratio de partidos calificados como "Baja confianza".
 * **Garantía sin Escalar (Raw Features):** Se entrena de forma robusta directamente sobre los datos sin escalar, eliminando la necesidad de transformaciones y previniendo el desfase silente de datos en producción.
 
-### Estrategia de Reentrenamiento Acumulativo Completo
-* Se entrena sobre el **dataset completo y acumulado** de más de **10,350 partidos** (9,557 partidos históricos de alta calidad + partidos completados de la temporada actual).
-* Se utiliza un sistema de **Sample Weights (pesos de muestra)** para ponderar la recencia de los datos:
-  * **Partidos de la temporada en curso (2026):** Peso de **`1.5`** (permite al modelo capturar rápidamente tendencias, dinámicas de equipos y rachas en vivo).
-  * **Partidos de temporadas históricas (2022-2025):** Peso de **`1.0`** (funcionan como una base de regularización sólida y estable).
+### Reentrenamiento Champion / Challenger (medición honesta)
+
+El reentrenamiento (`src/train_model.py` → `src/mlb_training.py`) compara el modelo en producción (*champion*) con un candidato nuevo (*challenger*) **solo con partidos que ninguno de los dos vio al entrenarse**:
+
+* **Ventana sombra:** los últimos 30 días con resultado (mínimo 150 partidos; se amplía hacia atrás si hace falta).
+* **Champion:** se evalúa con las predicciones que realmente publicó en esa ventana (`predicciones_historico`), fuera de muestra por construcción.
+* **Challenger:** CatBoost optimizado con Optuna (20 trials, validación expansiva por fecha) usando únicamente partidos anteriores a la ventana; se evalúa en la ventana.
+* **Promoción:** solo si el challenger mejora el *log loss* y no pierde más de 1 punto de accuracy. Entonces se reentrena con todos los datos y se escribe `models/model_card.json` (versión, fecha de corte, features, parámetros y métricas). Cada evaluación queda en `models/training_log.jsonl`.
+* **Cadencia:** lunes a las 09:00 UTC si pasaron ≥ 7 días desde el último entrenamiento y hay ≥ 50 partidos nuevos; `python train_model.py --forzar` lo ignora y `--solo-evaluar` solo mide.
+* **Datos:** ~4,900 partidos (2023-2026). Las estadísticas de la API de las temporadas pasadas viven en `data/features_historicas.csv` (texto versionado); el entrenamiento aborta si faltan. Los ceros en estadísticas (dato no disponible) se tratan como valores faltantes, igual en entrenamiento y en inferencia.
+* **Pesos por recencia:** temporada en curso `2.5`, temporada anterior `1.3`, resto `1.0`.
+* **Predicciones inmutables:** cada predicción guarda `model_version` y `generated_at`. Si un partido ya tiene resultado, su predicción publicada no se vuelve a escribir: cualquier re-puntuación va a `predicciones_rescore`.
 
 ---
 
@@ -210,11 +217,11 @@ graph TD
     A[Daily Scraper: Ingesta API MLB] --> B[Feature Engineering: Super Features]
     B --> C[Predict Engine: Inferencia & Dashboard]
     C --> D[Feedback Loop: Update Real Results]
-    D --> E{¿Alcanzó Milestone 2026?}
-    E -- Sí --> F[Challenger Model: Optuna + Pesos 1.5]
-    F --> G{¿Supera al Champion actual?}
-    G -- Sí --> H[Promoción de Modelo: Nuevo Champion V4.0]
-    G -- No --> I[Retener Champion anterior]
+    D --> E{¿Lunes y ≥7 días y ≥50 partidos nuevos?}
+    E -- Sí --> F[Challenger: Optuna + validación temporal]
+    F --> G{¿Mejor log loss en la ventana sombra?}
+    G -- Sí --> H[Promoción: nuevo champion + model_card.json]
+    G -- No --> I[Retener champion y registrar en training_log.jsonl]
     E -- No --> J[Monitorear Métricas en Dashboard]
     H --> J
     I --> J
@@ -261,9 +268,10 @@ docker-compose up --build
     cd src && streamlit run app.py
     ```
 
-3.  **Lanzar el entrenamiento de producción manualmente:**
+3.  **Evaluar o reentrenar el modelo manualmente:**
     ```bash
-    cd src && python train_model_v4.0.py
+    cd src && python train_model.py --solo-evaluar   # métricas champion vs challenger sin tocar nada
+    cd src && python train_model.py --forzar         # evalúa y promueve si procede
     ```
 
 ---
