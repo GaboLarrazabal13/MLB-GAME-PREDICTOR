@@ -4,7 +4,40 @@ Conversión de cuotas americanas a probabilidad y captura derivada (sin cuotas e
 
 import pytest
 
-from mlb_cuotas import COLUMNAS, capturas_de_partido, cierre_por_partido, prob_implicita, prob_sin_margen
+from mlb_cuotas import (
+    COLUMNAS,
+    capturas_de_partido,
+    cierre_por_partido,
+    combinar_probabilidades,
+    prob_implicita,
+    prob_mercado_para,
+    prob_sin_margen,
+)
+
+
+def test_combinar_probabilidades():
+    assert combinar_probabilidades(0.6, 0.6) == pytest.approx(0.6)
+    assert combinar_probabilidades(0.5, 0.5) == pytest.approx(0.5)
+    p = combinar_probabilidades(0.70, 0.55)
+    assert 0.55 < p < 0.70
+    assert combinar_probabilidades(0.7, 0.3, peso_mercado=0.0) == pytest.approx(0.7)
+    assert combinar_probabilidades(0.7, 0.3, peso_mercado=1.0) == pytest.approx(0.3)
+
+
+def test_prob_mercado_para_usa_la_ultima_captura_previa(tmp_path):
+    import pandas as pd
+
+    base = {"game_pk": 1, "fecha": "2027-04-01", "inicio_utc": "2027-04-01T23:05:00Z", "home_team": "NYY", "away_team": "BOS",
+            "n_casas": 2, "prob_home_min": 0.5, "prob_home_max": 0.6}
+    filas = [{**base, "captura_utc": "2027-04-01T12:00:00Z", "prob_home_mercado": 0.55},
+             {**base, "captura_utc": "2027-04-01T16:00:00Z", "prob_home_mercado": 0.58},
+             {**base, "captura_utc": "2027-04-02T00:00:00Z", "prob_home_mercado": 0.95}]  # en vivo
+    p = tmp_path / "c.csv"
+    pd.DataFrame(filas).to_csv(p, index=False)
+    assert prob_mercado_para("2027-04-01", "NYY", "BOS", path=p) == 0.58
+    assert prob_mercado_para("2027-04-01", "NYY", "BOS", path=p, ahora_utc="2027-04-01T13:00:00Z") == 0.55
+    assert prob_mercado_para("2027-04-01", "BOS", "NYY", path=p) is None
+    assert prob_mercado_para("2027-04-01", "NYY", "BOS", path=tmp_path / "no.csv") is None
 
 
 def test_prob_implicita():

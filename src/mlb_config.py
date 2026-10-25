@@ -214,6 +214,13 @@ SUPER_FEATURES = [
 # prueba en igualdad de condiciones de 2026 (entrenar hasta el 27-may, evaluar 1,612 partidos
 # posteriores) añadirlos bajó el acierto de 57.7% a 56.4%.
 FEATURES_EXPERIMENTALES = ["home_elo", "away_elo", "diff_elo", "home_descanso", "away_descanso"]
+
+# Probabilidad publicada = combinación del modelo con la probabilidad implícita del mercado
+# (media en escala logit). En la prueba de 2026 (1,611 partidos posteriores al 27-may) bajó el
+# log loss de 0.6803 a 0.6770 (p≈0.99) sin cambiar el acierto (58.2% → 58.1%). Sin cuota
+# disponible se publica solo el modelo. La forma reciente del abridor y el cansancio del bullpen
+# no mejoraron (57.7% → 56.8%) y no se usan.
+COMBINACION_MERCADO = {"activa": True, "peso_mercado": 0.5}
 MODEL_FEATURES = [f for f in TEMPORAL_FEATURES if f not in FEATURES_EXPERIMENTALES] + SCRAPING_FEATURES + SUPER_FEATURES
 
 
