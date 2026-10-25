@@ -12,6 +12,8 @@ on:
     - cron: '0 16 * 3-11 *'
     # Reentrenamiento champion/challenger (lunes 11:00 España / 5:00 AM ET), tras los resultados del domingo
     - cron: '0 9 * 3-11 1'
+    # Captura de cuotas antes de los partidos de noche (00:30 España / 6:30 PM ET): línea de cierre
+    - cron: '30 22 * 3-11 *'
 
   
   workflow_dispatch:  # Permite ejecución manual
@@ -29,6 +31,7 @@ on:
           - update_results
           - train
           - predict
+          - cuotas
       target_date:
         description: 'Fecha objetivo opcional para predicción/backfill (YYYY-MM-DD). Vacío = fecha más reciente.'
         required: false
@@ -378,6 +381,12 @@ jobs:
           cd src
           RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
 
+      - name: Capturar cuotas del mercado
+        run: |
+          cd src
+          python mlb_cuotas.py
+        continue-on-error: true
+
       - name: Verificar y sanar huecos recientes (Auto-Heal)
         if: steps.scrape.outcome == 'success'
         run: |
@@ -558,6 +567,41 @@ jobs:
           echo "❌ Persisten anomalias tras 3 intentos post-scrape. Requiere ejecucion manual."
           exit 1
   
+  # ============================================================================
+  # JOB 1C: CAPTURA DE CUOTAS (línea de cierre antes de los partidos de noche)
+  # ============================================================================
+  capturar_cuotas:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.schedule == '30 22 * 3-11 *' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'cuotas')
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: |
+          pip install pandas requests
+
+      - name: Capturar cuotas del mercado
+        run: |
+          cd src
+          python mlb_cuotas.py
+
+      - name: Commit y push de cuotas
+        run: |
+          bash scripts/push_seguro.sh "💹 Cuotas del mercado: $(date +'%Y-%m-%d %H:%M')" data/cuotas_mercado.csv
+
   # ============================================================================
   # JOB 2: ACTUALIZACIÓN DE RESULTADOS (schedule + manual)
   # ============================================================================

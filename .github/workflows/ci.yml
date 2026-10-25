@@ -33,6 +33,7 @@ jobs:
         !startsWith(github.event.head_commit.message, '✅ Resultados reales actualizados:') &&
         !startsWith(github.event.head_commit.message, '🤖 Modelo reentrenado:') &&
         !startsWith(github.event.head_commit.message, '🤖 Champion/challenger:') &&
+        !startsWith(github.event.head_commit.message, '💹 Cuotas del mercado:') &&
         !startsWith(github.event.head_commit.message, '🎯 Predicciones generadas:')
       )
     
@@ -73,6 +74,7 @@ jobs:
         !startsWith(github.event.head_commit.message, '✅ Resultados reales actualizados:') &&
         !startsWith(github.event.head_commit.message, '🤖 Modelo reentrenado:') &&
         !startsWith(github.event.head_commit.message, '🤖 Champion/challenger:') &&
+        !startsWith(github.event.head_commit.message, '💹 Cuotas del mercado:') &&
         !startsWith(github.event.head_commit.message, '🎯 Predicciones generadas:')
       )
     env:
@@ -168,6 +170,7 @@ jobs:
         !startsWith(github.event.head_commit.message, '✅ Resultados reales actualizados:') &&
         !startsWith(github.event.head_commit.message, '🤖 Modelo reentrenado:') &&
         !startsWith(github.event.head_commit.message, '🤖 Champion/challenger:') &&
+        !startsWith(github.event.head_commit.message, '💹 Cuotas del mercado:') &&
         !startsWith(github.event.head_commit.message, '🎯 Predicciones generadas:')
       )
     needs: [lint, test]
@@ -224,6 +227,7 @@ jobs:
         !startsWith(github.event.head_commit.message, '✅ Resultados reales actualizados:') &&
         !startsWith(github.event.head_commit.message, '🤖 Modelo reentrenado:') &&
         !startsWith(github.event.head_commit.message, '🤖 Champion/challenger:') &&
+        !startsWith(github.event.head_commit.message, '💹 Cuotas del mercado:') &&
         !startsWith(github.event.head_commit.message, '🎯 Predicciones generadas:')
       )
     
