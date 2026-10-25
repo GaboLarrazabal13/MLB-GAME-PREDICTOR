@@ -1841,7 +1841,7 @@ with st.sidebar:
         <div class="brand-name">MLB<span>Predictor</span></div>
     </div>
     <div class="brand-meta">
-        <span>Modelo V4.0</span>
+        <span>Modelo V5 · conjunto</span>
         {estado_api}
     </div>
     """,
@@ -3592,7 +3592,7 @@ elif pagina == "Acerca del modelo":
     st.markdown(f'<div class="about-hero">{LOGO_SVG}</div>', unsafe_allow_html=True)
     st.markdown('<div class="main-title">MLB Predictor</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="subtitle">Predicción de partidos de la MLB con machine learning, entrenado con datos oficiales de la liga y reentrenado cada día.</div>',
+        '<div class="subtitle">Predicción de partidos de la MLB con un conjunto de modelos, datos oficiales de la liga y validación honesta.</div>',
         unsafe_allow_html=True,
     )
 
@@ -3607,9 +3607,11 @@ elif pagina == "Acerca del modelo":
     <div class="stats-card">
         <h3>¿Qué es MLB Predictor?</h3>
         <p style="font-size: 1.1rem; line-height: 1.8;">
-            Sistema avanzado de predicción de partidos MLB que utiliza <strong>XGBoost</strong>
-            y <strong>web scraping en tiempo real</strong> para analizar más de 26 características
-            estadísticas por partido, incluyendo matchups específicos de lanzadores vs bateadores.
+            Cada probabilidad publicada es la media de tres miembros: un <strong>CatBoost</strong> con 38
+            variables de la API oficial de la MLB, una <strong>regresión logística sabermétrica</strong>
+            (pitagórica, FIP del abridor y del bullpen, carreras por partido) y la
+            <strong>probabilidad implícita de las casas de apuestas</strong>. Validado mes a mes en
+            2024–2026, acierta el 57.0% de los partidos frente al 55.3% del modelo anterior.
         </p>
     </div>
     """,
@@ -3622,13 +3624,13 @@ elif pagina == "Acerca del modelo":
         st.markdown(
             """
         <div class="stats-card">
-            <h4> Características V4.0</h4>
+            <h4> Cómo funciona (V5)</h4>
             <ul style="font-size: 1.05rem; line-height: 1.8;">
-                <li><strong>Modelo Híbrido</strong>: Temporal + Ingestión en vivo</li>
-                <li><strong>Super Features</strong>: Matchups directos y coeficientes dinámicos</li>
-                <li><strong>Optimización Bayesiana</strong>: Optuna para ajuste de hiperparámetros</li>
-                <li><strong>Reentrenamiento Incremental</strong>: Automatizado e inteligente</li>
-                <li><strong>API FastAPI</strong>: Endpoints RESTful de alto rendimiento</li>
+                <li><strong>Conjunto de tres miembros</strong>: CatBoost + sabermétrico + mercado</li>
+                <li><strong>Validación cronológica</strong>: cada idea se prueba mes a mes antes de entrar</li>
+                <li><strong>Reentrenamiento semanal</strong>: el CatBoost solo se reemplaza si gana en partidos que no vio</li>
+                <li><strong>Predicciones inmutables</strong>: nada se reescribe después del partido</li>
+                <li><strong>Salud y playoffs</strong>: alerta si el rendimiento cae y simulación diaria de la postemporada</li>
             </ul>
         </div>
         """,
@@ -3641,17 +3643,17 @@ elif pagina == "Acerca del modelo":
         <div class="stats-card">
             <h4> Fuentes de Datos</h4>
             <ul style="font-size: 1.05rem; line-height: 1.8;">
-                <li><strong>MLB Stats API Oficial</strong>: Ingesta digital ultra rápida de cartelera y rosters</li>
-                <li><strong>Histórico 2020-2026</strong>: Más de 10,000 partidos</li>
-                <li><strong>Actualización Automática</strong>: GitHub Actions</li>
-                <li><strong>Base de Datos SQLite</strong>: Almacenamiento local estructurado</li>
+                <li><strong>MLB Stats API oficial</strong>: cartelera, abridores, estadísticas y boxscores</li>
+                <li><strong>Histórico 2022–2026</strong>: 12,001 partidos con estadísticas al día anterior</li>
+                <li><strong>Mercado</strong>: probabilidad implícita de BetMGM y FanDuel antes de cada partido</li>
+                <li><strong>Actualización automática</strong>: GitHub Actions, de marzo a noviembre</li>
             </ul>
         </div>
         """,
             unsafe_allow_html=True,
         )
 
-    st.markdown("### Super Features Explicadas")
+    st.markdown("### Super Features (variables propias del miembro CatBoost)")
 
     col1, col2, col3 = st.columns(3)
 
@@ -3700,9 +3702,11 @@ elif pagina == "Acerca del modelo":
     st.markdown("### Stack Tecnológico")
 
     tech_badges = [
-        "Python 3.10+",
-        "XGBoost",
+        "Python 3.11+",
+        "CatBoost",
         "Scikit-learn",
+        "Optuna",
+        "MLflow",
         "FastAPI",
         "Streamlit",
         "Pandas",
