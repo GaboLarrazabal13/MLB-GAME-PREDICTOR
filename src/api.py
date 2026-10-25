@@ -4,6 +4,7 @@ Endpoints para predicciones manuales, automáticas y análisis de rendimiento
 """
 
 import asyncio
+import json
 import os
 import sqlite3
 import sys
@@ -23,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mlb_config import DB_PATH, TEAM_CODE_TO_NAME, get_team_code, get_team_name
 from mlb_predict_engine import predecir_juego
 from mlb_salud import calcular_salud
+from mlb_simulacion import SIMULACION_PATH
 
 # ============================================================================
 # CONFIGURACIÓN DE LA API
@@ -1238,6 +1240,15 @@ async def obtener_salud_modelo(
             return calcular_salud(conn, ventana_dias=dias)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error calculando la salud del modelo: {str(e)}") from e
+
+
+@app.get("/simulacion/playoffs")
+async def obtener_simulacion_playoffs():
+    """Última simulación de temporada y playoffs: probabilidad de clasificar, división, liga y título."""
+    if not os.path.exists(SIMULACION_PATH):
+        raise HTTPException(status_code=404, detail="Todavía no hay simulación; se genera tras actualizar los resultados.")
+    with open(SIMULACION_PATH, encoding="utf-8") as f:
+        return json.load(f)
 
 
 @app.get("/stats/team/{team_code}")

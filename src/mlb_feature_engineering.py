@@ -16,6 +16,7 @@ from mlb_config import (
     ELO_K,
     MODEL_FEATURES,
     PARTIDOS_HISTORICOS_PATH,
+    PITCHING_LOGS_PATH,
     SCRAPING_FEATURES,
     SUPER_FEATURES,
     get_team_code,
@@ -150,6 +151,108 @@ class TrackerCronologico:
             self.registrar(r.home_team, r.away_team, r.fecha, year, r.ganador,
                            getattr(r, "score_home", 0), getattr(r, "score_away", 0))
         return self
+
+
+FEATURES_PITCHEO_RECIENTE = [
+    "home_sp_era_3", "away_sp_era_3", "home_sp_whip_3", "away_sp_whip_3", "home_sp_kbb_3", "away_sp_kbb_3",
+    "home_sp_outs_3", "away_sp_outs_3", "home_sp_descanso", "away_sp_descanso",
+    "home_bullpen_pitches_3d", "away_bullpen_pitches_3d", "home_bullpen_outs_3d", "away_bullpen_outs_3d",
+]
+
+
+def normalizar_nombre(nombre):
+    """'José Ramírez Jr.' -> 'jose ramirez'. Para cruzar nombres del scraper con los de la API."""
+    import unicodedata
+
+    if not isinstance(nombre, str):
+        return ""
+    s = unicodedata.normalize("NFKD", nombre).encode("ascii", "ignore").decode().lower()
+    s = s.replace(".", " ").replace("'", "").replace("-", " ")
+    partes = [p for p in s.split() if p not in {"jr", "sr", "ii", "iii", "iv"}]
+    return " ".join(partes)
+
+
+class HistorialPitcheo:
+    """
+    Forma reciente de los abridores y cansancio de los bullpens a partir del registro de
+    lanzadores por partido (`data/pitching_logs.csv.gz`). Todas las consultas miran solo
+    partidos de fechas anteriores a la pedida, así que sirve igual para entrenar que para predecir.
+    """
+
+    def __init__(self, logs, n_salidas=3, dias_bullpen=3):
+        self.n = n_salidas
+        self.dias_bullpen = dias_bullpen
+        logs = logs.copy()
+        logs["fecha"] = pd.to_datetime(logs["fecha"])
+        logs["nombre"] = logs["pitcher"].map(normalizar_nombre)
+        logs = logs.sort_values(["fecha", "game_pk", "orden"], kind="stable")
+        cols = ["outs", "er", "h", "bb", "so", "bf"]
+        self.salidas = {
+            n: (g["fecha"].to_numpy(), g[cols].to_numpy(dtype=float))
+            for n, g in logs[logs["es_abridor"] == 1].groupby("nombre", sort=False)
+        }
+        self.apariciones = {n: g["fecha"].to_numpy() for n, g in logs.groupby("nombre", sort=False)}
+        rel = logs[logs["es_abridor"] == 0].groupby(["team", "fecha"])[["pitches", "outs"]].sum().reset_index()
+        self.bullpen = {t: (g["fecha"].to_numpy(), g[["pitches", "outs"]].to_numpy(dtype=float)) for t, g in rel.groupby("team")}
+
+    def _abridor(self, nombre, fecha):
+        nombre = normalizar_nombre(nombre)
+        out = {"era_3": np.nan, "whip_3": np.nan, "kbb_3": np.nan, "outs_3": np.nan, "descanso": np.nan}
+        if nombre in self.apariciones:
+            fechas = self.apariciones[nombre]
+            i = np.searchsorted(fechas, np.datetime64(fecha), side="left")
+            if i > 0:
+                out["descanso"] = float(min((np.datetime64(fecha) - fechas[i - 1]) / np.timedelta64(1, "D"), 10))
+        if nombre in self.salidas:
+            fechas, v = self.salidas[nombre]
+            i = np.searchsorted(fechas, np.datetime64(fecha), side="left")
+            ult = v[max(0, i - self.n):i]
+            if len(ult):
+                outs, er, h, bb, so, bf = ult.sum(axis=0)
+                if outs > 0:
+                    out["era_3"] = er * 27.0 / outs
+                    out["whip_3"] = (h + bb) * 3.0 / outs
+                out["kbb_3"] = (so - bb) / bf if bf > 0 else np.nan
+                out["outs_3"] = outs / len(ult)
+        return out
+
+    def _bullpen(self, team, fecha):
+        team = get_team_code(team) or str(team).strip().upper()
+        if team not in self.bullpen:
+            return 0.0, 0.0
+        fechas, v = self.bullpen[team]
+        fin = np.datetime64(fecha)
+        ini = fin - np.timedelta64(self.dias_bullpen, "D")
+        a, b = np.searchsorted(fechas, ini, side="left"), np.searchsorted(fechas, fin, side="left")
+        tot = v[a:b].sum(axis=0) if b > a else np.zeros(2)
+        return float(tot[0]), float(tot[1])
+
+    def features(self, home_team, away_team, home_pitcher, away_pitcher, fecha):
+        fecha = pd.Timestamp(fecha)
+        h, a = self._abridor(home_pitcher, fecha), self._abridor(away_pitcher, fecha)
+        bh, ba = self._bullpen(home_team, fecha), self._bullpen(away_team, fecha)
+        return {
+            "home_sp_era_3": h["era_3"], "away_sp_era_3": a["era_3"], "home_sp_whip_3": h["whip_3"], "away_sp_whip_3": a["whip_3"],
+            "home_sp_kbb_3": h["kbb_3"], "away_sp_kbb_3": a["kbb_3"], "home_sp_outs_3": h["outs_3"], "away_sp_outs_3": a["outs_3"],
+            "home_sp_descanso": h["descanso"], "away_sp_descanso": a["descanso"],
+            "home_bullpen_pitches_3d": bh[0], "away_bullpen_pitches_3d": ba[0], "home_bullpen_outs_3d": bh[1], "away_bullpen_outs_3d": ba[1],
+        }
+
+    def features_dataset(self, df):
+        return pd.DataFrame(
+            [self.features(r.home_team, r.away_team, r.home_pitcher, r.away_pitcher, r.fecha) for r in df.itertuples(index=False)],
+            columns=FEATURES_PITCHEO_RECIENTE,
+        )
+
+
+_PITCHEO_CACHE = {}
+
+
+def historial_pitcheo():
+    """HistorialPitcheo construido una vez por proceso desde PITCHING_LOGS_PATH (None si no hay registro)."""
+    if "h" not in _PITCHEO_CACHE:
+        _PITCHEO_CACHE["h"] = HistorialPitcheo(pd.read_csv(PITCHING_LOGS_PATH, dtype={"fecha": str})) if os.path.exists(PITCHING_LOGS_PATH) else None
+    return _PITCHEO_CACHE["h"]
 
 
 _HISTORIA_CACHE = {}

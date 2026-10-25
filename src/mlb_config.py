@@ -29,6 +29,8 @@ DB_PATH = os.path.join(BASE_DIR, "data", "mlb_reentrenamiento.db")
 # historico_real solo aporta los partidos que no están aquí (la temporada en curso).
 PARTIDOS_HISTORICOS_PATH = os.path.join(BASE_DIR, "data", "partidos_historicos.csv")
 FEATURES_HISTORICAS_PATH = os.path.join(BASE_DIR, "data", "features_historicas.csv")
+# Una fila por lanzador y partido (boxscores de la API): base de forma del abridor y cansancio del bullpen
+PITCHING_LOGS_PATH = os.path.join(BASE_DIR, "data", "pitching_logs.csv.gz")
 CACHE_PATH = os.path.join(BASE_DIR, "cache", "features_hibridas_v4.0_cache.pkl")
 
 # ============================================================================
@@ -66,6 +68,17 @@ TEAM_CODE_TO_NAME = {
     "TOR": "Toronto Blue Jays",
     "WSN": "Washington Nationals",
 }
+
+# Ligas y divisiones (formato de 2022 en adelante: 3 campeones de división + 3 comodines por liga)
+DIVISIONES = {
+    "AL Este": ["BAL", "BOS", "NYY", "TBR", "TOR"],
+    "AL Central": ["CHW", "CLE", "DET", "KCR", "MIN"],
+    "AL Oeste": ["ATH", "HOU", "LAA", "SEA", "TEX"],
+    "NL Este": ["ATL", "MIA", "NYM", "PHI", "WSN"],
+    "NL Central": ["CHC", "CIN", "MIL", "PIT", "STL"],
+    "NL Oeste": ["ARI", "COL", "LAD", "SDP", "SFG"],
+}
+DIVISION_DE = {t: d for d, equipos in DIVISIONES.items() for t in equipos}
 
 # Crear mapeo inverso automáticamente
 TEAM_NAME_TO_CODE = {}

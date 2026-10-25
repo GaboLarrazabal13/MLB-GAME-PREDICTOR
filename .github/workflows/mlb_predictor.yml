@@ -596,7 +596,19 @@ jobs:
         run: |
           cd src
           python mlb_mass_healer.py
-      
+
+      - name: Registro de lanzadores de los últimos días
+        run: |
+          cd src
+          python mlb_pitching_logs.py
+        continue-on-error: true
+
+      - name: Simulación de temporada y playoffs
+        run: |
+          cd src
+          python mlb_simulacion.py
+        continue-on-error: true
+
       - name: Commit y push de resultados
         run: |
           bash scripts/push_seguro.sh "✅ Resultados reales actualizados: $(date +'%Y-%m-%d')" data/
