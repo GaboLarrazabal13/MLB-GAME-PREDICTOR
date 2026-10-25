@@ -507,64 +507,6 @@ def calcular_tendencias_equipo(df, team, fecha_limite, ventana=10):
     }
 
 
-def verificar_milestone_reentrenamiento():
-    """
-    Comprueba si el total de registros en historico_real alcanzó el próximo milestone
-    de la temporada (486 / 972 / 1458 / 1944 / 2430).
-    Devuelve (should_train: bool, total: int, next_milestone: int | None).
-    """
-    import sqlite3
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
-    MILESTONES_TEMPORADA = [486, 972, 1458, 1944, 2430]
-    temporada_objetivo = int(os.getenv("TRAINING_SEASON_YEAR", datetime.now(ZoneInfo("America/New_York")).year))
-
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
-                   key TEXT PRIMARY KEY,
-                   value TEXT
-               )"""
-        )
-        total = conn.execute(
-            "SELECT COUNT(*) FROM historico_real WHERE substr(fecha,1,4) = ?",
-            (str(temporada_objetivo),),
-        ).fetchone()[0]
-
-        row = conn.execute("SELECT value FROM metadata_entrenamiento WHERE key = 'last_retrain_milestone'").fetchone()
-        try:
-            last_milestone = int(row[0]) if row and row[0] else 0
-        except Exception:
-            last_milestone = 0
-
-    next_milestone = next((m for m in MILESTONES_TEMPORADA if m > last_milestone), None)
-
-    if next_milestone is None:
-        return False, total, None
-
-    should_train = total >= next_milestone
-    return should_train, total, next_milestone
-
-
-def registrar_milestone_cumplido(milestone):
-    """Registra que el milestone fue procesado (con o sin mejora de accuracy)."""
-    import sqlite3
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """CREATE TABLE IF NOT EXISTS metadata_entrenamiento (
-                   key TEXT PRIMARY KEY,
-                   value TEXT
-               )"""
-        )
-        conn.execute(
-            "INSERT OR REPLACE INTO metadata_entrenamiento (key, value) VALUES (?, ?)",
-            ("last_retrain_milestone", str(milestone)),
-        )
-        conn.commit()
-    print(f"🎯 Milestone {milestone}/2430 registrado como completado.")
-
-
 def extraer_features_hibridas(row, df_historico=None, hacer_scraping=False, session_cache=None):
     """Extrae features combinando tendencias temporales y scraping"""
     from mlb_stats_api_client import obtener_fecha_ayer, obtener_stats_completas_api

@@ -19,9 +19,13 @@ else:
 
 MODELO_PATH = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.1_catboost.bin")
 MODELO_BACKUP = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.1_catboost_backup.bin")
-MODELO_LGBM_PATH = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.1_lgbm.pkl")
-MODELO_LGBM_BACKUP = os.path.join(BASE_DIR, "models", "modelo_mlb_v4.1_lgbm_backup.pkl")
+# Ficha del modelo en producción (versión, fecha de corte, métricas de la ventana sombra)
+MODEL_CARD_PATH = os.path.join(BASE_DIR, "models", "model_card.json")
+# Registro de cada evaluación champion/challenger (una línea JSON por ejecución)
+TRAINING_LOG_PATH = os.path.join(BASE_DIR, "models", "training_log.jsonl")
 DB_PATH = os.path.join(BASE_DIR, "data", "mlb_reentrenamiento.db")
+# Features de la API para temporadas pasadas, versionadas como texto (fuente de verdad del entrenamiento)
+FEATURES_HISTORICAS_PATH = os.path.join(BASE_DIR, "data", "features_historicas.csv")
 CACHE_PATH = os.path.join(BASE_DIR, "cache", "features_hibridas_v4.0_cache.pkl")
 
 # ============================================================================
@@ -180,6 +184,12 @@ SUPER_FEATURES = [
     "super_resistencia_era_ops",
     "super_muro_bullpen",
 ]
+
+# Features que consume el modelo en producción, en orden. ELO queda fuera a propósito:
+# el motor de predicción todavía no lo calcula (devuelve 1500) y entrenar con ELO real
+# produciría un desfase entre entrenamiento e inferencia.
+ELO_FEATURES = ["home_elo", "away_elo", "diff_elo"]
+MODEL_FEATURES = [f for f in TEMPORAL_FEATURES if f not in ELO_FEATURES] + SCRAPING_FEATURES + SUPER_FEATURES
 
 
 # ============================================================================
