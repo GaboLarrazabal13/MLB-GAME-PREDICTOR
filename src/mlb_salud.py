@@ -27,6 +27,7 @@ MIN_PARTIDOS_SEMANA = 30
 def _predicciones_con_resultado(conn):
     cols = {r[1] for r in conn.execute("PRAGMA table_info(predicciones_historico)")}
     extra = ", p.model_version" if "model_version" in cols else ", NULL AS model_version"
+    extra += ", p.prob_mercado" if "prob_mercado" in cols else ", NULL AS prob_mercado"
     df = pd.read_sql(
         f"""
         SELECT p.fecha, p.home_team, p.away_team, p.prob_home{extra}, r.ganador, r.year
@@ -64,15 +65,21 @@ def _referencia_mejor_record(conn, temporadas):
 
 def _metricas(d):
     if d.empty:
-        return {"n": 0, "accuracy": None, "logloss": None, "mejor_record": None, "local": None}
+        return {"n": 0, "accuracy": None, "logloss": None, "mejor_record": None, "local": None, "n_con_mercado": 0, "mercado": None, "modelo_en_partidos_con_mercado": None}
     p = np.clip(d["p"].to_numpy(), 1e-6, 1 - 1e-6)
     y = d["ganador"].to_numpy()
+    con = d["prob_mercado"].notna().to_numpy() if "prob_mercado" in d.columns else np.zeros(len(d), bool)
+    pm = d["prob_mercado"].to_numpy(dtype=float) / 100.0 if con.any() else None
     return {
         "n": int(len(d)),
         "accuracy": float(((p >= 0.5) == y).mean()),
         "logloss": float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p))),
         "mejor_record": float((d["ref"] == y).mean()),
         "local": float(y.mean()),
+        # referencia más exigente: el favorito de las casas de apuestas
+        "n_con_mercado": int(con.sum()),
+        "mercado": float(((pm[con] >= 0.5) == y[con]).mean()) if con.any() else None,
+        "modelo_en_partidos_con_mercado": float(((p[con] >= 0.5) == y[con]).mean()) if con.any() else None,
     }
 
 

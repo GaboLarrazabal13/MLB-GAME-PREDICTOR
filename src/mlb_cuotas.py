@@ -85,6 +85,34 @@ def capturar(desde, hasta, path=CUOTAS_PATH):
     return filas
 
 
+def combinar_probabilidades(p_modelo, p_mercado, peso_mercado=0.5):
+    """Media ponderada en escala logit de dos probabilidades del local."""
+    import math
+
+    clip = lambda p: min(max(float(p), 1e-6), 1 - 1e-6)  # noqa: E731
+    logit = lambda p: math.log(clip(p) / (1 - clip(p)))  # noqa: E731
+    z = (1 - peso_mercado) * logit(p_modelo) + peso_mercado * logit(p_mercado)
+    return 1.0 / (1.0 + math.exp(-z))
+
+
+def prob_mercado_para(fecha, home_team, away_team, path=CUOTAS_PATH, ahora_utc=None):
+    """
+    Probabilidad del local según la captura más reciente anterior al inicio del partido (y a
+    `ahora_utc`). None si no hay captura. En dobles jornadas se usa el partido que empieza antes.
+    """
+    if not os.path.exists(path):
+        return None
+    df = pd.read_csv(path)
+    df = df[(df["fecha"] == str(fecha)[:10]) & (df["home_team"] == home_team) & (df["away_team"] == away_team)]
+    df = df[df["captura_utc"] < df["inicio_utc"]]
+    if ahora_utc:
+        df = df[df["captura_utc"] <= ahora_utc]
+    if df.empty:
+        return None
+    primero = df[df["inicio_utc"] == df["inicio_utc"].min()]
+    return float(primero.sort_values("captura_utc").iloc[-1]["prob_home_mercado"])
+
+
 def cierre_por_partido(path=CUOTAS_PATH):
     """Última captura antes del inicio de cada partido (la línea de cierre que tenemos)."""
     if not os.path.exists(path):

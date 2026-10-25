@@ -249,6 +249,13 @@ jobs:
           RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' SCRAPER_BETWEEN_GAMES_SECONDS=0 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=10 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=8 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
         continue-on-error: true
 
+      # Antes de predecir: la probabilidad publicada combina el modelo con la cuota del mercado
+      - name: Capturar cuotas del mercado
+        run: |
+          cd src
+          python mlb_cuotas.py
+        continue-on-error: true
+
       - name: Generar predicciones si hay datos nuevos
         if: steps.scrape_all.outcome == 'success'
         run: |
@@ -375,17 +382,18 @@ jobs:
           RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' SCRAPER_BETWEEN_GAMES_SECONDS=3 SCRAPER_ADAPTIVE_DELAY_ON_FAIL_SECONDS=15 SCRAPER_PREVIEW_RETRIES=3 SCRAPER_PREVIEW_RETRY_WAIT_SECONDS=10 SCRAPER_SAVE_PARTIAL_ON_FINAL=1 python mlb_daily_scraper.py
         continue-on-error: true
 
-      - name: Generar predicciones si hay datos nuevos
-        if: steps.scrape.outcome == 'success'
-        run: |
-          cd src
-          RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
-
+      # Antes de predecir: la probabilidad publicada combina el modelo con la cuota del mercado
       - name: Capturar cuotas del mercado
         run: |
           cd src
           python mlb_cuotas.py
         continue-on-error: true
+
+      - name: Generar predicciones si hay datos nuevos
+        if: steps.scrape.outcome == 'success'
+        run: |
+          cd src
+          RUN_SOURCE=workflow TARGET_DATE='${{ github.event.inputs.target_date }}' python mlb_predict_engine.py
 
       - name: Verificar y sanar huecos recientes (Auto-Heal)
         if: steps.scrape.outcome == 'success'
@@ -724,6 +732,13 @@ jobs:
         run: |
           pip install -r requirements.txt
       
+      # Antes de predecir: la probabilidad publicada combina el modelo con la cuota del mercado
+      - name: Capturar cuotas del mercado
+        run: |
+          cd src
+          python mlb_cuotas.py
+        continue-on-error: true
+
       - name: Generar predicciones
         run: |
           cd src

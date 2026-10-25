@@ -68,6 +68,15 @@ def test_referencia_mejor_record_se_calcula_con_partidos_previos():
     assert s["ventana"]["accuracy"] == 0.0  # el modelo eligió a NYY (60%)
 
 
+def test_referencia_del_mercado():
+    conn = _db(_temporada("2026-06-01", 5, acierta=True))
+    conn.execute("ALTER TABLE predicciones_historico ADD COLUMN prob_mercado REAL")
+    conn.execute("UPDATE predicciones_historico SET prob_mercado = 40.0 WHERE fecha <= '2026-06-02'")  # el mercado falla esos días
+    s = calcular_salud(conn, hoy=date(2026, 6, 5), card=CARD)
+    assert s["ventana"]["n_con_mercado"] == 12
+    assert s["ventana"]["mercado"] == 0.0 and s["ventana"]["modelo_en_partidos_con_mercado"] == 1.0
+
+
 def test_sin_datos():
     s = calcular_salud(_db([]), hoy=date(2026, 6, 3), card=CARD)
     assert s["estado"] == "sin_datos"

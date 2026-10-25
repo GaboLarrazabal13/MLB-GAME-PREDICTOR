@@ -13,7 +13,8 @@ import pandas as pd
 from catboost import CatBoostClassifier
 
 # Importar módulos centralizados
-from mlb_config import DB_PATH, MODELO_PATH, get_team_name
+from mlb_config import COMBINACION_MERCADO, DB_PATH, MODELO_PATH, get_team_name
+from mlb_cuotas import combinar_probabilidades, prob_mercado_para
 from mlb_feature_engineering import (
     calcular_estadisticas_agregadas,
     calcular_super_features,
@@ -52,15 +53,15 @@ def obtener_nivel_confianza(prob_pct):
 COLUMNAS_PREDICCION = """(fecha TEXT, home_team TEXT, away_team TEXT, home_pitcher TEXT,
                           away_pitcher TEXT, prob_home REAL, prob_away REAL,
                           prediccion TEXT, confianza TEXT, tipo TEXT, detalles TEXT,
-                          model_version TEXT, generated_at TEXT)"""
+                          model_version TEXT, generated_at TEXT, prob_modelo REAL, prob_mercado REAL)"""
 
 
 def _asegurar_columnas(conn, tabla):
     conn.execute(f"CREATE TABLE IF NOT EXISTS {tabla} {COLUMNAS_PREDICCION}")
     existentes = {col[1] for col in conn.execute(f"PRAGMA table_info({tabla})")}
-    for columna in ("detalles", "model_version", "generated_at"):
+    for columna, tipo in (("detalles", "TEXT"), ("model_version", "TEXT"), ("generated_at", "TEXT"), ("prob_modelo", "REAL"), ("prob_mercado", "REAL")):
         if columna not in existentes:
-            conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} TEXT")
+            conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")
 
 
 def partido_ya_jugado(conn, fecha, home_team, away_team):
@@ -273,10 +274,17 @@ def predecir_juego(
             extra={"feature_columns": int(len(X_df.columns))},
         )
 
-        # 10. Realizar predicción
+        # 10. Realizar predicción y combinarla con el mercado si hay cuota
         stage_start = time.perf_counter()
-        prob_home = model_cb.predict_proba(X_df)[0][1]
-        _debug_stage("predict", stage_start, extra={"model_version": model_version})
+        prob_modelo = float(model_cb.predict_proba(X_df)[0][1])
+        prob_mercado = None
+        if COMBINACION_MERCADO["activa"]:
+            try:
+                prob_mercado = prob_mercado_para(row_data["fecha"], home_team, away_team)
+            except Exception:  # noqa: BLE001 - sin cuotas se publica solo el modelo
+                prob_mercado = None
+        prob_home = combinar_probabilidades(prob_modelo, prob_mercado, COMBINACION_MERCADO["peso_mercado"]) if prob_mercado is not None else prob_modelo
+        _debug_stage("predict", stage_start, extra={"model_version": model_version, "prob_modelo": prob_modelo, "prob_mercado": prob_mercado})
 
         prob_home_pct = round(float(prob_home) * 100, 2)
         prob_away_pct = round(100 - prob_home_pct, 2)
@@ -478,6 +486,8 @@ def predecir_juego(
             "detalles": detalles_json,
             "model_version": model_version,
             "generated_at": pd.Timestamp.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "prob_modelo": round(prob_modelo * 100, 2),
+            "prob_mercado": round(prob_mercado * 100, 2) if prob_mercado is not None else None,
         }
 
         resultado_data = {**db_data, "detalles": detalles}
