@@ -1,5 +1,5 @@
 {
- "generado": "2026-10-28T13:58:03+00:00",
+ "generado": "2026-10-29T14:05:16+00:00",
  "temporada": 2026,
  "partidos_pendientes": 0,
  "simulaciones": 10000,
@@ -8,22 +8,22 @@
    "equipo": "MIL",
    "division_nombre": "NL Central",
    "victorias": 103,
-   "elo": 1694.8,
+   "elo": 1703.5,
    "playoffs": 1.0,
    "division": 1.0,
-   "liga": 0.6715,
-   "campeon": 0.5297,
+   "liga": 0.6965,
+   "campeon": 0.5696,
    "victorias_esperadas": 103.0
   },
   {
    "equipo": "TBR",
    "division_nombre": "AL Este",
    "victorias": 98,
-   "elo": 1624.9,
+   "elo": 1616.2,
    "playoffs": 1.0,
    "division": 1.0,
-   "liga": 0.5397,
-   "campeon": 0.2258,
+   "liga": 0.5167,
+   "campeon": 0.1855,
    "victorias_esperadas": 98.0
   },
   {
@@ -33,8 +33,8 @@
    "elo": 1605.8,
    "playoffs": 1.0,
    "division": 0.0,
-   "liga": 0.1274,
-   "campeon": 0.0724,
+   "liga": 0.1184,
+   "campeon": 0.0681,
    "victorias_esperadas": 91.0
   },
   {
@@ -44,8 +44,8 @@
    "elo": 1571.8,
    "playoffs": 1.0,
    "division": 1.0,
-   "liga": 0.135,
-   "campeon": 0.0612,
+   "liga": 0.1272,
+   "campeon": 0.0592,
    "victorias_esperadas": 100.0
   },
   {
@@ -55,8 +55,8 @@
    "elo": 1575.9,
    "playoffs": 1.0,
    "division": 0.0,
-   "liga": 0.1616,
-   "campeon": 0.0414,
+   "liga": 0.1736,
+   "campeon": 0.044,
    "victorias_esperadas": 93.0
   },
   {
@@ -66,8 +66,8 @@
    "elo": 1538.1,
    "playoffs": 1.0,
    "division": 1.0,
-   "liga": 0.196,
-   "campeon": 0.0346,
+   "liga": 0.204,
+   "campeon": 0.041,
    "victorias_esperadas": 85.0
   },
   {
@@ -77,8 +77,8 @@
    "elo": 1533.6,
    "playoffs": 1.0,
    "division": 1.0,
-   "liga": 0.0322,
-   "campeon": 0.0111,
+   "liga": 0.0289,
+   "campeon": 0.0102,
    "victorias_esperadas": 94.0
   },
   {
@@ -88,8 +88,8 @@
    "elo": 1528.9,
    "playoffs": 1.0,
    "division": 0.0,
-   "liga": 0.0244,
-   "campeon": 0.0073,
+   "liga": 0.0203,
+   "campeon": 0.0067,
    "victorias_esperadas": 88.0
   },
   {
@@ -99,20 +99,9 @@
    "elo": 1507.7,
    "playoffs": 1.0,
    "division": 0.0,
-   "liga": 0.045,
-   "campeon": 0.0065,
+   "liga": 0.0468,
+   "campeon": 0.006,
    "victorias_esperadas": 84.0
-  },
-  {
-   "equipo": "BOS",
-   "division_nombre": "AL Este",
-   "victorias": 87,
-   "elo": 1507.6,
-   "playoffs": 1.0,
-   "division": 0.0,
-   "liga": 0.0281,
-   "campeon": 0.0043,
-   "victorias_esperadas": 87.0
   },
   {
    "equipo": "CHC",
@@ -121,9 +110,20 @@
    "elo": 1509.9,
    "playoffs": 1.0,
    "division": 0.0,
-   "liga": 0.0095,
-   "campeon": 0.0029,
+   "liga": 0.0087,
+   "campeon": 0.0036,
    "victorias_esperadas": 89.0
+  },
+  {
+   "equipo": "BOS",
+   "division_nombre": "AL Este",
+   "victorias": 87,
+   "elo": 1507.6,
+   "playoffs": 1.0,
+   "division": 0.0,
+   "liga": 0.0299,
+   "campeon": 0.0032,
+   "victorias_esperadas": 87.0
   },
   {
    "equipo": "HOU",
@@ -132,8 +132,8 @@
    "elo": 1478.7,
    "playoffs": 1.0,
    "division": 1.0,
-   "liga": 0.0296,
-   "campeon": 0.0028,
+   "liga": 0.029,
+   "campeon": 0.0029,
    "victorias_esperadas": 81.0
   },
   {
