@@ -1,8 +1,8 @@
 {
-  "version": "saber-20261026",
-  "trained_at": "2026-10-26T15:47:25+00:00",
-  "trained_through": "2026-10-24",
-  "n_train": 12001,
+  "version": "saber-20261102",
+  "trained_at": "2026-11-02T19:05:48+00:00",
+  "trained_through": "2026-10-28",
+  "n_train": 12004,
   "features": [
     "diff_pitag",
     "diff_fip_sp",
@@ -13,13 +13,13 @@
     "away_ra"
   ],
   "coeficientes_estandarizados": {
-    "diff_pitag": 0.475,
-    "diff_fip_sp": 0.1158,
-    "diff_fip_bp": 0.0156,
-    "home_rs": -0.1029,
-    "away_rs": 0.1076,
-    "home_ra": 0.0787,
-    "away_ra": -0.1105
+    "diff_pitag": 0.4754,
+    "diff_fip_sp": 0.116,
+    "diff_fip_bp": 0.016,
+    "home_rs": -0.1031,
+    "away_rs": 0.1074,
+    "home_ra": 0.0793,
+    "away_ra": -0.1106
   },
-  "intercepto": 0.124
+  "intercepto": 0.1237
 }
