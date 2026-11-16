@@ -1,6 +1,6 @@
 {
-  "version": "saber-20261109",
-  "trained_at": "2026-11-09T19:27:49+00:00",
+  "version": "saber-20261116",
+  "trained_at": "2026-11-16T19:12:45+00:00",
   "trained_through": "2026-10-28",
   "n_train": 12004,
   "features": [
